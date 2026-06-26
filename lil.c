@@ -1115,6 +1115,48 @@ static Value eval_expr(ASTNode *n) {
                     }
                     return make_num(0);
                 }
+                if (!strcmp(fn, "factors")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: factors expects a number", n->line);
+                    char *arg = resolve_arg(n->data.funcall.args[1]);
+                    long num = (long)strtod(arg, NULL); free(arg);
+                    if (num < 1) return make_str("");
+                    char buf[4096] = {0}; size_t pos = 0;
+                    for (long i = 1; i <= num; i++) {
+                        if (num % i == 0) {
+                            int r = snprintf(buf + pos, sizeof(buf) - pos, "%ld ", i);
+                            if (r > 0) pos += r;
+                            if (pos >= sizeof(buf) - 10) break;
+                        }
+                    }
+                    return make_str(buf);
+                }
+                if (!strcmp(fn, "fib")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: fib expects a number", n->line);
+                    char *arg = resolve_arg(n->data.funcall.args[1]);
+                    long cnt = (long)strtod(arg, NULL); free(arg);
+                    if (cnt < 1) return make_str("");
+                    if (cnt > 100) cnt = 100;
+                    char buf[4096] = {0}; size_t pos = 0;
+                    long a = 0, b = 1;
+                    for (long i = 0; i < cnt; i++) {
+                        int r = snprintf(buf + pos, sizeof(buf) - pos, "%ld ", a);
+                        if (r > 0) pos += r;
+                        if (pos >= sizeof(buf) - 20) break;
+                        long c = a + b; a = b; b = c;
+                    }
+                    return make_str(buf);
+                }
+                if (!strcmp(fn, "isprime")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: isprime expects a number", n->line);
+                    char *arg = resolve_arg(n->data.funcall.args[1]);
+                    long num = (long)strtod(arg, NULL); free(arg);
+                    if (num < 2) return make_num(0);
+                    int prime = 1;
+                    for (long i = 2; i * i <= num; i++) {
+                        if (num % i == 0) { prime = 0; break; }
+                    }
+                    return make_num(prime);
+                }
                 fatal("line %d: unknown math function '%s'", n->line, fn);
             }
 

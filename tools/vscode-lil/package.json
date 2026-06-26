@@ -1,0 +1,41 @@
+{
+  "name": "lil-format",
+  "displayName": "lil formatter",
+  "description": "formatter and syntax highlighting for lil language files",
+  "version": "0.1.0",
+  "publisher": "xlrc888",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Formatters", "Programming Languages"],
+  "activationEvents": ["onLanguage:lil"],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "lil",
+        "extensions": [".lil"],
+        "aliases": ["lil", "lil script"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "lil",
+        "scopeName": "source.lil",
+        "path": "./syntaxes/lil.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "lil-format.formatFile",
+        "title": "Format lil file"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "lil-format.formatFile",
+        "key": "alt+shift+f",
+        "when": "editorLangId == lil"
+      }
+    ]
+  }
+}

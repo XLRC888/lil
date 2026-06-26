@@ -146,40 +146,20 @@ loop {
             rev = function string reverse $lotxt
             if lotxt == rev { print `Bot: Yes, '{txt}' is a palindrome!` } else { print `Bot: No.` }
         } elif raw has "fib " {
-            n = function math eval $raw
+            ns = function string substr $raw 4 1000
+            n = function math eval $ns
             if n > 20 { n = 20 }
             if n < 1 { n = 1 }
-            a = 0
-            b = 1
-            res = ""
-            for i = 1 to n {
-                res = res + a + " "
-                c = a + b
-                a = b
-                b = c
-            }
+            res = function math fib $n
             print `Bot: {res}`
         } elif raw has "prime " {
-            n = function math eval $raw
-            if n < 2 {
-                print "Bot: No"
-            } else {
-                is_prime = 1
-                i = 2
-                while i * i <= n {
-                    if n % i == 0 { is_prime = 0 }
-                    i = i + 1
-                }
-                if is_prime { print "Bot: Yes" } else { print "Bot: No" }
-            }
+            ns = function string substr $raw 6 1000
+            n = function math eval $ns
+            if function math isprime $n { print "Bot: Yes" } else { print "Bot: No" }
         } elif raw has "factors " {
-            n = function math eval $raw
-            res = ""
-            i = 1
-            while i <= n {
-                if n % i == 0 { res = res + i + " " }
-                i = i + 1
-            }
+            ns = function string substr $raw 8 1000
+            n = function math eval $ns
+            res = function math factors $n
             print `Bot: {res}`
         } elif raw has "todo add " {
             task = function string substr $raw 9 1000

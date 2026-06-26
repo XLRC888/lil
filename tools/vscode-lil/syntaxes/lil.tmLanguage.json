@@ -1,0 +1,67 @@
+{
+  "name": "lil",
+  "scopeName": "source.lil",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#templates" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#dollar" },
+    { "include": "#operators" },
+    { "include": "#delimiters" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        { "match": "#.*$", "name": "comment.line.number-sign.lil" }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        { "begin": "\"", "end": "\"", "name": "string.quoted.double.lil",
+          "patterns": [{ "match": "\\\\.", "name": "constant.character.escape.lil" }] }
+      ]
+    },
+    "templates": {
+      "patterns": [
+        { "begin": "`", "end": "`", "name": "string.interpolated.lil",
+          "patterns": [{ "match": "\\\\.", "name": "constant.character.escape.lil" }] }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        { "match": "\\b\\d+\\.?\\d*\\b", "name": "constant.numeric.lil" }
+      ]
+    },
+    "dollar": {
+      "patterns": [
+        { "match": "\\$\\w*", "name": "variable.other.lil" }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        { "match": "\\b(if|else|elif|while|for|to|loop|stop|exit)\\b", "name": "keyword.control.lil" },
+        { "match": "\\b(print|input|include|function)\\b", "name": "keyword.other.lil" },
+        { "match": "\\b(has|nocase|anywhere|word)\\b", "name": "keyword.operator.lil" },
+        { "match": "\\b(and|or|not)\\b", "name": "keyword.operator.logical.lil" }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        { "match": "&&|\\|\\||==|!=|<=|>=|[+\\-*/%<>!]=", "name": "keyword.operator.comparison.lil" },
+        { "match": "=", "name": "keyword.operator.assignment.lil" }
+      ]
+    },
+    "delimiters": {
+      "patterns": [
+        { "match": "[{}]", "name": "punctuation.curlybrace.lil" },
+        { "match": "[()]", "name": "punctuation.parenthesis.lil" },
+        { "match": "[\\[\\]]", "name": "punctuation.bracket.lil" },
+        { "match": ",", "name": "punctuation.comma.lil" },
+        { "match": ";", "name": "punctuation.terminator.lil" }
+      ]
+    }
+  },
+  "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+}
