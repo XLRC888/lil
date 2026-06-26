@@ -1,0 +1,11 @@
+input "what is your name? " name
+input "how old are you? " age
+
+print "hello", name
+print "you are", age, "years old"
+
+if age >= 18 {
+    print "you are an adult"
+} else {
+    print "you are a minor"
+}

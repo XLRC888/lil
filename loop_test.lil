@@ -1,0 +1,41 @@
+print "testing loop/stop"
+
+x = 1
+loop {
+    print "x is", x
+    if x >= 3 {
+        print "stopping"
+        stop
+    }
+    x = x + 1
+}
+print "after loop"
+
+print "testing stop inside while:"
+i = 1
+while i <= 10 {
+    if i == 4 {
+        print "break while at", i
+        stop
+    }
+    print i
+    i = i + 1
+}
+print "after while"
+
+print "testing stop inside for:"
+for i = 1 to 10 {
+    if i == 3 {
+        print "break for at", i
+        stop
+    }
+    print i
+}
+print "after for"
+
+print "testing exit inside loop:"
+loop {
+    print "exiting program"
+    exit
+}
+print "should not reach"

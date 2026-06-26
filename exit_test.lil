@@ -1,0 +1,6 @@
+print "before if"
+if 1 {
+    print "inside if, exiting"
+    exit
+}
+print "should not reach here"

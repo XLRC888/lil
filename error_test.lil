@@ -1,0 +1,7 @@
+# this should work
+print "before error"
+
+# this should cause error
+x = 10 / 0
+
+print "after error"
