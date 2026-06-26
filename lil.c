@@ -829,34 +829,64 @@ static Value eval_expr(ASTNode *n) {
                 fatal("line %d: function expects a name", n->line);
             }
 
+            static int date_mode = 0;
             char *fn = n->data.funcall.args[0];
 
+            if (!strcmp(fn, "set")) {
+                if (n->data.funcall.argc > 1 && !strcmp(n->data.funcall.args[1], "format")) {
+                    if (n->data.funcall.argc < 3) fatal("line %d: set format expects a region", n->line);
+                    if (!strcmp(n->data.funcall.args[2], "US")) date_mode = 1;
+                    else if (!strcmp(n->data.funcall.args[2], "EU")) date_mode = 0;
+                    else fatal("line %d: unknown date format '%s'", n->line, n->data.funcall.args[2]);
+                }
+                return make_str("");
+            }
+
+            char *fmt_min, *fmt_std, *fmt_stdp, *fmt_full, *fmt_fullns, *fmt_fullnd, *fmt_fp;
+            if (date_mode) {
+                fmt_min    = "%-m/%-d/%y";
+                fmt_std    = "%m/%d/%Y";
+                fmt_stdp   = "%m/%d/%Y %A";
+                fmt_full   = "%m/%d/%Y %A %H:%M:%S";
+                fmt_fullns = "%m/%d/%Y %A %H:%M";
+                fmt_fullnd = "%m/%d/%Y %H:%M:%S";
+                fmt_fp     = "%m/%d/%Y %A %H:%M:%S";
+            } else {
+                fmt_min    = "%-d.%-m.%y";
+                fmt_std    = "%d.%m.%Y";
+                fmt_stdp   = "%d.%m.%Y %A";
+                fmt_full   = "%d.%m.%Y %A %H:%M:%S";
+                fmt_fullns = "%d.%m.%Y %A %H:%M";
+                fmt_fullnd = "%d.%m.%Y %H:%M:%S";
+                fmt_fp     = "%d.%m.%Y %A %H:%M:%S";
+            }
+
             if (!strcmp(fn, "minimal")) {
-                strftime(buf, sizeof(buf), "%-d.%-m.%y", tm);
+                strftime(buf, sizeof(buf), fmt_min, tm);
                 return make_str(buf);
             }
             if (!strcmp(fn, "standart")) {
-                strftime(buf, sizeof(buf), "%d.%m.%Y", tm);
+                strftime(buf, sizeof(buf), fmt_std, tm);
                 return make_str(buf);
             }
             if (!strcmp(fn, "standartplus")) {
-                strftime(buf, sizeof(buf), "%d.%m.%Y %A", tm);
+                strftime(buf, sizeof(buf), fmt_stdp, tm);
                 return make_str(buf);
             }
             if (!strcmp(fn, "full")) {
                 if (n->data.funcall.argc > 1 && !strcmp(n->data.funcall.args[1], "noseconds")) {
-                    strftime(buf, sizeof(buf), "%d.%m.%Y %A %H:%M", tm);
+                    strftime(buf, sizeof(buf), fmt_fullns, tm);
                 } else if (n->data.funcall.argc > 1 && !strcmp(n->data.funcall.args[1], "noday")) {
-                    strftime(buf, sizeof(buf), "%d.%m.%Y %H:%M:%S", tm);
+                    strftime(buf, sizeof(buf), fmt_fullnd, tm);
                 } else {
-                    strftime(buf, sizeof(buf), "%d.%m.%Y %A %H:%M:%S", tm);
+                    strftime(buf, sizeof(buf), fmt_full, tm);
                 }
                 return make_str(buf);
             }
             if (!strcmp(fn, "fullplus")) {
                 struct timeval tv;
                 gettimeofday(&tv, NULL);
-                strftime(buf, sizeof(buf), "%d.%m.%Y %A %H:%M:%S", tm);
+                strftime(buf, sizeof(buf), fmt_fp, tm);
                 size_t blen = strlen(buf);
                 snprintf(buf + blen, sizeof(buf) - blen, ".%03ld", tv.tv_usec / 1000);
                 return make_str(buf);
