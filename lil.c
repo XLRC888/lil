@@ -17,7 +17,9 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_SLASH, TOK_MOD, TOK_EQ, TOK_NE, TOK_LT, TOK_GT, TOK_LE, TOK_GE, TOK_ASSIGN,
     TOK_LPAREN, TOK_RPAREN, TOK_LBRACE, TOK_RBRACE, TOK_COMMA,
     TOK_SEMI, TOK_NEWLINE, TOK_EOF, TOK_AND, TOK_OR, TOK_NOT,
-    TOK_LOOP, TOK_STOP, TOK_INCLUDE, TOK_FUNCTION } TokenType;
+    TOK_LOOP, TOK_STOP, TOK_INCLUDE, TOK_FUNCTION,
+    TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
+    TOK_LBRACKET, TOK_RBRACKET } TokenType;
 
 typedef struct {
     TokenType type;
@@ -49,7 +51,8 @@ typedef struct ASTNode {
         struct { char *name; struct ASTNode *value; } assign;
         struct { struct ASTNode **exprs; int count; int cap; } print;
         struct { char *name; char *prompt; } input;
-        struct { struct ASTNode *cond, *then, *els; } if_stmt;
+        struct { struct ASTNode *cond, *then, *els; int flags; int has_mode;
+            struct ASTNode *has_item; struct ASTNode **has_items; int has_nitems; } if_stmt;
         struct { struct ASTNode *cond, *body; } while_stmt;
         struct { char *var; struct ASTNode *start, *end, *body; } forto;
         struct { struct ASTNode *body; } loop;
@@ -245,6 +248,10 @@ static Token lex_scan(void) {
             if (!strcmp(word, "stop"))    { free(word); t.type = TOK_STOP; return t; }
             if (!strcmp(word, "include")) { free(word); t.type = TOK_INCLUDE; return t; }
             if (!strcmp(word, "function")) { free(word); t.type = TOK_FUNCTION; return t; }
+            if (!strcmp(word, "has"))     { free(word); t.type = TOK_HAS; return t; }
+            if (!strcmp(word, "nocase"))  { free(word); t.type = TOK_NOCASE; return t; }
+            if (!strcmp(word, "anywhere")) { free(word); t.type = TOK_ANYWHERE; return t; }
+            if (!strcmp(word, "word"))    { free(word); t.type = TOK_WORD; return t; }
 
             t.type = TOK_ID;
             t.val.str = word;
@@ -262,6 +269,8 @@ static Token lex_scan(void) {
             case ')': t.type = TOK_RPAREN; return t;
             case '{': t.type = TOK_LBRACE; return t;
             case '}': t.type = TOK_RBRACE; return t;
+            case '[': t.type = TOK_LBRACKET; return t;
+            case ']': t.type = TOK_RBRACKET; return t;
             case ',': t.type = TOK_COMMA; return t;
             case ';': t.type = TOK_SEMI; return t;
             case '=':
@@ -365,6 +374,11 @@ static ASTNode *ast_if(ASTNode *cond, ASTNode *then, ASTNode *els) {
     n->data.if_stmt.cond = cond;
     n->data.if_stmt.then = then;
     n->data.if_stmt.els = els;
+    n->data.if_stmt.flags = 0;
+    n->data.if_stmt.has_mode = 0;
+    n->data.if_stmt.has_item = NULL;
+    n->data.if_stmt.has_items = NULL;
+    n->data.if_stmt.has_nitems = 0;
     return n;
 }
 
@@ -460,16 +474,59 @@ static ASTNode *parse_block(void) {
 static ASTNode *parse_else_chain(void) {
     if (lex_cur.type == TOK_ELIF) {
         lex_next();
-        ASTNode *cond = parse_expr();
+        ASTNode *cond, *body;
+        int flags = 0, has_mode = 0;
+        ASTNode *has_item = NULL, **has_items = NULL;
+        int has_nitems = 0;
+
+        cond = parse_expr();
+
+        if (lex_cur.type == TOK_HAS) {
+            has_mode = 1;
+            lex_next();
+            if (lex_cur.type == TOK_LBRACKET) {
+                lex_next();
+                int cap = 0;
+                while (lex_cur.type != TOK_RBRACKET && lex_cur.type != TOK_EOF) {
+                    if (has_nitems >= cap) {
+                        cap = cap ? cap * 2 : 4;
+                        has_items = realloc(has_items, sizeof(ASTNode*) * cap);
+                        if (!has_items) fatal("out of memory");
+                    }
+                    has_items[has_nitems++] = parse_expr();
+                    if (lex_cur.type == TOK_COMMA) lex_next();
+                }
+                if (lex_cur.type != TOK_RBRACKET) fatal("line %d: expected ']'", lex_cur.line);
+                lex_next();
+            } else {
+                has_item = parse_expr();
+            }
+            if (lex_cur.type == TOK_NOCASE) { flags |= 1; lex_next(); }
+        } else {
+            while (lex_cur.type == TOK_NOCASE || lex_cur.type == TOK_ANYWHERE || lex_cur.type == TOK_WORD) {
+                if (lex_cur.type == TOK_NOCASE) flags |= 1;
+                else if (lex_cur.type == TOK_ANYWHERE) flags |= 2;
+                else if (lex_cur.type == TOK_WORD) flags |= 4;
+                lex_next();
+            }
+        }
+
         if (lex_cur.type == TOK_NEWLINE) lex_next();
         if (lex_cur.type != TOK_LBRACE) fatal("line %d: expected '{' after elif condition", lex_cur.line);
-        ASTNode *body = parse_block();
+        body = parse_block();
         ASTNode *rest = NULL;
         while (lex_cur.type == TOK_NEWLINE) lex_next();
         if (lex_cur.type == TOK_ELIF || lex_cur.type == TOK_ELSE) {
             rest = parse_else_chain();
         }
-        return ast_if(cond, body, rest);
+
+        ASTNode *n = ast_if(cond, body, rest);
+        n->data.if_stmt.flags = flags;
+        n->data.if_stmt.has_mode = has_mode;
+        n->data.if_stmt.has_item = has_item;
+        n->data.if_stmt.has_items = has_items;
+        n->data.if_stmt.has_nitems = has_nitems;
+        return n;
     }
     if (lex_cur.type == TOK_ELSE) {
         lex_next();
@@ -525,16 +582,58 @@ static ASTNode *parse_stmt(void) {
 
     if (lex_cur.type == TOK_IF) {
         lex_next();
-        ASTNode *cond = parse_expr();
+        ASTNode *cond, *then, *els = NULL;
+        int flags = 0, has_mode = 0;
+        ASTNode *has_item = NULL, **has_items = NULL;
+        int has_nitems = 0;
+
+        cond = parse_expr();
+
+        if (lex_cur.type == TOK_HAS) {
+            has_mode = 1;
+            lex_next();
+            if (lex_cur.type == TOK_LBRACKET) {
+                lex_next();
+                int cap = 0;
+                while (lex_cur.type != TOK_RBRACKET && lex_cur.type != TOK_EOF) {
+                    if (has_nitems >= cap) {
+                        cap = cap ? cap * 2 : 4;
+                        has_items = realloc(has_items, sizeof(ASTNode*) * cap);
+                        if (!has_items) fatal("out of memory");
+                    }
+                    has_items[has_nitems++] = parse_expr();
+                    if (lex_cur.type == TOK_COMMA) lex_next();
+                }
+                if (lex_cur.type != TOK_RBRACKET) fatal("line %d: expected ']'", lex_cur.line);
+                lex_next();
+            } else {
+                has_item = parse_expr();
+            }
+            if (lex_cur.type == TOK_NOCASE) { flags |= 1; lex_next(); }
+        } else {
+            while (lex_cur.type == TOK_NOCASE || lex_cur.type == TOK_ANYWHERE || lex_cur.type == TOK_WORD) {
+                if (lex_cur.type == TOK_NOCASE) flags |= 1;
+                else if (lex_cur.type == TOK_ANYWHERE) flags |= 2;
+                else if (lex_cur.type == TOK_WORD) flags |= 4;
+                lex_next();
+            }
+        }
+
         if (lex_cur.type == TOK_NEWLINE) lex_next();
         if (lex_cur.type != TOK_LBRACE) fatal("line %d: expected '{' after if condition", lex_cur.line);
-        ASTNode *then = parse_block();
-        ASTNode *els = NULL;
+        then = parse_block();
         while (lex_cur.type == TOK_NEWLINE) lex_next();
         if (lex_cur.type == TOK_ELIF || lex_cur.type == TOK_ELSE) {
             els = parse_else_chain();
         }
-        return ast_if(cond, then, els);
+
+        ASTNode *n = ast_if(cond, then, els);
+        n->data.if_stmt.flags = flags;
+        n->data.if_stmt.has_mode = has_mode;
+        n->data.if_stmt.has_item = has_item;
+        n->data.if_stmt.has_items = has_items;
+        n->data.if_stmt.has_nitems = has_nitems;
+        return n;
     }
 
     if (lex_cur.type == TOK_WHILE) {
@@ -901,6 +1000,96 @@ static Value eval_expr(ASTNode *n) {
     }
 }
 
+static char *str_lower(const char *s) {
+    size_t n = strlen(s);
+    char *r = malloc(n + 1);
+    if (!r) fatal("out of memory");
+    for (size_t i = 0; i < n; i++) r[i] = tolower((unsigned char)s[i]);
+    r[n] = 0;
+    return r;
+}
+
+static int is_word_bound(char c) {
+    return !isalnum((unsigned char)c) && c != '_';
+}
+
+static int check_cond_flags(ASTNode *cond, int flags) {
+    if (cond->type != NODE_BINOP) {
+        fatal("line %d: nocase/anywhere/word require a comparison", cond->line);
+    }
+    int op = cond->data.binop.op;
+    if (op != TOK_EQ && op != TOK_NE) {
+        fatal("line %d: nocase/anywhere/word only work with == or !=", cond->line);
+    }
+
+    Value lv = eval_expr(cond->data.binop.left);
+    Value rv = eval_expr(cond->data.binop.right);
+    char *ls = val_tostr(lv);
+    char *rs = val_tostr(rv);
+    int result = 0;
+
+    if (flags & 4) {
+        char *haystack = (flags & 1) ? str_lower(ls) : sdup(ls);
+        char *needle = (flags & 1) ? str_lower(rs) : sdup(rs);
+        size_t hl = strlen(haystack), nl = strlen(needle);
+        result = 0;
+        for (size_t i = 0; i + nl <= hl; i++) {
+            if (memcmp(haystack + i, needle, nl) == 0) {
+                int before = (i == 0) || is_word_bound(haystack[i-1]);
+                int after = (i + nl >= hl) || is_word_bound(haystack[i+nl]);
+                if (before && after) { result = 1; break; }
+            }
+        }
+        free(haystack); free(needle);
+    } else if (flags & 2) {
+        char *haystack = (flags & 1) ? str_lower(ls) : ls;
+        char *needle = (flags & 1) ? str_lower(rs) : rs;
+        result = (strstr(haystack, needle) != NULL) ? 1 : 0;
+        if (flags & 1) { free(haystack); free(needle); }
+    } else if (flags & 1) {
+        char *ll = str_lower(ls);
+        char *lr = str_lower(rs);
+        result = (strcmp(ll, lr) == 0) ? 1 : 0;
+        free(ll); free(lr);
+    }
+
+    free(ls); free(rs);
+    return (op == TOK_EQ) ? result : !result;
+}
+
+static int check_has(ASTNode *lhs_expr, ASTNode *item, ASTNode **items, int nitems, int nocase) {
+    Value lv = eval_expr(lhs_expr);
+    char *ls = val_tostr(lv);
+    int result = 0;
+
+    if (nitems > 0) {
+        result = 1;
+        for (int i = 0; i < nitems; i++) {
+            Value rv = eval_expr(items[i]);
+            char *rs = val_tostr(rv);
+
+            char *haystack = nocase ? str_lower(ls) : ls;
+            char *needle = nocase ? str_lower(rs) : rs;
+            int found = (strstr(haystack, needle) != NULL) ? 1 : 0;
+            if (nocase) { free(haystack); free(needle); }
+
+            if (!found) result = 0;
+            free(rs);
+        }
+    } else if (item) {
+        Value rv = eval_expr(item);
+        char *rs = val_tostr(rv);
+        char *haystack = nocase ? str_lower(ls) : ls;
+        char *needle = nocase ? str_lower(rs) : rs;
+        result = (strstr(haystack, needle) != NULL) ? 1 : 0;
+        if (nocase) { free(haystack); free(needle); }
+        free(rs);
+    }
+
+    free(ls);
+    return result;
+}
+
 static int exec_stmt(ASTNode *n) {
     if (!n || n->type == NODE_EMPTY) return 0;
     switch (n->type) {
@@ -943,9 +1132,18 @@ static int exec_stmt(ASTNode *n) {
             return 0;
         }
         case NODE_IF: {
-            Value cv = eval_expr(n->data.if_stmt.cond);
-            double c = (cv.type == VAL_STR) ? (strlen(cv.data.str) != 0) : (cv.data.num != 0);
-            if (c) {
+            int truthy;
+            if (n->data.if_stmt.has_mode) {
+                truthy = check_has(n->data.if_stmt.cond, n->data.if_stmt.has_item,
+                    n->data.if_stmt.has_items, n->data.if_stmt.has_nitems,
+                    n->data.if_stmt.flags & 1);
+            } else if (n->data.if_stmt.flags) {
+                truthy = check_cond_flags(n->data.if_stmt.cond, n->data.if_stmt.flags);
+            } else {
+                Value cv = eval_expr(n->data.if_stmt.cond);
+                truthy = (cv.type == VAL_STR) ? (strlen(cv.data.str) != 0) : (cv.data.num != 0);
+            }
+            if (truthy) {
                 int r = exec_stmt(n->data.if_stmt.then);
                 if (r) return r;
             } else if (n->data.if_stmt.els) {
