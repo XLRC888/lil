@@ -19,7 +19,8 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_SEMI, TOK_NEWLINE, TOK_EOF, TOK_AND, TOK_OR, TOK_NOT,
     TOK_LOOP, TOK_STOP, TOK_INCLUDE, TOK_FUNCTION,
     TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
-    TOK_LBRACKET, TOK_RBRACKET } TokenType;
+    TOK_LBRACKET, TOK_RBRACKET,
+    TOK_TEMPLATE, TOK_DOLLAR_ID } TokenType;
 
 typedef struct {
     TokenType type;
@@ -37,7 +38,8 @@ typedef struct {
 typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_ASSIGN, NODE_PRINT, NODE_INPUT, NODE_IF, NODE_WHILE,
     NODE_FORTO, NODE_BLOCK, NODE_EXIT, NODE_EMPTY,
-    NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_FUNCTION } NodeType;
+    NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_FUNCTION,
+    NODE_TEMPLATE } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -58,6 +60,7 @@ typedef struct ASTNode {
         struct { struct ASTNode *body; } loop;
         struct { char *name; } include;
         struct { char *lib; char **args; int argc; } funcall;
+        struct { char *raw; } templ;
         struct { struct ASTNode **stmts; int count, cap; } block;
     } data;
 } ASTNode;
@@ -77,6 +80,9 @@ static ASTNode *parse_stmt(void);
 static ASTNode *parse_block(void);
 static Value eval_expr(ASTNode *n);
 static int exec_stmt(ASTNode *n);
+static double math_parse_expr(const char **p);
+static double math_parse_term(const char **p);
+static double math_parse_factor(const char **p);
 
 static void fatal(const char *fmt, ...) {
     error_occurred = 1;
@@ -217,6 +223,20 @@ static Token lex_scan(void) {
             return t;
         }
 
+        if (c == '`') {
+            lex_pos++;
+            int start = lex_pos;
+            while (lex_pos < lex_len && lex_src[lex_pos] != '`') {
+                if (lex_src[lex_pos] == '\n') lex_line++;
+                lex_pos++;
+            }
+            if (lex_pos >= lex_len) fatal("line %d: unterminated template", lex_line);
+            t.type = TOK_TEMPLATE;
+            t.val.str = sdupn(lex_src + start, lex_pos - start);
+            lex_pos++;
+            return t;
+        }
+
         if (isdigit(c)) {
             char *end;
             t.val.num = strtod(lex_src + lex_pos, &end);
@@ -291,6 +311,18 @@ static Token lex_scan(void) {
             case '|':
                 if (lex_pos < lex_len && lex_src[lex_pos] == '|') { lex_pos++; t.type = TOK_OR; return t; }
                 fatal("line %d: expected '||'", lex_line); return t;
+            case '$': {
+                if (lex_pos < lex_len && (isalpha(lex_src[lex_pos]) || lex_src[lex_pos] == '_')) {
+                    int start = lex_pos;
+                    while (lex_pos < lex_len && (isalnum(lex_src[lex_pos]) || lex_src[lex_pos] == '_')) lex_pos++;
+                    t.type = TOK_DOLLAR_ID;
+                    t.val.str = sdupn(lex_src + start, lex_pos - start);
+                    return t;
+                }
+                t.type = TOK_DOLLAR_ID;
+                t.val.str = sdup("");
+                return t;
+            }
             default:
                 fatal("line %d: unexpected character '%c' (%d)", lex_line, c, c); return t;
         }
@@ -419,6 +451,12 @@ static ASTNode *ast_function(const char *lib, char **args, int argc) {
     n->data.funcall.lib = sdup(lib);
     n->data.funcall.args = args;
     n->data.funcall.argc = argc;
+    return n;
+}
+
+static ASTNode *ast_templ(const char *raw) {
+    ASTNode *n = ast_alloc(NODE_TEMPLATE);
+    n->data.templ.raw = sdup(raw);
     return n;
 }
 
@@ -711,6 +749,11 @@ static ASTNode *parse_primary(void) {
         lex_next();
         return ast_str(s);
     }
+    if (lex_cur.type == TOK_TEMPLATE) {
+        char *r = sdup(lex_cur.val.str);
+        lex_next();
+        return ast_templ(r);
+    }
     if (lex_cur.type == TOK_FUNCTION) {
         lex_next();
         if (lex_cur.type != TOK_ID) fatal("line %d: function expects a library name", lex_cur.line);
@@ -718,13 +761,24 @@ static ASTNode *parse_primary(void) {
         lex_next();
         char **args = NULL;
         int argc = 0, cap = 0;
-        while (lex_cur.type == TOK_ID) {
+        while (lex_cur.type == TOK_ID || lex_cur.type == TOK_STR || lex_cur.type == TOK_NUM || lex_cur.type == TOK_TEMPLATE || lex_cur.type == TOK_DOLLAR_ID) {
             if (argc >= cap) {
                 cap = cap ? cap * 2 : 4;
                 args = realloc(args, sizeof(char*) * cap);
                 if (!args) fatal("out of memory");
             }
-            args[argc++] = sdup(lex_cur.val.str);
+            if (lex_cur.type == TOK_NUM) {
+                char tmp[64];
+                snprintf(tmp, sizeof(tmp), "%.10g", lex_cur.val.num);
+                args[argc++] = sdup(tmp);
+            } else if (lex_cur.type == TOK_DOLLAR_ID) {
+                char *prefixed = malloc(strlen(lex_cur.val.str) + 2);
+                prefixed[0] = '$';
+                strcpy(prefixed + 1, lex_cur.val.str);
+                args[argc++] = prefixed;
+            } else {
+                args[argc++] = sdup(lex_cur.val.str);
+            }
             lex_next();
         }
         return ast_function(lib, args, argc);
@@ -827,6 +881,15 @@ static ASTNode *parse_expr(void) {
     return parse_or();
 }
 
+static char *resolve_arg(char *arg) {
+    if (arg[0] == '$') {
+        Value v = var_get(arg + 1);
+        char *s = val_tostr(v);
+        return s;
+    }
+    return sdup(arg);
+}
+
 static Value eval_expr(ASTNode *n) {
     if (!n) return make_num(0);
     switch (n->type) {
@@ -834,6 +897,34 @@ static Value eval_expr(ASTNode *n) {
             return make_num(n->data.num);
         case NODE_STR:
             return make_str(n->data.str);
+        case NODE_TEMPLATE: {
+            char *raw = n->data.templ.raw;
+            char res[2048] = {0};
+            size_t ri = 0, pos = 0, len = strlen(raw);
+            while (pos < len && ri < sizeof(res) - 1) {
+                if (raw[pos] == '{') {
+                    pos++;
+                    size_t start = pos;
+                    while (pos < len && raw[pos] != '}') pos++;
+                    if (pos >= len) fatal("line %d: unclosed '{' in template", n->line);
+                    size_t vlen = pos - start;
+                    char vname[256];
+                    memcpy(vname, raw + start, vlen);
+                    vname[vlen] = 0;
+                    Value v = var_get(vname);
+                    char *vs = val_tostr(v);
+                    size_t sl = strlen(vs);
+                    if (ri + sl >= sizeof(res) - 1) sl = sizeof(res) - ri - 1;
+                    memcpy(res + ri, vs, sl); ri += sl;
+                    free(vs);
+                    pos++;
+                } else {
+                    res[ri++] = raw[pos++];
+                }
+            }
+            res[ri] = 0;
+            return make_str(res);
+        }
         case NODE_ID:
             return var_get(n->data.id);
         case NODE_UNARY: {
@@ -917,81 +1008,89 @@ static Value eval_expr(ASTNode *n) {
         }
         case NODE_FUNCTION: {
             char buf[256];
-            time_t t = time(NULL);
-            struct tm *tm = localtime(&t);
-
-            if (strcmp(n->data.funcall.lib, "date")) {
-                fatal("line %d: unknown library '%s'", n->line, n->data.funcall.lib);
-            }
-
             if (n->data.funcall.argc < 1) {
                 fatal("line %d: function expects a name", n->line);
             }
-
-            static int date_mode = 0;
             char *fn = n->data.funcall.args[0];
 
-            if (!strcmp(fn, "set")) {
-                if (n->data.funcall.argc > 1 && !strcmp(n->data.funcall.args[1], "format")) {
-                    if (n->data.funcall.argc < 3) fatal("line %d: set format expects a region", n->line);
-                    if (!strcmp(n->data.funcall.args[2], "US")) date_mode = 1;
-                    else if (!strcmp(n->data.funcall.args[2], "EU")) date_mode = 0;
-                    else fatal("line %d: unknown date format '%s'", n->line, n->data.funcall.args[2]);
+            if (!strcmp(n->data.funcall.lib, "date")) {
+                time_t t = time(NULL);
+                struct tm *tm = localtime(&t);
+                static int date_mode = 0;
+
+                if (!strcmp(fn, "set")) {
+                    if (n->data.funcall.argc > 1 && !strcmp(n->data.funcall.args[1], "format")) {
+                        if (n->data.funcall.argc < 3) fatal("line %d: set format expects a region", n->line);
+                        if (!strcmp(n->data.funcall.args[2], "US")) date_mode = 1;
+                        else if (!strcmp(n->data.funcall.args[2], "EU")) date_mode = 0;
+                        else fatal("line %d: unknown date format '%s'", n->line, n->data.funcall.args[2]);
+                    }
+                    return make_str("");
                 }
-                return make_str("");
-            }
 
-            char *fmt_min, *fmt_std, *fmt_stdp, *fmt_full, *fmt_fullns, *fmt_fullnd, *fmt_fp;
-            if (date_mode) {
-                fmt_min    = "%-m/%-d/%y";
-                fmt_std    = "%m/%d/%Y";
-                fmt_stdp   = "%m/%d/%Y %A";
-                fmt_full   = "%m/%d/%Y %A %H:%M:%S";
-                fmt_fullns = "%m/%d/%Y %A %H:%M";
-                fmt_fullnd = "%m/%d/%Y %H:%M:%S";
-                fmt_fp     = "%m/%d/%Y %A %H:%M:%S";
-            } else {
-                fmt_min    = "%-d.%-m.%y";
-                fmt_std    = "%d.%m.%Y";
-                fmt_stdp   = "%d.%m.%Y %A";
-                fmt_full   = "%d.%m.%Y %A %H:%M:%S";
-                fmt_fullns = "%d.%m.%Y %A %H:%M";
-                fmt_fullnd = "%d.%m.%Y %H:%M:%S";
-                fmt_fp     = "%d.%m.%Y %A %H:%M:%S";
-            }
-
-            if (!strcmp(fn, "minimal")) {
-                strftime(buf, sizeof(buf), fmt_min, tm);
-                return make_str(buf);
-            }
-            if (!strcmp(fn, "standart")) {
-                strftime(buf, sizeof(buf), fmt_std, tm);
-                return make_str(buf);
-            }
-            if (!strcmp(fn, "standartplus")) {
-                strftime(buf, sizeof(buf), fmt_stdp, tm);
-                return make_str(buf);
-            }
-            if (!strcmp(fn, "full")) {
-                if (n->data.funcall.argc > 1 && !strcmp(n->data.funcall.args[1], "noseconds")) {
-                    strftime(buf, sizeof(buf), fmt_fullns, tm);
-                } else if (n->data.funcall.argc > 1 && !strcmp(n->data.funcall.args[1], "noday")) {
-                    strftime(buf, sizeof(buf), fmt_fullnd, tm);
+                char *fmt_min, *fmt_std, *fmt_stdp, *fmt_full, *fmt_fullns, *fmt_fullnd, *fmt_fp;
+                if (date_mode) {
+                    fmt_min    = "%-m/%-d/%y"; fmt_std  = "%m/%d/%Y"; fmt_stdp = "%m/%d/%Y %A";
+                    fmt_full   = "%m/%d/%Y %A %H:%M:%S"; fmt_fullns = "%m/%d/%Y %A %H:%M";
+                    fmt_fullnd = "%m/%d/%Y %H:%M:%S"; fmt_fp = "%m/%d/%Y %A %H:%M:%S";
                 } else {
-                    strftime(buf, sizeof(buf), fmt_full, tm);
+                    fmt_min    = "%-d.%-m.%y"; fmt_std  = "%d.%m.%Y"; fmt_stdp = "%d.%m.%Y %A";
+                    fmt_full   = "%d.%m.%Y %A %H:%M:%S"; fmt_fullns = "%d.%m.%Y %A %H:%M";
+                    fmt_fullnd = "%d.%m.%Y %H:%M:%S"; fmt_fp = "%d.%m.%Y %A %H:%M:%S";
                 }
-                return make_str(buf);
-            }
-            if (!strcmp(fn, "fullplus")) {
-                struct timeval tv;
-                gettimeofday(&tv, NULL);
-                strftime(buf, sizeof(buf), fmt_fp, tm);
-                size_t blen = strlen(buf);
-                snprintf(buf + blen, sizeof(buf) - blen, ".%03ld", tv.tv_usec / 1000);
-                return make_str(buf);
+
+                if (!strcmp(fn, "minimal")) { strftime(buf, sizeof(buf), fmt_min, tm); return make_str(buf); }
+                if (!strcmp(fn, "standart")) { strftime(buf, sizeof(buf), fmt_std, tm); return make_str(buf); }
+                if (!strcmp(fn, "standartplus")) { strftime(buf, sizeof(buf), fmt_stdp, tm); return make_str(buf); }
+                if (!strcmp(fn, "full")) {
+                    if (n->data.funcall.argc > 1 && !strcmp(n->data.funcall.args[1], "noseconds"))
+                        strftime(buf, sizeof(buf), fmt_fullns, tm);
+                    else if (n->data.funcall.argc > 1 && !strcmp(n->data.funcall.args[1], "noday"))
+                        strftime(buf, sizeof(buf), fmt_fullnd, tm);
+                    else strftime(buf, sizeof(buf), fmt_full, tm);
+                    return make_str(buf);
+                }
+                if (!strcmp(fn, "fullplus")) {
+                    struct timeval tv; gettimeofday(&tv, NULL);
+                    strftime(buf, sizeof(buf), fmt_fp, tm);
+                    size_t blen = strlen(buf);
+                    snprintf(buf + blen, sizeof(buf) - blen, ".%03ld", tv.tv_usec / 1000);
+                    return make_str(buf);
+                }
+                fatal("line %d: unknown date function '%s'", n->line, fn);
             }
 
-            fatal("line %d: unknown function '%s' in %s", n->line, fn, n->data.funcall.lib);
+            if (!strcmp(n->data.funcall.lib, "math")) {
+                if (!strcmp(fn, "hasops")) {
+                    if (n->data.funcall.argc < 2)
+                        fatal("line %d: math hasops expects a string", n->line);
+                    char *arg = resolve_arg(n->data.funcall.args[1]);
+                    int found = 0;
+                    for (char *p = arg; *p; p++) {
+                        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '%') {
+                            found = 1; break;
+                        }
+                    }
+                    free(arg);
+                    return make_num(found);
+                }
+
+                if (!strcmp(fn, "eval")) {
+                    if (n->data.funcall.argc < 2)
+                        fatal("line %d: math eval expects a string expression", n->line);
+                    char *expr_str = resolve_arg(n->data.funcall.args[1]);
+                    const char *p = expr_str;
+                    double result = math_parse_expr(&p);
+                    while (*p == ' ') p++;
+                    if (*p) { free(expr_str); fatal("line %d: unexpected '%c' in math expression", n->line, *p); }
+                    free(expr_str);
+                    return make_num(result);
+                }
+
+                fatal("line %d: unknown math function '%s'", n->line, fn);
+            }
+
+            fatal("line %d: unknown library '%s'", n->line, n->data.funcall.lib);
             return make_num(0);
         }
         default:
@@ -1088,6 +1187,50 @@ static int check_has(ASTNode *lhs_expr, ASTNode *item, ASTNode **items, int nite
 
     free(ls);
     return result;
+}
+
+static double math_parse_factor(const char **p) {
+    while (**p == ' ') (*p)++;
+    if (**p == '(') {
+        (*p)++;
+        double v = math_parse_expr(p);
+        while (**p == ' ') (*p)++;
+        if (**p != ')') fatal("math: expected ')'");
+        (*p)++;
+        return v;
+    }
+    if (**p == '-') {
+        (*p)++;
+        return -math_parse_factor(p);
+    }
+    char *end;
+    double v = strtod(*p, &end);
+    if (end == *p) fatal("math: expected number");
+    *p = end;
+    return v;
+}
+
+static double math_parse_term(const char **p) {
+    double v = math_parse_factor(p);
+    while (1) {
+        while (**p == ' ') (*p)++;
+        if (**p == '*') { (*p)++; v *= math_parse_factor(p); }
+        else if (**p == '/') { (*p)++; double d = math_parse_factor(p); if (d == 0) fatal("math: division by zero"); v /= d; }
+        else if (**p == '%') { (*p)++; long d = (long)math_parse_factor(p); if (d == 0) fatal("math: modulo by zero"); v = (long)v % d; }
+        else break;
+    }
+    return v;
+}
+
+static double math_parse_expr(const char **p) {
+    double v = math_parse_term(p);
+    while (1) {
+        while (**p == ' ') (*p)++;
+        if (**p == '+') { (*p)++; v += math_parse_term(p); }
+        else if (**p == '-') { (*p)++; v -= math_parse_term(p); }
+        else break;
+    }
+    return v;
 }
 
 static int exec_stmt(ASTNode *n) {
