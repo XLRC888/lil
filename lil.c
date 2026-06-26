@@ -5,6 +5,8 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <setjmp.h>
+#include <time.h>
+#include <sys/time.h>
 
 #define VERSION "0.1.0"
 #define MAX_VARS 1024
@@ -15,7 +17,7 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_SLASH, TOK_MOD, TOK_EQ, TOK_NE, TOK_LT, TOK_GT, TOK_LE, TOK_GE, TOK_ASSIGN,
     TOK_LPAREN, TOK_RPAREN, TOK_LBRACE, TOK_RBRACE, TOK_COMMA,
     TOK_SEMI, TOK_NEWLINE, TOK_EOF, TOK_AND, TOK_OR, TOK_NOT,
-    TOK_LOOP, TOK_STOP } TokenType;
+    TOK_LOOP, TOK_STOP, TOK_INCLUDE, TOK_FUNCTION } TokenType;
 
 typedef struct {
     TokenType type;
@@ -33,7 +35,7 @@ typedef struct {
 typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_ASSIGN, NODE_PRINT, NODE_INPUT, NODE_IF, NODE_WHILE,
     NODE_FORTO, NODE_BLOCK, NODE_EXIT, NODE_EMPTY,
-    NODE_LOOP, NODE_STOP } NodeType;
+    NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_FUNCTION } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -51,6 +53,8 @@ typedef struct ASTNode {
         struct { struct ASTNode *cond, *body; } while_stmt;
         struct { char *var; struct ASTNode *start, *end, *body; } forto;
         struct { struct ASTNode *body; } loop;
+        struct { char *name; } include;
+        struct { char *lib; char **args; int argc; } funcall;
         struct { struct ASTNode **stmts; int count, cap; } block;
     } data;
 } ASTNode;
@@ -239,6 +243,8 @@ static Token lex_scan(void) {
             if (!strcmp(word, "not"))     { free(word); t.type = TOK_NOT; return t; }
             if (!strcmp(word, "loop"))    { free(word); t.type = TOK_LOOP; return t; }
             if (!strcmp(word, "stop"))    { free(word); t.type = TOK_STOP; return t; }
+            if (!strcmp(word, "include")) { free(word); t.type = TOK_INCLUDE; return t; }
+            if (!strcmp(word, "function")) { free(word); t.type = TOK_FUNCTION; return t; }
 
             t.type = TOK_ID;
             t.val.str = word;
@@ -386,6 +392,20 @@ static ASTNode *ast_loop(ASTNode *body) {
 
 static ASTNode *ast_stop(void) {
     return ast_alloc(NODE_STOP);
+}
+
+static ASTNode *ast_include(const char *name) {
+    ASTNode *n = ast_alloc(NODE_INCLUDE);
+    n->data.include.name = sdup(name);
+    return n;
+}
+
+static ASTNode *ast_function(const char *lib, char **args, int argc) {
+    ASTNode *n = ast_alloc(NODE_FUNCTION);
+    n->data.funcall.lib = sdup(lib);
+    n->data.funcall.args = args;
+    n->data.funcall.argc = argc;
+    return n;
 }
 
 static ASTNode *ast_block(void) {
@@ -561,6 +581,14 @@ static ASTNode *parse_stmt(void) {
         return ast_stop();
     }
 
+    if (lex_cur.type == TOK_INCLUDE) {
+        lex_next();
+        if (lex_cur.type != TOK_ID) fatal("line %d: include expects a library name", lex_cur.line);
+        char *name = sdup(lex_cur.val.str);
+        lex_next();
+        return ast_include(name);
+    }
+
     if (lex_cur.type == TOK_ID && lex_peek_next().type == TOK_ASSIGN) {
         char *name = sdup(lex_cur.val.str);
         lex_next();
@@ -583,6 +611,24 @@ static ASTNode *parse_primary(void) {
         char *s = sdup(lex_cur.val.str);
         lex_next();
         return ast_str(s);
+    }
+    if (lex_cur.type == TOK_FUNCTION) {
+        lex_next();
+        if (lex_cur.type != TOK_ID) fatal("line %d: function expects a library name", lex_cur.line);
+        char *lib = sdup(lex_cur.val.str);
+        lex_next();
+        char **args = NULL;
+        int argc = 0, cap = 0;
+        while (lex_cur.type == TOK_ID) {
+            if (argc >= cap) {
+                cap = cap ? cap * 2 : 4;
+                args = realloc(args, sizeof(char*) * cap);
+                if (!args) fatal("out of memory");
+            }
+            args[argc++] = sdup(lex_cur.val.str);
+            lex_next();
+        }
+        return ast_function(lib, args, argc);
     }
     if (lex_cur.type == TOK_ID) {
         char *name = sdup(lex_cur.val.str);
@@ -770,6 +816,55 @@ static Value eval_expr(ASTNode *n) {
             }
             return make_num(result);
         }
+        case NODE_FUNCTION: {
+            char buf[256];
+            time_t t = time(NULL);
+            struct tm *tm = localtime(&t);
+
+            if (strcmp(n->data.funcall.lib, "date")) {
+                fatal("line %d: unknown library '%s'", n->line, n->data.funcall.lib);
+            }
+
+            if (n->data.funcall.argc < 1) {
+                fatal("line %d: function expects a name", n->line);
+            }
+
+            char *fn = n->data.funcall.args[0];
+
+            if (!strcmp(fn, "minimal")) {
+                strftime(buf, sizeof(buf), "%-d.%-m.%y", tm);
+                return make_str(buf);
+            }
+            if (!strcmp(fn, "standart")) {
+                strftime(buf, sizeof(buf), "%d.%m.%Y", tm);
+                return make_str(buf);
+            }
+            if (!strcmp(fn, "standartplus")) {
+                strftime(buf, sizeof(buf), "%d.%m.%Y %A", tm);
+                return make_str(buf);
+            }
+            if (!strcmp(fn, "full")) {
+                if (n->data.funcall.argc > 1 && !strcmp(n->data.funcall.args[1], "noseconds")) {
+                    strftime(buf, sizeof(buf), "%d.%m.%Y %A %H:%M", tm);
+                } else if (n->data.funcall.argc > 1 && !strcmp(n->data.funcall.args[1], "noday")) {
+                    strftime(buf, sizeof(buf), "%d.%m.%Y %H:%M:%S", tm);
+                } else {
+                    strftime(buf, sizeof(buf), "%d.%m.%Y %A %H:%M:%S", tm);
+                }
+                return make_str(buf);
+            }
+            if (!strcmp(fn, "fullplus")) {
+                struct timeval tv;
+                gettimeofday(&tv, NULL);
+                strftime(buf, sizeof(buf), "%d.%m.%Y %A %H:%M:%S", tm);
+                size_t blen = strlen(buf);
+                snprintf(buf + blen, sizeof(buf) - blen, ".%03ld", tv.tv_usec / 1000);
+                return make_str(buf);
+            }
+
+            fatal("line %d: unknown function '%s' in %s", n->line, fn, n->data.funcall.lib);
+            return make_num(0);
+        }
         default:
             fatal("line %d: expression expected", n->line);
             return make_num(0);
@@ -873,6 +968,8 @@ static int exec_stmt(ASTNode *n) {
         }
         case NODE_STOP:
             return 2;
+        case NODE_INCLUDE:
+            return 0;
         case NODE_EXIT:
             return 1;
         default:
