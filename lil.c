@@ -998,10 +998,11 @@ static Value eval_expr(ASTNode *n) {
                     }
                 }
             } else {
-                double lv = val_tonum(l), rv = val_tonum(r);
+                int lv = (l.type == VAL_STR) ? (strlen(l.data.str) != 0) : (l.data.num != 0);
+                int rv = (r.type == VAL_STR) ? (strlen(r.data.str) != 0) : (r.data.num != 0);
                 switch (op) {
-                    case TOK_AND: result = (lv != 0 && rv != 0); break;
-                    case TOK_OR: result = (lv != 0 || rv != 0); break;
+                    case TOK_AND: result = (lv && rv); break;
+                    case TOK_OR: result = (lv || rv); break;
                     default: fatal("line %d: unknown operator", n->line);
                 }
             }

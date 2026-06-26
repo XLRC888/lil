@@ -1,0 +1,196 @@
+include math
+include date
+
+print "Manual Intellegence v1.0 (lil edition)"
+print "type 'help' for commands, 'exit' to quit"
+
+todos = ""
+game_state = 0
+pw = 0
+pl = 0
+g_target = 100
+g_attempts = 0
+
+loop {
+    input "> " raw
+
+    if game_state == 0 and (raw == "exit" or raw == "quit" or raw == "bye") {
+        print "Bot: Bye!"
+        stop
+    }
+
+    if game_state == 1 {
+        if raw == "quit" {
+            game_state = 0
+            print "Bot: Thanks for playing!"
+        } elif raw == "rock" or raw == "paper" or raw == "scissors" {
+            player = raw
+            bot = function math choice rock paper scissors
+            if player == bot {
+                print `Bot: I chose {bot}. Tie!`
+            } elif player == "rock" and bot == "scissors" or player == "paper" and bot == "rock" or player == "scissors" and bot == "paper" {
+                pw = pw + 1
+                print `Bot: I chose {bot}. You win! Score: {pw} - {pl}`
+            } else {
+                pl = pl + 1
+                print `Bot: I chose {bot}. I win! Score: {pw} - {pl}`
+            }
+            print "Bot: Play again? (rock/paper/scissors) or type 'quit'"
+        } else {
+            print "Bot: Choose Rock, Paper, or Scissors!"
+        }
+    } elif game_state == 2 {
+        if raw == "quit" {
+            print `Bot: The number was {g_target}.`
+            game_state = 0
+        } else {
+            gn = function math eval $raw
+            if gn != 0 or raw == "0" {
+                g_attempts = g_attempts + 1
+                if gn == g_target {
+                    print `Bot: Correct! {g_target} in {g_attempts} tries!`
+                    game_state = 0
+                } elif gn < g_target {
+                    print `Bot: Higher! (attempt {g_attempts})`
+                } else {
+                    print `Bot: Lower! (attempt {g_attempts})`
+                }
+            } else {
+                print "Bot: Enter a number!"
+            }
+        }
+    } else {
+        if raw == "help" or raw == "?" {
+            print "Bot: Commands: time, date, joke, flip, coin, dice"
+            print "  countdown, reverse, upper, lower, len, pal"
+            print "  fib, prime, factors, todo, rps, guess, 8ball"
+            print "  wyr, name, help, exit - or just chat!"
+        } elif raw == "time" or raw == "current time" {
+            t = function date full noday
+            print `Bot: Current time: {t}`
+        } elif raw == "date" or raw == "current date" {
+            d = function date standart
+            print `Bot: Current date: {d}`
+        } elif raw == "flip" or raw == "coin" {
+            r = function math choice Heads Tails
+            print `Bot: {r}!`
+        } elif raw == "8ball" or raw == "magic 8" {
+            r = function math choice "It is certain." "Without a doubt." "Yes definitely." "Ask again later." "Better not tell you now." "Don't count on it." "My reply is no." "Very doubtful."
+            print `Bot: {r}`
+        } elif raw == "hello" or raw == "hi" or raw == "hey" {
+            r = function math choice "Hello!" "Hey there!" "Hi!" "Howdy!" "Greetings!" "Hey!"
+            print `Bot: {r}`
+        } elif raw == "thanks" or raw == "thank you" or raw == "thx" {
+            r = function math choice "You're welcome!" "No problem!" "Anytime!" "Happy to help!"
+            print `Bot: {r}`
+        } elif raw == "rps" or raw == "rock paper scissors" {
+            game_state = 1
+            pw = 0
+            pl = 0
+            print "Bot: Rock Paper Scissors! Go!"
+        } elif raw == "guess" {
+            game_state = 2
+            g_target = function math randint 1 100
+            g_attempts = 0
+            print "Bot: Guess a number 1-100! Type 'quit' to stop."
+        } elif raw == "joke" {
+            r = function math choice "Why did the scarecrow win an award? Outstanding!" "Why don't scientists trust atoms? They make up everything!" "What do you call fake spaghetti? An impasta!" "Why did the math book look sad? Too many problems!" "Why did the computer get cold? Left its Windows open!" "What do you call a bear with no teeth? A gummy bear!"
+            print `Bot: {r}`
+        } elif raw == "dice" {
+            r = function math randint 1 6
+            print `Bot: You rolled a {r} (d6)`
+        } elif raw == "countdown" {
+            print "Bot: Counting down from 5..."
+            i = 5
+            while i > 0 {
+                print i
+                function math sleep 1
+                i = i - 1
+            }
+            print "Bot: Time's up!"
+        } elif raw == "todo" {
+            if todos == "" {
+                print "Bot: Empty list!"
+            } else {
+                print "Bot: Todos:"
+                print todos
+            }
+        } elif raw has "wyr" {
+            r = function math choice "Fight 100 duck-horses or 1 horse-duck?" "Fly or be invisible?" "Live in space or under the ocean?" "Unlimited pizza or unlimited tacos?" "Never sleep or never eat?" "Talk to animals or speak all languages?" "Time travel or teleport?"
+            print `Bot: Would you rather... {r}`
+        } elif raw == "name" {
+            r = function math choice CyberBot NeoBot PixelBot DataBot CodeBot SyntaxBot LogicBot MetaBot VectorBot
+            print `Bot: Generated: {r}`
+        } elif raw == "hello world" {
+            r = function math choice "Hello World! The classic!" "print('Hello World!')" "A classic greeting!" "Hello World indeed!"
+            print `Bot: {r}`
+        } elif raw has "reverse " {
+            txt = function string substr $raw 8 1000
+            rev = function string reverse $txt
+            print `Bot: {rev}`
+        } elif raw has "upper " {
+            txt = function string substr $raw 6 1000
+            up = function string upper $txt
+            print `Bot: {up}`
+        } elif raw has "lower " {
+            txt = function string substr $raw 6 1000
+            lo = function string lower $txt
+            print `Bot: {lo}`
+        } elif raw has "len " {
+            txt = function string substr $raw 4 1000
+            ln = function string len $txt
+            print `Bot: {ln} characters`
+        } elif raw has "pal " {
+            txt = function string substr $raw 4 1000
+            lotxt = function string lower $txt
+            rev = function string reverse $lotxt
+            if lotxt == rev { print `Bot: Yes, '{txt}' is a palindrome!` } else { print `Bot: No.` }
+        } elif raw has "fib " {
+            n = function math eval $raw
+            if n > 20 { n = 20 }
+            if n < 1 { n = 1 }
+            a = 0
+            b = 1
+            res = ""
+            for i = 1 to n {
+                res = res + a + " "
+                c = a + b
+                a = b
+                b = c
+            }
+            print `Bot: {res}`
+        } elif raw has "prime " {
+            n = function math eval $raw
+            if n < 2 {
+                print "Bot: No"
+            } else {
+                is_prime = 1
+                i = 2
+                while i * i <= n {
+                    if n % i == 0 { is_prime = 0 }
+                    i = i + 1
+                }
+                if is_prime { print "Bot: Yes" } else { print "Bot: No" }
+            }
+        } elif raw has "factors " {
+            n = function math eval $raw
+            res = ""
+            i = 1
+            while i <= n {
+                if n % i == 0 { res = res + i + " " }
+                i = i + 1
+            }
+            print `Bot: {res}`
+        } elif raw has "todo add " {
+            task = function string substr $raw 9 1000
+            if todos == "" { todos = task } else { todos = todos + ", " + task }
+            print `Bot: Added '{task}'!`
+        } elif raw == "todo clear" {
+            todos = ""
+            print "Bot: Cleared all tasks!"
+        } else {
+            r = function math choice "I'm not sure how to respond." "Hmm, I didn't understand that." "Could you rephrase that?" "My creator hasn't taught me that yet."
+            print `Bot: {r}`
+        }
+    }
+}
