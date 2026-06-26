@@ -1,0 +1,51 @@
+include math
+include date
+
+print "=== random/randint ==="
+for i = 1 to 5 {
+    r = function math random
+    print `random: {r}`
+}
+for i = 1 to 3 {
+    d = function math randint 1 6
+    print `dice: {d}`
+}
+
+print "=== choice ==="
+for i = 1 to 3 {
+    c = function math choice heads tails
+    print `coin: {c}`
+}
+
+print "=== string library ==="
+s = "Hello World"
+u = function string upper $s
+l = function string lower $s
+rv = function string reverse $s
+ln = function string len $s
+print `upper: {u}`
+print `lower: {l}`
+print `reverse: {rv}`
+print `len: {ln}`
+
+print "=== substr ==="
+sub1 = function string substr $s 0 5
+sub2 = function string substr $s 6 11
+print `substr 0-5: {sub1}`
+print `substr 6-11: {sub2}`
+
+print "=== replace ==="
+t = "the quick brown fox"
+r1 = function string replace $t "fox" "dog"
+print `replace: {r1}`
+
+print "=== repeat ==="
+rpt = function string repeat "ha" 3
+print `repeat: {rpt}`
+
+print "=== sleep ==="
+print "sleeping 1 second..."
+function math sleep 1
+print "done"
+
+print "=== all feature tests passed ==="

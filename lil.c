@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 199309L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1062,22 +1063,17 @@ static Value eval_expr(ASTNode *n) {
 
             if (!strcmp(n->data.funcall.lib, "math")) {
                 if (!strcmp(fn, "hasops")) {
-                    if (n->data.funcall.argc < 2)
-                        fatal("line %d: math hasops expects a string", n->line);
+                    if (n->data.funcall.argc < 2) fatal("line %d: math hasops expects a string", n->line);
                     char *arg = resolve_arg(n->data.funcall.args[1]);
                     int found = 0;
                     for (char *p = arg; *p; p++) {
-                        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '%') {
-                            found = 1; break;
-                        }
+                        if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '%') { found = 1; break; }
                     }
                     free(arg);
                     return make_num(found);
                 }
-
                 if (!strcmp(fn, "eval")) {
-                    if (n->data.funcall.argc < 2)
-                        fatal("line %d: math eval expects a string expression", n->line);
+                    if (n->data.funcall.argc < 2) fatal("line %d: math eval expects a string expression", n->line);
                     char *expr_str = resolve_arg(n->data.funcall.args[1]);
                     const char *p = expr_str;
                     double result = math_parse_expr(&p);
@@ -1086,8 +1082,128 @@ static Value eval_expr(ASTNode *n) {
                     free(expr_str);
                     return make_num(result);
                 }
-
+                if (!strcmp(fn, "random")) {
+                    static int seeded = 0;
+                    if (!seeded) { srand(time(NULL)); seeded = 1; }
+                    return make_num((double)rand() / RAND_MAX);
+                }
+                if (!strcmp(fn, "randint")) {
+                    static int seeded = 0;
+                    if (!seeded) { srand(time(NULL)); seeded = 1; }
+                    if (n->data.funcall.argc < 3) fatal("line %d: randint expects min and max", n->line);
+                    int lo = (int)strtod(n->data.funcall.args[1], NULL);
+                    int hi = (int)strtod(n->data.funcall.args[2], NULL);
+                    if (lo > hi) { int t = lo; lo = hi; hi = t; }
+                    return make_num(lo + rand() % (hi - lo + 1));
+                }
+                if (!strcmp(fn, "choice")) {
+                    static int seeded = 0;
+                    if (!seeded) { srand(time(NULL)); seeded = 1; }
+                    if (n->data.funcall.argc < 2) fatal("line %d: choice expects at least one option", n->line);
+                    int idx = rand() % (n->data.funcall.argc - 1) + 1;
+                    return make_str(n->data.funcall.args[idx]);
+                }
+                if (!strcmp(fn, "sleep")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: sleep expects seconds", n->line);
+                    double secs = strtod(n->data.funcall.args[1], NULL);
+                    if (secs > 0) {
+                        struct timespec ts;
+                        ts.tv_sec = (time_t)secs;
+                        ts.tv_nsec = (long)((secs - (time_t)secs) * 1e9);
+                        nanosleep(&ts, NULL);
+                    }
+                    return make_num(0);
+                }
                 fatal("line %d: unknown math function '%s'", n->line, fn);
+            }
+
+            if (!strcmp(n->data.funcall.lib, "string")) {
+                if (!strcmp(fn, "upper")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: string upper expects a string", n->line);
+                    char *arg = resolve_arg(n->data.funcall.args[1]);
+                    for (char *p = arg; *p; p++) *p = toupper((unsigned char)*p);
+                    Value v = make_str(arg);
+                    free(arg);
+                    return v;
+                }
+                if (!strcmp(fn, "lower")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: string lower expects a string", n->line);
+                    char *arg = resolve_arg(n->data.funcall.args[1]);
+                    for (char *p = arg; *p; p++) *p = tolower((unsigned char)*p);
+                    Value v = make_str(arg);
+                    free(arg);
+                    return v;
+                }
+                if (!strcmp(fn, "reverse")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: string reverse expects a string", n->line);
+                    char *arg = resolve_arg(n->data.funcall.args[1]);
+                    size_t len = strlen(arg);
+                    for (size_t i = 0; i < len / 2; i++) {
+                        char t = arg[i]; arg[i] = arg[len-1-i]; arg[len-1-i] = t;
+                    }
+                    Value v = make_str(arg);
+                    free(arg);
+                    return v;
+                }
+                if (!strcmp(fn, "len")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: string len expects a string", n->line);
+                    char *arg = resolve_arg(n->data.funcall.args[1]);
+                    double l = (double)strlen(arg);
+                    free(arg);
+                    return make_num(l);
+                }
+                if (!strcmp(fn, "substr")) {
+                    if (n->data.funcall.argc < 4) fatal("line %d: string substr expects string, start, end", n->line);
+                    char *arg = resolve_arg(n->data.funcall.args[1]);
+                    int start = (int)strtod(n->data.funcall.args[2], NULL);
+                    int end = (int)strtod(n->data.funcall.args[3], NULL);
+                    size_t len = strlen(arg);
+                    if (start < 0) start = 0;
+                    if (end > (int)len) end = (int)len;
+                    if (start >= end) { free(arg); return make_str(""); }
+                    char *res = sdupn(arg + start, end - start);
+                    free(arg);
+                    return make_str(res);
+                }
+                if (!strcmp(fn, "replace")) {
+                    if (n->data.funcall.argc < 4) fatal("line %d: string replace expects string, old, new", n->line);
+                    char *arg = resolve_arg(n->data.funcall.args[1]);
+                    char *old = resolve_arg(n->data.funcall.args[2]);
+                    char *new = resolve_arg(n->data.funcall.args[3]);
+                    size_t olen = strlen(old), nlen = strlen(new);
+                    char buf[4096] = {0};
+                    size_t ri = 0, pos = 0, len = strlen(arg);
+                    while (pos < len && ri < sizeof(buf) - 1) {
+                        if (pos + olen <= len && memcmp(arg + pos, old, olen) == 0) {
+                            size_t av = sizeof(buf) - ri - 1;
+                            size_t cp = nlen < av ? nlen : av;
+                            memcpy(buf + ri, new, cp); ri += cp;
+                            pos += olen;
+                        } else {
+                            buf[ri++] = arg[pos++];
+                        }
+                    }
+                    buf[ri] = 0;
+                    free(arg); free(old); free(new);
+                    return make_str(buf);
+                }
+                if (!strcmp(fn, "repeat")) {
+                    if (n->data.funcall.argc < 3) fatal("line %d: string repeat expects string and count", n->line);
+                    char *arg = resolve_arg(n->data.funcall.args[1]);
+                    int count = (int)strtod(n->data.funcall.args[2], NULL);
+                    if (count < 0) count = 0;
+                    if (count > 1000) count = 1000;
+                    size_t slen = strlen(arg);
+                    char *res = malloc(slen * count + 1);
+                    if (!res) fatal("out of memory");
+                    res[0] = 0;
+                    for (int i = 0; i < count; i++) strcat(res, arg);
+                    free(arg);
+                    Value v = make_str(res);
+                    free(res);
+                    return v;
+                }
+                fatal("line %d: unknown string function '%s'", n->line, fn);
             }
 
             fatal("line %d: unknown library '%s'", n->line, n->data.funcall.lib);
