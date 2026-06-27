@@ -1,0 +1,1 @@
+if "hello" has ["h","e","l"] { print "all" } else { print "not all" }

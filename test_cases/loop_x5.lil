@@ -1,0 +1,6 @@
+x = 0
+loop {
+x = x + 1
+print x
+if x == 5 { stop }
+}

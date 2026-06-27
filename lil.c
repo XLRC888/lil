@@ -206,18 +206,20 @@ static Token lex_scan(void) {
         if (c == '\n') { lex_pos++; lex_line++; t.type = TOK_NEWLINE; return t; }
 
         if (c == '#') {
-            while (lex_pos < lex_len && lex_src[lex_pos] != '\n') lex_pos++;
+            while (lex_pos < lex_len && lex_src[lex_pos] != '\n' && lex_src[lex_pos] != '\r') lex_pos++;
             continue;
         }
 
         if (c == '"') {
             lex_pos++;
             int start = lex_pos;
+            int sline = lex_line;
             while (lex_pos < lex_len && lex_src[lex_pos] != '"') {
+                if (lex_src[lex_pos] == '\\' && lex_pos + 1 < lex_len) { lex_pos += 2; continue; }
                 if (lex_src[lex_pos] == '\n') lex_line++;
                 lex_pos++;
             }
-            if (lex_pos >= lex_len) fatal("line %d: unterminated string", lex_line);
+            if (lex_pos >= lex_len) fatal("line %d: unterminated string", sline);
             t.type = TOK_STR;
             t.val.str = sdupn(lex_src + start, lex_pos - start);
             lex_pos++;
@@ -227,11 +229,13 @@ static Token lex_scan(void) {
         if (c == '`') {
             lex_pos++;
             int start = lex_pos;
+            int sline = lex_line;
             while (lex_pos < lex_len && lex_src[lex_pos] != '`') {
+                if (lex_src[lex_pos] == '\\' && lex_pos + 1 < lex_len) { lex_pos += 2; continue; }
                 if (lex_src[lex_pos] == '\n') lex_line++;
                 lex_pos++;
             }
-            if (lex_pos >= lex_len) fatal("line %d: unterminated template", lex_line);
+            if (lex_pos >= lex_len) fatal("line %d: unterminated template", sline);
             t.type = TOK_TEMPLATE;
             t.val.str = sdupn(lex_src + start, lex_pos - start);
             lex_pos++;
@@ -240,6 +244,8 @@ static Token lex_scan(void) {
 
         if (isdigit(c)) {
             char *end;
+            if (c == '0' && lex_pos + 1 < lex_len && (lex_src[lex_pos+1] == 'x' || lex_src[lex_pos+1] == 'X'))
+                fatal("line %d: hex literals not supported, use decimal", lex_line);
             t.val.num = strtod(lex_src + lex_pos, &end);
             if (end == lex_src + lex_pos) { lex_pos++; continue; }
             t.type = TOK_NUM;
@@ -320,8 +326,7 @@ static Token lex_scan(void) {
                     t.val.str = sdupn(lex_src + start, lex_pos - start);
                     return t;
                 }
-                t.type = TOK_DOLLAR_ID;
-                t.val.str = sdup("");
+                fatal("line %d: '$' must be followed by a variable name", lex_line);
                 return t;
             }
             default:
@@ -774,6 +779,7 @@ static ASTNode *parse_primary(void) {
                 args[argc++] = sdup(tmp);
             } else if (lex_cur.type == TOK_DOLLAR_ID) {
                 char *prefixed = malloc(strlen(lex_cur.val.str) + 2);
+                if (!prefixed) fatal("out of memory");
                 prefixed[0] = '$';
                 strcpy(prefixed + 1, lex_cur.val.str);
                 args[argc++] = prefixed;
@@ -900,22 +906,35 @@ static Value eval_expr(ASTNode *n) {
             return make_str(n->data.str);
         case NODE_TEMPLATE: {
             char *raw = n->data.templ.raw;
-            char res[2048] = {0};
-            size_t ri = 0, pos = 0, len = strlen(raw);
-            while (pos < len && ri < sizeof(res) - 1) {
+            char *res = malloc(2048);
+            size_t res_cap = 2048, ri = 0, pos = 0, len = strlen(raw);
+            if (!res) fatal("out of memory");
+            while (pos < len) {
+                if (ri + 256 >= res_cap) {
+                    res_cap *= 2; res = realloc(res, res_cap);
+                    if (!res) fatal("out of memory");
+                }
                 if (raw[pos] == '{') {
                     pos++;
                     size_t start = pos;
-                    while (pos < len && raw[pos] != '}') pos++;
+                    while (pos < len && raw[pos] != '}') {
+                        if (raw[pos] == '{') fatal("line %d: nested '{' in template", n->line);
+                        pos++;
+                    }
                     if (pos >= len) fatal("line %d: unclosed '{' in template", n->line);
                     size_t vlen = pos - start;
+                    if (vlen == 0) fatal("line %d: empty '{}' in template", n->line);
                     char vname[256];
+                    if (vlen >= 256) vlen = 255;
                     memcpy(vname, raw + start, vlen);
                     vname[vlen] = 0;
                     Value v = var_get(vname);
                     char *vs = val_tostr(v);
                     size_t sl = strlen(vs);
-                    if (ri + sl >= sizeof(res) - 1) sl = sizeof(res) - ri - 1;
+                    while (ri + sl + 1 >= res_cap) {
+                        res_cap *= 2; res = realloc(res, res_cap);
+                        if (!res) fatal("out of memory");
+                    }
                     memcpy(res + ri, vs, sl); ri += sl;
                     free(vs);
                     pos++;
@@ -924,7 +943,9 @@ static Value eval_expr(ASTNode *n) {
                 }
             }
             res[ri] = 0;
-            return make_str(res);
+            Value tv = make_str(res);
+            free(res);
+            return tv;
         }
         case NODE_ID:
             return var_get(n->data.id);
@@ -954,7 +975,9 @@ static Value eval_expr(ASTNode *n) {
                     strcpy(res, ls);
                     strcat(res, rs);
                     free(ls); free(rs);
-                    return make_str(res);
+                    Value concatv = make_str(res);
+                    free(res);
+                    return concatv;
                 }
                 return make_num(l.data.num + r.data.num);
             }
@@ -1083,35 +1106,33 @@ static Value eval_expr(ASTNode *n) {
                     free(expr_str);
                     return make_num(result);
                 }
+                { static int rng_seeded; if (!rng_seeded) { srand(time(NULL)); rng_seeded = 1; } }
                 if (!strcmp(fn, "random")) {
-                    static int seeded = 0;
-                    if (!seeded) { srand(time(NULL)); seeded = 1; }
                     return make_num((double)rand() / RAND_MAX);
                 }
                 if (!strcmp(fn, "randint")) {
-                    static int seeded = 0;
-                    if (!seeded) { srand(time(NULL)); seeded = 1; }
                     if (n->data.funcall.argc < 3) fatal("line %d: randint expects min and max", n->line);
-                    int lo = (int)strtod(n->data.funcall.args[1], NULL);
-                    int hi = (int)strtod(n->data.funcall.args[2], NULL);
+                    char *r1 = resolve_arg(n->data.funcall.args[1]);
+                    char *r2 = resolve_arg(n->data.funcall.args[2]);
+                    int lo = (int)strtod(r1, NULL); free(r1);
+                    int hi = (int)strtod(r2, NULL); free(r2);
                     if (lo > hi) { int t = lo; lo = hi; hi = t; }
                     return make_num(lo + rand() % (hi - lo + 1));
                 }
                 if (!strcmp(fn, "choice")) {
-                    static int seeded = 0;
-                    if (!seeded) { srand(time(NULL)); seeded = 1; }
                     if (n->data.funcall.argc < 2) fatal("line %d: choice expects at least one option", n->line);
                     int idx = rand() % (n->data.funcall.argc - 1) + 1;
                     return make_str(n->data.funcall.args[idx]);
                 }
                 if (!strcmp(fn, "sleep")) {
                     if (n->data.funcall.argc < 2) fatal("line %d: sleep expects seconds", n->line);
-                    double secs = strtod(n->data.funcall.args[1], NULL);
+                    char *rs = resolve_arg(n->data.funcall.args[1]);
+                    double secs = strtod(rs, NULL); free(rs);
                     if (secs > 0) {
                         struct timespec ts;
                         ts.tv_sec = (time_t)secs;
                         ts.tv_nsec = (long)((secs - (time_t)secs) * 1e9);
-                        nanosleep(&ts, NULL);
+                        while (nanosleep(&ts, &ts) == -1 && errno == EINTR) {}
                     }
                     return make_num(0);
                 }
@@ -1135,7 +1156,7 @@ static Value eval_expr(ASTNode *n) {
                     char *arg = resolve_arg(n->data.funcall.args[1]);
                     long cnt = (long)strtod(arg, NULL); free(arg);
                     if (cnt < 1) return make_str("");
-                    if (cnt > 100) cnt = 100;
+                    if (cnt > 92) cnt = 92;
                     char buf[4096] = {0}; size_t pos = 0;
                     long a = 0, b = 1;
                     for (long i = 0; i < cnt; i++) {
@@ -1152,7 +1173,7 @@ static Value eval_expr(ASTNode *n) {
                     long num = (long)strtod(arg, NULL); free(arg);
                     if (num < 2) return make_num(0);
                     int prime = 1;
-                    for (long i = 2; i * i <= num; i++) {
+                    for (long i = 2; i <= num / i; i++) {
                         if (num % i == 0) { prime = 0; break; }
                     }
                     return make_num(prime);
@@ -1198,15 +1219,19 @@ static Value eval_expr(ASTNode *n) {
                 if (!strcmp(fn, "substr")) {
                     if (n->data.funcall.argc < 4) fatal("line %d: string substr expects string, start, end", n->line);
                     char *arg = resolve_arg(n->data.funcall.args[1]);
-                    int start = (int)strtod(n->data.funcall.args[2], NULL);
-                    int end = (int)strtod(n->data.funcall.args[3], NULL);
+                    char *rs = resolve_arg(n->data.funcall.args[2]);
+                    int start = (int)strtod(rs, NULL); free(rs);
+                    rs = resolve_arg(n->data.funcall.args[3]);
+                    int end = (int)strtod(rs, NULL); free(rs);
                     size_t len = strlen(arg);
                     if (start < 0) start = 0;
                     if (end > (int)len) end = (int)len;
                     if (start >= end) { free(arg); return make_str(""); }
-                    char *res = sdupn(arg + start, end - start);
+                    char *ress = sdupn(arg + start, end - start);
                     free(arg);
-                    return make_str(res);
+                    Value sv = make_str(ress);
+                    free(ress);
+                    return sv;
                 }
                 if (!strcmp(fn, "replace")) {
                     if (n->data.funcall.argc < 4) fatal("line %d: string replace expects string, old, new", n->line);
@@ -1214,9 +1239,17 @@ static Value eval_expr(ASTNode *n) {
                     char *old = resolve_arg(n->data.funcall.args[2]);
                     char *new = resolve_arg(n->data.funcall.args[3]);
                     size_t olen = strlen(old), nlen = strlen(new);
-                    char buf[4096] = {0};
+                    if (olen == 0) { Value rv = make_str(arg); free(arg); free(old); free(new); return rv; }
+                    size_t blen = strlen(arg) + 1;
+                    if (nlen > olen) blen += (strlen(arg) / olen) * (nlen - olen) + 1;
+                    char *buf = malloc(blen > 4096 ? blen : 4096);
+                    if (!buf) fatal("out of memory");
                     size_t ri = 0, pos = 0, len = strlen(arg);
-                    while (pos < len && ri < sizeof(buf) - 1) {
+                    while (pos < len) {
+                        if (ri + nlen + 1 >= blen) {
+                            blen *= 2; buf = realloc(buf, blen);
+                            if (!buf) fatal("out of memory");
+                        }
                         if (pos + olen <= len && memcmp(arg + pos, old, olen) == 0) {
                             size_t av = sizeof(buf) - ri - 1;
                             size_t cp = nlen < av ? nlen : av;
@@ -1228,15 +1261,19 @@ static Value eval_expr(ASTNode *n) {
                     }
                     buf[ri] = 0;
                     free(arg); free(old); free(new);
-                    return make_str(buf);
+                    Value repv = make_str(buf);
+                    free(buf);
+                    return repv;
                 }
                 if (!strcmp(fn, "repeat")) {
                     if (n->data.funcall.argc < 3) fatal("line %d: string repeat expects string and count", n->line);
                     char *arg = resolve_arg(n->data.funcall.args[1]);
-                    int count = (int)strtod(n->data.funcall.args[2], NULL);
+                    char *rc = resolve_arg(n->data.funcall.args[2]);
+                    int count = (int)strtod(rc, NULL); free(rc);
                     if (count < 0) count = 0;
                     if (count > 1000) count = 1000;
                     size_t slen = strlen(arg);
+                    if (slen > 0 && (size_t)count > 1000000 / slen) count = (int)(1000000 / slen);
                     char *res = malloc(slen * count + 1);
                     if (!res) fatal("out of memory");
                     res[0] = 0;
@@ -1423,9 +1460,10 @@ static int exec_stmt(ASTNode *n) {
                 return 0;
             }
             size_t len = strlen(buf);
-            if (len > 0 && buf[len-1] == '\n') buf[len-1] = 0;
+            while (len > 0 && (buf[len-1] == '\n' || buf[len-1] == '\r' || buf[len-1] == ' ' || buf[len-1] == '\t')) buf[--len] = 0;
             char *end;
             double d = strtod(buf, &end);
+            while (*end == ' ' || *end == '\t') end++;
             if (*end == 0) {
                 var_set(n->data.input.name, make_num(d));
             } else {
@@ -1516,9 +1554,10 @@ static void run_file(const char *path) {
     rewind(f);
     char *src = malloc(sz + 1);
     if (!src) { fclose(f); fprintf(stderr, "out of memory\n"); return; }
-    fread(src, 1, sz, f);
+    long got = fread(src, 1, sz, f);
     fclose(f);
-    src[sz] = 0;
+    if (got < sz) fprintf(stderr, "warning: short read from '%s'\n", path);
+    src[got] = 0;
 
     if (setjmp(error_jmp)) return;
 
@@ -1528,7 +1567,7 @@ static void run_file(const char *path) {
     ASTNode *prog = parse_program();
     free(src);
 
-    exec_stmt(prog);
+    if (exec_stmt(prog) == 1) return;
 }
 
 static void repl(void) {
@@ -1553,7 +1592,7 @@ static void repl(void) {
             ASTNode *s = parse_stmt();
             if (s->type != NODE_EMPTY) {
                 int r = exec_stmt(s);
-                if (r) return;
+                if (r == 1) return;
             }
             if (lex_cur.type == TOK_NEWLINE) lex_next();
         }
