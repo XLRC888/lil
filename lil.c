@@ -40,7 +40,7 @@ typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_ASSIGN, NODE_PRINT, NODE_INPUT, NODE_IF, NODE_WHILE,
     NODE_FORTO, NODE_BLOCK, NODE_EXIT, NODE_EMPTY,
     NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_FUNCTION,
-    NODE_TEMPLATE } NodeType;
+    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -59,6 +59,8 @@ typedef struct ASTNode {
         struct { struct ASTNode *cond, *body; } while_stmt;
         struct { char *var; struct ASTNode *start, *end, *body; } forto;
         struct { struct ASTNode *body; } loop;
+        struct { char *name; struct ASTNode *body; } func_def;
+        struct { char *name; } func_call;
         struct { char *name; } include;
         struct { char *lib; char **args; int argc; } funcall;
         struct { char *raw; } templ;
@@ -70,6 +72,15 @@ typedef struct {
     char *name;
     Value val;
 } Var;
+
+#define MAX_FUNCS 256
+typedef struct {
+    char *name;
+    struct ASTNode *body;
+} FuncDef;
+
+static FuncDef funcs[MAX_FUNCS];
+static int func_count;
 
 static jmp_buf error_jmp;
 static int error_occurred;
@@ -466,6 +477,19 @@ static ASTNode *ast_templ(const char *raw) {
     return n;
 }
 
+static ASTNode *ast_func_def(const char *name, ASTNode *body) {
+    ASTNode *n = ast_alloc(NODE_FUNC_DEF);
+    n->data.func_def.name = sdup(name);
+    n->data.func_def.body = body;
+    return n;
+}
+
+static ASTNode *ast_func_call(const char *name) {
+    ASTNode *n = ast_alloc(NODE_FUNC_CALL);
+    n->data.func_call.name = sdup(name);
+    return n;
+}
+
 static ASTNode *ast_block(void) {
     ASTNode *n = ast_alloc(NODE_BLOCK);
     n->data.block.stmts = safe_alloc(sizeof(ASTNode*) * 16);
@@ -732,6 +756,19 @@ static ASTNode *parse_stmt(void) {
         return ast_include(name);
     }
 
+    if (lex_cur.type == TOK_DOLLAR_ID) {
+        char *fname = sdup(lex_cur.val.str);
+        lex_next();
+        if (lex_cur.type != TOK_LPAREN) fatal("line %d: expected '(' after function name", lex_cur.line);
+        lex_next();
+        if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
+        lex_next();
+        if (lex_cur.type == TOK_NEWLINE) lex_next();
+        if (lex_cur.type != TOK_LBRACE) fatal("line %d: expected '{' after function definition", lex_cur.line);
+        ASTNode *body = parse_block();
+        return ast_func_def(fname, body);
+    }
+
     if (lex_cur.type == TOK_ID && lex_peek_next().type == TOK_ASSIGN) {
         char *name = sdup(lex_cur.val.str);
         lex_next();
@@ -791,6 +828,14 @@ static ASTNode *parse_primary(void) {
         return ast_function(lib, args, argc);
     }
     if (lex_cur.type == TOK_ID) {
+        if (lex_peek_next().type == TOK_LPAREN) {
+            char *fname = sdup(lex_cur.val.str);
+            lex_next();
+            lex_next();
+            if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')' after function call", lex_cur.line);
+            lex_next();
+            return ast_func_call(fname);
+        }
         char *name = sdup(lex_cur.val.str);
         lex_next();
         return ast_id(name);
@@ -946,6 +991,16 @@ static Value eval_expr(ASTNode *n) {
             Value tv = make_str(res);
             free(res);
             return tv;
+        }
+        case NODE_FUNC_CALL: {
+            for (int i = 0; i < func_count; i++) {
+                if (!strcmp(funcs[i].name, n->data.func_call.name)) {
+                    exec_stmt(funcs[i].body);
+                    return make_num(0);
+                }
+            }
+            fatal("line %d: function '%s' not defined", n->line, n->data.func_call.name);
+            return make_num(0);
         }
         case NODE_ID:
             return var_get(n->data.id);
@@ -1538,6 +1593,18 @@ static int exec_stmt(ASTNode *n) {
             return 2;
         case NODE_INCLUDE:
             return 0;
+        case NODE_FUNC_DEF: {
+            for (int i = 0; i < func_count; i++) {
+                if (!strcmp(funcs[i].name, n->data.func_def.name)) {
+                    fatal("line %d: function '%s' already defined", n->line, n->data.func_def.name);
+                }
+            }
+            if (func_count >= MAX_FUNCS) fatal("line %d: too many function definitions", n->line);
+            funcs[func_count].name = sdup(n->data.func_def.name);
+            funcs[func_count].body = n->data.func_def.body;
+            func_count++;
+            return 0;
+        }
         case NODE_EXIT:
             return 1;
         default:
