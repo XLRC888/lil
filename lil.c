@@ -756,6 +756,13 @@ static ASTNode *parse_stmt(void) {
         return ast_include(name);
     }
 
+    if (lex_cur.type == TOK_MOD && lex_peek_next().type == TOK_ID) {
+        lex_next();
+        char *vname = sdup(lex_cur.val.str);
+        lex_next();
+        return ast_assign(vname, ast_str(""));
+    }
+
     if (lex_cur.type == TOK_DOLLAR_ID) {
         char *fname = sdup(lex_cur.val.str);
         lex_next();
