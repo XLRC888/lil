@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-603db682.js";
+            window.path_to_searchindex_js = "searchindex-f7750c4d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-200542aa.js"></script>
@@ -690,7 +690,7 @@ if text has word "world" {
 <p>If your script uses any of these features, compilation will fail.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="c-extensions"><a class="header" href="#c-extensions">C Extensions</a></h1>
-<p>lil provides two operators that give you direct access to memory. These only work in compiled mode.</p>
+<p>lil provides two operators that give you direct access to memory. These only work when compiling with <code>lil -c</code>. Running them with the interpreter produces an error.</p>
 <h2 id="address-of-"><a class="header" href="#address-of-">Address-of (@)</a></h2>
 <p>The <code>@</code> operator returns the memory address of a variable as a number:</p>
 <pre><code class="language-lil">x = 42
@@ -705,7 +705,7 @@ value = ^addr
 print value    # prints 42
 </code></pre>
 <p>These are useful for low-level programming and interfacing with hardware at specific memory addresses (MMIO).</p>
-<p>In interpreted mode, both operators produce a compile error.</p>
+<p>In the interpreter (<code>lil file.lil</code>), both operators produce an error.</p>
 
                     </main>
 
