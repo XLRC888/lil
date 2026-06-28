@@ -31,4 +31,9 @@ files starting with `[compiled]` can only be compiled, not interpreted.
 | primes 5k  | 0.13s   | 0.05s    | 0.005s    | 0.004s |
 | strcat 1M  | 0.14s   | 0.14s    | 0.13s     | 0.01s  |
 
+## documentation
+
+the lil book is available at https://xlrc888.github.io/lil/
+source is in the book/ directory.
+
 lil vm beats python on compute. compiled output matches C on simple loops.
