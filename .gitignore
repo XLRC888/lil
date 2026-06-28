@@ -2,3 +2,5 @@ lil
 *.o
 *.out
 book/book/
+__pycache__/
+*.pyc
