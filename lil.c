@@ -2085,6 +2085,258 @@ OP_FALLBACK: {
 }
 }
 
+static char *cescape(const char *s) {
+    size_t n = strlen(s);
+    char *r = malloc(n * 4 + 1);
+    if (!r) return NULL;
+    size_t j = 0;
+    for (size_t i = 0; i < n; i++) {
+        if (s[i] == '\\') { r[j++] = '\\'; r[j++] = '\\'; }
+        else if (s[i] == '"') { r[j++] = '\\'; r[j++] = '"'; }
+        else if (s[i] == '\n') { r[j++] = '\\'; r[j++] = 'n'; }
+        else if (s[i] == '\r') { r[j++] = '\\'; r[j++] = 'r'; }
+        else if (s[i] == '\t') { r[j++] = '\\'; r[j++] = 't'; }
+        else r[j++] = s[i];
+    }
+    r[j] = 0;
+    return r;
+}
+
+static int cg_loop_id;
+
+static void cg_collect_vars(ASTNode *n);
+static void cg_varinit(FILE *f, ASTNode *prog) {
+    var_count = 0;
+    for (int i = 0; i < prog->data.block.count; i++)
+        cg_collect_vars(prog->data.block.stmts[i]);
+    for (int i = 0; i < var_count; i++)
+        fprintf(f, "  var_ensure(\"%s\");\n", vars[i].name);
+}
+
+static void cg_collect_vars(ASTNode *n) {
+    if (!n) return;
+    switch (n->type) {
+        case NODE_ASSIGN: var_ensure(n->data.assign.name); cg_collect_vars(n->data.assign.value); break;
+        case NODE_WHILE: cg_collect_vars(n->data.while_stmt.cond); cg_collect_vars(n->data.while_stmt.body); break;
+        case NODE_IF: cg_collect_vars(n->data.if_stmt.cond); cg_collect_vars(n->data.if_stmt.then); cg_collect_vars((ASTNode*)n->data.if_stmt.els); break;
+        case NODE_LOOP: cg_collect_vars(n->data.loop.body); break;
+        case NODE_FORTO: var_ensure(n->data.forto.var); cg_collect_vars(n->data.forto.start); cg_collect_vars(n->data.forto.end); cg_collect_vars(n->data.forto.body); break;
+        case NODE_BLOCK: for (int i = 0; i < n->data.block.count; i++) cg_collect_vars(n->data.block.stmts[i]); break;
+        case NODE_PRINT: for (int i = 0; i < n->data.print.count; i++) cg_collect_vars(n->data.print.exprs[i]); break;
+        case NODE_INPUT: var_ensure(n->data.input.name); break;
+        case NODE_TEMPLATE: break;
+        case NODE_FUNC_DEF: break;
+        case NODE_INCLUDE: break;
+        case NODE_FUNC_CALL: break;
+        default: break;
+    }
+}
+
+static void cg_expr(FILE *f, ASTNode *n) {
+    if (!n) { fprintf(f, "make_num(0)"); return; }
+    switch (n->type) {
+        case NODE_NUM: fprintf(f, "make_num(%.17g)", n->data.num); break;
+        case NODE_STR: {
+            char *esc = cescape(n->data.str);
+            fprintf(f, "make_str(\"%s\")", esc);
+            free(esc);
+            break;
+        }
+        case NODE_ID: {
+            int idx = var_find(n->data.id);
+            fprintf(f, "copy_val(vars[%d].val)", idx);
+            break;
+        }
+        case NODE_BINOP: {
+            int op = n->data.binop.op;
+            if (op == TOK_AND || op == TOK_OR) {
+                fprintf(f, "make_num(truthy(");
+                cg_expr(f, n->data.binop.left);
+                fprintf(f, ") %s truthy(", op == TOK_AND ? "&&" : "||");
+                cg_expr(f, n->data.binop.right);
+                fprintf(f, "))");
+                break;
+            }
+            if (op == TOK_PLUS) {
+                fprintf(f, "val_add(");
+                cg_expr(f, n->data.binop.left);
+                fprintf(f, ",");
+                cg_expr(f, n->data.binop.right);
+                fprintf(f, ")");
+                break;
+            }
+            if (op == TOK_EQ || op == TOK_NE || op == TOK_LT || op == TOK_GT || op == TOK_LE || op == TOK_GE) {
+                fprintf(f, "make_num(val_cmp(");
+                cg_expr(f, n->data.binop.left);
+                fprintf(f, ",");
+                cg_expr(f, n->data.binop.right);
+                if (op == TOK_EQ) fprintf(f, ",0))");
+                else if (op == TOK_NE) fprintf(f, ",1))");
+                else if (op == TOK_LT) fprintf(f, ",2))");
+                else if (op == TOK_GT) fprintf(f, ",3))");
+                else if (op == TOK_LE) fprintf(f, ",4))");
+                else fprintf(f, ",5))");
+                break;
+            }
+            fprintf(f, "val_arith(");
+            cg_expr(f, n->data.binop.left);
+            fprintf(f, ",");
+            cg_expr(f, n->data.binop.right);
+            if (op == TOK_PLUS) fprintf(f, ",1)");
+            else if (op == TOK_MINUS) fprintf(f, ",2)");
+            else if (op == TOK_STAR) fprintf(f, ",3)");
+            else if (op == TOK_SLASH) fprintf(f, ",4)");
+            else if (op == TOK_MOD) fprintf(f, ",5)");
+            else fprintf(f, ",1)");
+            break;
+        }
+        case NODE_UNARY: {
+            if (n->data.unary.op == TOK_MINUS) {
+                fprintf(f, "val_neg(");
+                cg_expr(f, n->data.unary.operand);
+                fprintf(f, ")");
+            } else {
+                fprintf(f, "make_num(!truthy(");
+                cg_expr(f, n->data.unary.operand);
+                fprintf(f, "))");
+            }
+            break;
+        }
+        case NODE_TEMPLATE: {
+            fprintf(f, "make_str(eval_template(");
+            char *esc = cescape(n->data.templ.raw);
+            fprintf(f, "\"%s\"", esc);
+            free(esc);
+            fprintf(f, "))");
+            break;
+        }
+        case NODE_FUNC_CALL: {
+            fprintf(f, "call_func(\"%s\")", n->data.func_call.name);
+            break;
+        }
+        default: fprintf(f, "make_num(0)"); break;
+    }
+}
+
+static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
+    if (!n) return;
+    switch (n->type) {
+        case NODE_EMPTY: break;
+        case NODE_ASSIGN: {
+            int idx = var_find(n->data.assign.name);
+            fprintf(f, "val_free(vars[%d].val); vars[%d].val = ", idx, idx);
+            cg_expr(f, n->data.assign.value);
+            fprintf(f, ";\n");
+            break;
+        }
+        case NODE_PRINT: {
+            for (int i = 0; i < n->data.print.count; i++) {
+                if (i > 0) fprintf(f, "printf(\" \");\n");
+                fprintf(f, "{\n  Value _v = ");
+                cg_expr(f, n->data.print.exprs[i]);
+                fprintf(f, ";\n  if (_v.type == VAL_STR) { printf(\"%%s\",_v.data.str); val_free(_v); }\n");
+                fprintf(f, "  else printf(\"%%g\",_v.data.num);\n}\n");
+            }
+            fprintf(f, "printf(\"\\n\");\n");
+            break;
+        }
+        case NODE_WHILE: {
+            int lid = cg_loop_id++;
+            fprintf(f, "while (truthy(");
+            cg_expr(f, n->data.while_stmt.cond);
+            fprintf(f, ")");
+            fprintf(f, ") {\n");
+            int *new_ids = malloc((loop_depth + 1) * sizeof(int));
+            if (loop_depth > 0) memcpy(new_ids, loop_ids, loop_depth * sizeof(int));
+            new_ids[loop_depth] = lid;
+            cg_stmt(f, n->data.while_stmt.body, new_ids, loop_depth + 1);
+            free(new_ids);
+            fprintf(f, "}\n");
+            fprintf(f, "_lil_break_%d: ;\n", lid);
+            break;
+        }
+        case NODE_LOOP: {
+            int lid = cg_loop_id++;
+            fprintf(f, "while (1) {\n");
+            int *new_ids = malloc((loop_depth + 1) * sizeof(int));
+            if (loop_depth > 0) memcpy(new_ids, loop_ids, loop_depth * sizeof(int));
+            new_ids[loop_depth] = lid;
+            cg_stmt(f, n->data.loop.body, new_ids, loop_depth + 1);
+            free(new_ids);
+            fprintf(f, "}\n");
+            fprintf(f, "_lil_break_%d: ;\n", lid);
+            break;
+        }
+        case NODE_STOP: {
+            if (loop_depth > 0)
+                fprintf(f, "goto _lil_break_%d;\n", loop_ids[loop_depth - 1]);
+            break;
+        }
+        case NODE_EXIT: fprintf(f, "return 0;\n"); break;
+        case NODE_IF: {
+            fprintf(f, "if (truthy(");
+            cg_expr(f, n->data.if_stmt.cond);
+            fprintf(f, ")) {\n");
+            cg_stmt(f, n->data.if_stmt.then, loop_ids, loop_depth);
+            if (n->data.if_stmt.els) {
+                if (((ASTNode*)n->data.if_stmt.els)->type == NODE_IF)
+                    fprintf(f, "} else ");
+                else
+                    fprintf(f, "} else {\n");
+                cg_stmt(f, (ASTNode*)n->data.if_stmt.els, loop_ids, loop_depth);
+                if (((ASTNode*)n->data.if_stmt.els)->type != NODE_IF)
+                    fprintf(f, "}\n");
+                else
+                    fprintf(f, "\n");
+            } else {
+                fprintf(f, "}\n");
+            }
+            break;
+        }
+        case NODE_FORTO: {
+            int lid = cg_loop_id++;
+            int idx = var_find(n->data.forto.var);
+            fprintf(f, "val_free(vars[%d].val);\n", idx);
+            fprintf(f, "vars[%d].val = make_num(val_tonum(", idx);
+            cg_expr(f, n->data.forto.start);
+            fprintf(f, "));\n");
+            fprintf(f, "double _end = val_tonum(");
+            cg_expr(f, n->data.forto.end);
+            fprintf(f, ");\n");
+            fprintf(f, "while (vars[%d].val.data.num <= _end) {\n", idx);
+            int *new_ids = malloc((loop_depth + 1) * sizeof(int));
+            if (loop_depth > 0) memcpy(new_ids, loop_ids, loop_depth * sizeof(int));
+            new_ids[loop_depth] = lid;
+            cg_stmt(f, n->data.forto.body, new_ids, loop_depth + 1);
+            free(new_ids);
+            fprintf(f, "  vars[%d].val.data.num += 1;\n", idx);
+            fprintf(f, "}\n");
+            break;
+        }
+        case NODE_BLOCK: {
+            for (int i = 0; i < n->data.block.count; i++) {
+                cg_stmt(f, n->data.block.stmts[i], loop_ids, loop_depth);
+            }
+            break;
+        }
+        case NODE_INPUT: {
+            int idx = var_find(n->data.input.name);
+            fprintf(f, "{\n  char _buf[4096];\n");
+            if (n->data.input.prompt) {
+                char *esc = cescape(n->data.input.prompt);
+                fprintf(f, "  printf(\"%s\"); fflush(stdout);\n", esc);
+                free(esc);
+            }
+            fprintf(f, "  if (fgets(_buf,4096,stdin)) {\n");
+            fprintf(f, "    size_t _l = strlen(_buf);\n");
+            fprintf(f, "    if (_l>0 && _buf[_l-1]=='\\n') _buf[_l-1]=0;\n");
+            fprintf(f, "    val_free(vars[%d].val); vars[%d].val = make_str(_buf);\n", idx, idx);
+            fprintf(f, "  }\n}\n");
+            break;
+        }
+    }
+}
+
 static int generate_c(const char *path, const char *outpath) {
     FILE *f = fopen(path, "rb");
     if (!f) { fprintf(stderr, "error: cannot open '%s': %s\n", path, strerror(errno)); return 1; }
@@ -2111,271 +2363,96 @@ static int generate_c(const char *path, const char *outpath) {
     lex_init(psrc);
     lex_next();
     ASTNode *prog = parse_program();
-    code_len = 0; const_len = 0; fb_len = 0;
-    fixup_len = 0; cur_loop = 0; for_counter = 0;
-    compile_prog(prog->data.block.stmts, prog->data.block.count);
-
-    for (int i = 0; i < code_len; i++)
-        if (code[i].op == OP_FALLBACK) {
-            fprintf(stderr, "error: cannot compile - program uses non-compilable features\n");
-            free(src); return 1;
-        }
 
     char cpath[1024];
     snprintf(cpath, sizeof(cpath), "%s.c", outpath);
     f = fopen(cpath, "w");
     if (!f) { fprintf(stderr, "error: cannot write '%s'\n", cpath); free(src); return 1; }
 
-    fprintf(f, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <stdint.h>\n#include <stdarg.h>\n#include <errno.h>\n#include <setjmp.h>\n#include <time.h>\n#include <sys/time.h>\n#include <math.h>\n\n");
-
+    fprintf(f, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <stdint.h>\n#include <math.h>\n\n");
     fprintf(f, "typedef enum { VAL_NUM, VAL_STR } ValType;\n");
-    fprintf(f, "typedef struct { ValType type; union { double num; char *str; } data; } Value;\n\n");
-    fprintf(f, "static Value make_num(double n) { Value v = {VAL_NUM, {.num=n}}; return v; }\n");
-    fprintf(f, "static Value make_str(const char *s) { Value v = {VAL_STR, {.str=strdup(s)}}; return v; }\n");
+    fprintf(f, "typedef struct { ValType type; union { double num; char *str; } data; } Value;\n");
+    fprintf(f, "static Value make_num(double n) { Value v = {VAL_NUM,{.num=n}}; return v; }\n");
+    fprintf(f, "static Value make_str(const char *s) { Value v = {VAL_STR,{.str=strdup(s)}}; return v; }\n");
+    fprintf(f, "static void val_free(Value v) { if (v.type == VAL_STR) free(v.data.str); }\n");
+    fprintf(f, "static Value copy_val(Value v) { if (v.type==VAL_STR) v.data.str=strdup(v.data.str); return v; }\n");
+    fprintf(f, "static int truthy(Value v) { if (v.type == VAL_STR) return strlen(v.data.str)!=0; return v.data.num!=0; }\n");
     fprintf(f, "static char *val_tostr(Value v) {\n");
     fprintf(f, "  if (v.type == VAL_STR) return strdup(v.data.str);\n");
     fprintf(f, "  char buf[128]; double d = v.data.num;\n");
-    fprintf(f, "  if (d == (long)d) snprintf(buf,sizeof(buf),\"%%ld\",(long)d); else snprintf(buf,sizeof(buf),\"%%.10g\",d);\n");
+    fprintf(f, "  if (d==(long)d) snprintf(buf,sizeof(buf),\"%%ld\",(long)d);\n");
+    fprintf(f, "  else snprintf(buf,sizeof(buf),\"%%.10g\",d);\n");
     fprintf(f, "  return strdup(buf);\n");
     fprintf(f, "}\n");
     fprintf(f, "static double val_tonum(Value v) {\n");
     fprintf(f, "  if (v.type == VAL_NUM) return v.data.num;\n");
-    fprintf(f, "  char *end; double d = strtod(v.data.str, &end);\n");
-    fprintf(f, "  if (*end) { fprintf(stderr,\"cannot convert to number\\n\"); exit(1); }\n");
+    fprintf(f, "  char *end; double d = strtod(v.data.str,&end);\n");
+    fprintf(f, "  if (*end) { fprintf(stderr,\"convert error\\n\"); exit(1); }\n");
     fprintf(f, "  return d;\n");
     fprintf(f, "}\n");
-    fprintf(f, "static void val_free(Value v) { if (v.type == VAL_STR) free(v.data.str); }\n\n");
+    fprintf(f, "static Value val_add(Value a, Value b) {\n");
+    fprintf(f, "  if (a.type==VAL_STR||b.type==VAL_STR) {\n");
+    fprintf(f, "    char *as=val_tostr(a),*bs=val_tostr(b);\n");
+    fprintf(f, "    char *r=malloc(strlen(as)+strlen(bs)+1);\n");
+    fprintf(f, "    strcpy(r,as); strcat(r,bs);\n");
+    fprintf(f, "    val_free(a);val_free(b);free(as);free(bs);\n");
+    fprintf(f, "    Value vr=make_str(r);free(r);return vr;\n");
+    fprintf(f, "  }\n");
+    fprintf(f, "  double r=a.data.num+b.data.num;\n");
+    fprintf(f, "  val_free(a);val_free(b);return make_num(r);\n");
+    fprintf(f, "}\n");
+    fprintf(f, "static Value val_arith(Value a, Value b, int op) {\n");
+    fprintf(f, "  if (a.type==VAL_STR||b.type==VAL_STR) { val_free(a);val_free(b);return make_num(0); }\n");
+    fprintf(f, "  double av=a.data.num,bv=b.data.num;\n");
+    fprintf(f, "  val_free(a);val_free(b);\n");
+    fprintf(f, "  double r=0;\n");
+    fprintf(f, "  switch(op) {\n");
+    fprintf(f, "    case 1: r=av+bv;break; case 2: r=av-bv;break;\n");
+    fprintf(f, "    case 3: r=av*bv;break; case 4: r=bv==0?0:av/bv;break;\n");
+    fprintf(f, "    case 5: r=bv==0?0:(double)((int)av%%(int)bv);break;\n");
+    fprintf(f, "  }\n");
+    fprintf(f, "  return make_num(r);\n");
+    fprintf(f, "}\n");
+    fprintf(f, "static Value val_neg(Value a) {\n");
+    fprintf(f, "  if (a.type==VAL_STR) { val_free(a); return make_num(0); }\n");
+    fprintf(f, "  double r=-a.data.num; val_free(a); return make_num(r);\n");
+    fprintf(f, "}\n");
+    fprintf(f, "static int val_cmp(Value a, Value b, int op) {\n");
+    fprintf(f, "  int r; double av, bv;\n");
+    fprintf(f, "  if (a.type==VAL_STR||b.type==VAL_STR) {\n");
+    fprintf(f, "    char *as=val_tostr(a),*bs=val_tostr(b);\n");
+    fprintf(f, "    int c=strcmp(as,bs);free(as);free(bs);\n");
+    fprintf(f, "    if(op==0)r=c==0;else if(op==1)r=c!=0;else if(op==2)r=c<0;\n");
+    fprintf(f, "    else if(op==3)r=c>0;else if(op==4)r=c<=0;else r=c>=0;\n");
+    fprintf(f, "  } else {\n");
+    fprintf(f, "    av=a.data.num; bv=b.data.num;\n");
+    fprintf(f, "    if(op==0)r=av==bv;else if(op==1)r=av!=bv;else if(op==2)r=av<bv;\n");
+    fprintf(f, "    else if(op==3)r=av>bv;else if(op==4)r=av<=bv;else r=av>=bv;\n");
+    fprintf(f, "  }\n");
+    fprintf(f, "  val_free(a);val_free(b);return r;\n");
+    fprintf(f, "}\n\n");
 
-    fprintf(f, "#define MAX_VARS 1024\ntypedef struct { char *name; Value val; } Var;\n");
-    fprintf(f, "static Var vars[MAX_VARS];\nstatic int var_count;\n");
-    fprintf(f, "static int var_find(const char *name) {\n");
-    fprintf(f, "  for (int i = 0; i < var_count; i++) if (!strcmp(vars[i].name, name)) return i;\n");
-    fprintf(f, "  return -1;\n");
-    fprintf(f, "}\n");
-    fprintf(f, "static Value var_get(const char *name) {\n");
-    fprintf(f, "  int i = var_find(name);\n");
-    fprintf(f, "  if (i < 0) { Value v = {VAL_NUM, {.num=0}}; return v; }\n");
-    fprintf(f, "  return vars[i].val;\n");
-    fprintf(f, "}\n");
-    fprintf(f, "static void var_set(const char *name, Value v) {\n");
-    fprintf(f, "  int i = var_find(name);\n");
-    fprintf(f, "  if (i >= 0) { if (vars[i].val.type == VAL_STR) free(vars[i].val.data.str); vars[i].val = v; }\n");
-    fprintf(f, "  else { if (var_count >= MAX_VARS) { fprintf(stderr,\"too many vars\\n\"); exit(1); }\n");
-    fprintf(f, "    vars[var_count].name = strdup(name); vars[var_count].val = v; var_count++; }\n");
-    fprintf(f, "}\n");
+    fprintf(f, "#define MAX_VARS 1024\n");
+    fprintf(f, "typedef struct { char *name; Value val; } Var;\n");
+    fprintf(f, "static Var vars[MAX_VARS];\n");
+    fprintf(f, "static int var_count;\n");
     fprintf(f, "static int var_ensure(const char *name) {\n");
-    fprintf(f, "  int i = var_find(name); if (i >= 0) return i;\n");
-    fprintf(f, "  if (var_count >= MAX_VARS) { fprintf(stderr,\"too many vars\\n\"); exit(1); }\n");
-    fprintf(f, "  vars[var_count].name = strdup(name); vars[var_count].val = (Value){VAL_NUM,{.num=0}};\n");
+    fprintf(f, "  for (int i=0;i<var_count;i++) if(!strcmp(vars[i].name,name)) return i;\n");
+    fprintf(f, "  if (var_count>=MAX_VARS) { fprintf(stderr,\"too many vars\\n\"); exit(1); }\n");
+    fprintf(f, "  vars[var_count].name=strdup(name);\n");
+    fprintf(f, "  vars[var_count].val=(Value){VAL_NUM,{.num=0}};\n");
     fprintf(f, "  return var_count++;\n");
     fprintf(f, "}\n\n");
 
-    fprintf(f, "enum {\n");
-    fprintf(f, "  OP_NOP,OP_CONST,OP_VAR_GET,OP_VAR_SET,OP_VAR_GET_IDX,OP_VAR_SET_IDX,\n");
-    fprintf(f, "  OP_INC_IDX,OP_DEC_IDX,OP_ADD,OP_SUB,OP_MUL,OP_DIV,OP_MOD,OP_NEG,\n");
-    fprintf(f, "  OP_EQ,OP_NE,OP_LT,OP_GT,OP_LE,OP_GE,OP_AND,OP_OR,OP_NOT,\n");
-    fprintf(f, "  OP_PRINT,OP_JMP,OP_JZ,OP_HALT,OP_EXIT,OP_FALLBACK,OP_POP\n");
-    fprintf(f, "};\n");
-    fprintf(f, "typedef struct { uint16_t op; int arg; } Instr;\n");
-    fprintf(f, "static Instr *code;\n");
-    fprintf(f, "static int code_len;\n");
-    fprintf(f, "static Value *consts;\n");
-    fprintf(f, "static int const_len;\n");
-    fprintf(f, "#define VM_STACK 4096\n");
-    fprintf(f, "static Value vm_stack[VM_STACK];\n");
-    fprintf(f, "static int sp;\n");
-    fprintf(f, "static int vm_exit;\n\n");
-
-    fprintf(f, "static int truthy(Value v) {\n");
-    fprintf(f, "  if (v.type == VAL_STR) return strlen(v.data.str) != 0;\n");
-    fprintf(f, "  return v.data.num != 0;\n");
-    fprintf(f, "}\n\n");
-
-    fprintf(f, "static void vm_run(void) {\n");
-    fprintf(f, "  int ip = 0; sp = 0; vm_exit = 0;\n");
-    fprintf(f, "  void *dtab[] = { &&OP_NOP,&&OP_CONST,&&OP_VAR_GET,&&OP_VAR_SET,\n");
-    fprintf(f, "    &&OP_VAR_GET_IDX,&&OP_VAR_SET_IDX,&&OP_INC_IDX,&&OP_DEC_IDX,\n");
-    fprintf(f, "    &&OP_ADD,&&OP_SUB,&&OP_MUL,&&OP_DIV,&&OP_MOD,&&OP_NEG,\n");
-    fprintf(f, "    &&OP_CMP,&&OP_CMP,&&OP_CMP,&&OP_CMP,&&OP_CMP,&&OP_CMP,\n");
-    fprintf(f, "    &&OP_AND,&&OP_OR,&&OP_NOT,\n");
-    fprintf(f, "    &&OP_PRINT,&&OP_JMP,&&OP_JZ,&&OP_HALT,&&OP_EXIT,&&OP_FALLBACK,&&OP_POP };\n");
-    fprintf(f, "  goto *dtab[code[ip].op];\n");
-
-    fprintf(f, "OP_NOP: ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "OP_CONST: {\n");
-    fprintf(f, "  Value v = consts[code[ip].arg];\n");
-    fprintf(f, "  if (v.type == VAL_STR) v.data.str = strdup(v.data.str);\n");
-    fprintf(f, "  vm_stack[sp++] = v; ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_VAR_GET: { ip++; goto *dtab[code[ip].op]; }\n");
-    fprintf(f, "OP_VAR_SET: { ip++; goto *dtab[code[ip].op]; }\n");
-    fprintf(f, "OP_VAR_GET_IDX: {\n");
-    fprintf(f, "  Value v = vars[code[ip].arg].val;\n");
-    fprintf(f, "  if (v.type == VAL_STR) v.data.str = strdup(v.data.str);\n");
-    fprintf(f, "  vm_stack[sp++] = v; ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_VAR_SET_IDX: {\n");
-    fprintf(f, "  int idx = code[ip].arg; Value v = vm_stack[--sp];\n");
-    fprintf(f, "  if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);\n");
-    fprintf(f, "  vars[idx].val = v; ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_INC_IDX: {\n");
-    fprintf(f, "  int idx = code[ip].arg;\n");
-    fprintf(f, "  if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);\n");
-    fprintf(f, "  vars[idx].val.data.num += 1; vars[idx].val.type = VAL_NUM;\n");
-    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_DEC_IDX: {\n");
-    fprintf(f, "  int idx = code[ip].arg;\n");
-    fprintf(f, "  if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);\n");
-    fprintf(f, "  vars[idx].val.data.num -= 1; vars[idx].val.type = VAL_NUM;\n");
-    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_ADD: {\n");
-    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
-    fprintf(f, "  if (a.type == VAL_STR || b.type == VAL_STR) {\n");
-    fprintf(f, "    char *as = val_tostr(a), *bs = val_tostr(b);\n");
-    fprintf(f, "    char *r = malloc(strlen(as)+strlen(bs)+1); strcpy(r,as); strcat(r,bs);\n");
-    fprintf(f, "    val_free(a); val_free(b); free(as); free(bs);\n");
-    fprintf(f, "    vm_stack[sp++] = make_str(r); free(r);\n");
-    fprintf(f, "  } else { val_free(a); val_free(b); vm_stack[sp++] = make_num(a.data.num + b.data.num); }\n");
-    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_SUB: {\n");
-    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
-    fprintf(f, "  if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }\n");
-    fprintf(f, "  else { val_free(a); val_free(b); vm_stack[sp++] = make_num(a.data.num - b.data.num); }\n");
-    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_MUL: {\n");
-    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
-    fprintf(f, "  if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }\n");
-    fprintf(f, "  else { val_free(a); val_free(b); vm_stack[sp++] = make_num(a.data.num * b.data.num); }\n");
-    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_DIV: {\n");
-    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
-    fprintf(f, "  if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }\n");
-    fprintf(f, "  else { double rd = b.data.num; if (rd==0) { val_free(a); val_free(b); vm_stack[sp++]=make_num(0); }\n");
-    fprintf(f, "  else { val_free(a); val_free(b); vm_stack[sp++] = make_num(a.data.num / rd); } }\n");
-    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_MOD: {\n");
-    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
-    fprintf(f, "  if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }\n");
-    fprintf(f, "  else { int rd = (int)b.data.num; if (rd==0) { val_free(a); val_free(b); vm_stack[sp++]=make_num(0); }\n");
-    fprintf(f, "  else { val_free(a); val_free(b); vm_stack[sp++] = make_num((double)((int)a.data.num %% rd)); } }\n");
-    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_NEG: {\n");
-    fprintf(f, "  Value a = vm_stack[--sp];\n");
-    fprintf(f, "  if (a.type == VAL_STR) { val_free(a); vm_stack[sp++] = make_num(0); }\n");
-    fprintf(f, "  else { double r = -a.data.num; val_free(a); vm_stack[sp++] = make_num(r); }\n");
-    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_CMP: {\n");
-    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp]; int r; uint16_t oc = code[ip].op;\n");
-    fprintf(f, "  if (a.type == VAL_STR || b.type == VAL_STR) {\n");
-    fprintf(f, "    char *as = val_tostr(a), *bs = val_tostr(b); int c = strcmp(as, bs); free(as); free(bs);\n");
-    fprintf(f, "    if (oc==OP_EQ) r=c==0; else if (oc==OP_NE) r=c!=0; else if (oc==OP_LT) r=c<0;\n");
-    fprintf(f, "    else if (oc==OP_GT) r=c>0; else if (oc==OP_LE) r=c<=0; else r=c>=0;\n");
-    fprintf(f, "  } else {\n");
-    fprintf(f, "    double av=a.data.num, bv=b.data.num;\n");
-    fprintf(f, "    if (oc==OP_EQ) r=av==bv; else if (oc==OP_NE) r=av!=bv; else if (oc==OP_LT) r=av<bv;\n");
-    fprintf(f, "    else if (oc==OP_GT) r=av>bv; else if (oc==OP_LE) r=av<=bv; else r=av>=bv;\n");
-    fprintf(f, "  }\n");
-    fprintf(f, "  val_free(a); val_free(b); vm_stack[sp++] = make_num(r);\n");
-    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_AND: {\n");
-    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
-    fprintf(f, "  int r = truthy(a) && truthy(b); val_free(a); val_free(b); vm_stack[sp++] = make_num(r);\n");
-    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_OR: {\n");
-    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
-    fprintf(f, "  int r = truthy(a) || truthy(b); val_free(a); val_free(b); vm_stack[sp++] = make_num(r);\n");
-    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_NOT: {\n");
-    fprintf(f, "  Value a = vm_stack[--sp];\n");
-    fprintf(f, "  int r = !truthy(a); val_free(a); vm_stack[sp++] = make_num(r);\n");
-    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_PRINT: {\n");
-    fprintf(f, "  int n = code[ip].arg; Value *vals = malloc(n * sizeof(Value));\n");
-    fprintf(f, "  for (int i = n-1; i >= 0; i--) vals[i] = vm_stack[--sp];\n");
-    fprintf(f, "  for (int i = 0; i < n; i++) {\n");
-    fprintf(f, "    if (vals[i].type == VAL_STR) { printf(\"%%s\", vals[i].data.str); free(vals[i].data.str); }\n");
-    fprintf(f, "    else printf(\"%%g\", vals[i].data.num);\n");
-    fprintf(f, "  }\n");
-    fprintf(f, "  free(vals); printf(\"\\n\"); ip++; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_JMP: { ip = code[ip].arg; goto *dtab[code[ip].op]; }\n");
-    fprintf(f, "OP_JZ: {\n");
-    fprintf(f, "  Value a = vm_stack[--sp]; int t = truthy(a); val_free(a);\n");
-    fprintf(f, "  ip = t ? ip + 1 : code[ip].arg; goto *dtab[code[ip].op];\n");
-    fprintf(f, "}\n");
-    fprintf(f, "OP_HALT: return;\n");
-    fprintf(f, "OP_EXIT: return;\n");
-    fprintf(f, "OP_POP: { val_free(vm_stack[--sp]); ip++; goto *dtab[code[ip].op]; }\n");
-    fprintf(f, "OP_FALLBACK: return;\n");
-    fprintf(f, "}\n\n");
-
-    fprintf(f, "#define CODE_LEN %d\n", code_len);
-    fprintf(f, "#define CONST_LEN %d\n", const_len);
-    fprintf(f, "static uint16_t code_ops[CODE_LEN] = {");
-    for (int i = 0; i < code_len; i++) {
-        if (i % 16 == 0) fprintf(f, "\n  ");
-        fprintf(f, "%d,", code[i].op);
-    }
-    fprintf(f, "\n};\n");
-    fprintf(f, "static int code_args[CODE_LEN] = {");
-    for (int i = 0; i < code_len; i++) {
-        if (i % 16 == 0) fprintf(f, "\n  ");
-        fprintf(f, "%d,", code[i].arg);
-    }
-    fprintf(f, "\n};\n");
-    fprintf(f, "static int const_types[CONST_LEN] = {");
-    for (int i = 0; i < const_len; i++) {
-        if (i % 16 == 0) fprintf(f, "\n  ");
-        fprintf(f, "%d,", consts[i].type);
-    }
-    fprintf(f, "\n};\n");
-    fprintf(f, "static double const_nums[CONST_LEN] = {");
-    for (int i = 0; i < const_len; i++) {
-        if (i % 16 == 0) fprintf(f, "\n  ");
-        fprintf(f, "%.17g,", consts[i].data.num);
-    }
-    fprintf(f, "\n};\n");
-    fprintf(f, "static char *const_strs[CONST_LEN] = {");
-    for (int i = 0; i < const_len; i++) {
-        if (i % 8 == 0) fprintf(f, "\n  ");
-        if (consts[i].type == VAL_STR) fprintf(f, "\"%s\",", consts[i].data.str);
-        else fprintf(f, "NULL,");
-    }
-    fprintf(f, "\n};\n\n");
+    var_count = 0;
+    cg_loop_id = 0;
 
     fprintf(f, "int main() {\n");
-    fprintf(f, "  code_len = CODE_LEN;\n");
-    fprintf(f, "  code = malloc(CODE_LEN * sizeof(Instr));\n");
-    fprintf(f, "  for (int i = 0; i < CODE_LEN; i++) {\n");
-    fprintf(f, "    code[i].op = code_ops[i];\n");
-    fprintf(f, "    code[i].arg = code_args[i];\n");
-    fprintf(f, "  }\n");
-    fprintf(f, "  const_len = CONST_LEN;\n");
-    fprintf(f, "  consts = malloc(CONST_LEN * sizeof(Value));\n");
-    fprintf(f, "  for (int i = 0; i < CONST_LEN; i++) {\n");
-    fprintf(f, "    consts[i].type = const_types[i];\n");
-    fprintf(f, "    if (const_types[i] == VAL_STR) consts[i].data.str = strdup(const_strs[i]);\n");
-    fprintf(f, "    else consts[i].data.num = const_nums[i];\n");
-    fprintf(f, "  }\n");
-    fprintf(f, "  var_count = 0;\n");
-    fprintf(f, "  vm_run();\n");
-    fprintf(f, "  for (int i = 0; i < var_count; i++) if (vars[i].val.type == VAL_STR) free(vars[i].val.data.str);\n");
-    fprintf(f, "  free(consts); free(code);\n");
-    fprintf(f, "  return 0;\n");
-    fprintf(f, "}\n");
+    cg_varinit(f, prog);
+    int *empty = NULL;
+    cg_stmt(f, prog, empty, 0);
+    fprintf(f, "  for (int i=0;i<var_count;i++) if(vars[i].val.type==VAL_STR) free(vars[i].val.data.str);\n");
+    fprintf(f, "  return 0;\n}\n");
     fclose(f);
 
     char cmd[2048];
