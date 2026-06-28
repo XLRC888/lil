@@ -22,7 +22,7 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_LOOP, TOK_STOP, TOK_BREAK, TOK_INCLUDE, TOK_FUNCTION, TOK_STRIFY, TOK_INTIFY,
     TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
     TOK_LBRACKET, TOK_RBRACKET,
-    TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET } TokenType;
+    TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET, TOK_TRY, TOK_CATCH } TokenType;
 
 typedef struct {
     TokenType type;
@@ -41,7 +41,7 @@ typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_ASSIGN, NODE_PRINT, NODE_INPUT, NODE_IF, NODE_WHILE,
     NODE_FORTO, NODE_BLOCK, NODE_EXIT, NODE_EMPTY,
     NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_FUNCTION,
-    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_STRIFY, NODE_INTIFY } NodeType;
+    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_STRIFY, NODE_INTIFY, NODE_TRY } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -65,6 +65,7 @@ typedef struct ASTNode {
         struct { char *name; } include;
         struct { char *lib; char **args; int argc; } funcall;
         struct { char *raw; } templ;
+        struct { struct ASTNode *body, *catch_body; } try_stmt;
         struct { struct ASTNode **stmts; int count, cap; } block;
     } data;
 } ASTNode;
@@ -300,6 +301,8 @@ static Token lex_scan(void) {
             if (!strcmp(word, "not"))     { free(word); t.type = TOK_NOT; return t; }
             if (!strcmp(word, "strify"))  { free(word); t.type = TOK_STRIFY; return t; }
             if (!strcmp(word, "intify"))  { free(word); t.type = TOK_INTIFY; return t; }
+            if (!strcmp(word, "try"))     { free(word); t.type = TOK_TRY; return t; }
+            if (!strcmp(word, "catch"))   { free(word); t.type = TOK_CATCH; return t; }
             if (!strcmp(word, "loop"))    { free(word); t.type = TOK_LOOP; return t; }
             if (!strcmp(word, "stop"))    { free(word); t.type = TOK_STOP; return t; }
             if (!strcmp(word, "break"))   { free(word); t.type = TOK_BREAK; return t; }
@@ -772,6 +775,22 @@ static ASTNode *parse_stmt(void) {
         lex_next();
         return ast_alloc(NODE_BREAK);
     }
+    if (lex_cur.type == TOK_TRY) {
+        lex_next();
+        if (lex_cur.type == TOK_NEWLINE) lex_next();
+        if (lex_cur.type != TOK_LBRACE) fatal("line %d: expected '{' after try", lex_cur.line);
+        ASTNode *body = parse_block();
+        while (lex_cur.type == TOK_NEWLINE) lex_next();
+        if (lex_cur.type != TOK_CATCH) fatal("line %d: expected catch after try", lex_cur.line);
+        lex_next();
+        if (lex_cur.type == TOK_NEWLINE) lex_next();
+        if (lex_cur.type != TOK_LBRACE) fatal("line %d: expected '{' after catch", lex_cur.line);
+        ASTNode *catch_body = parse_block();
+        ASTNode *n = ast_alloc(NODE_TRY);
+        n->data.try_stmt.body = body;
+        n->data.try_stmt.catch_body = catch_body;
+        return n;
+    }
     if (lex_cur.type == TOK_INCLUDE) {
         lex_next();
         if (lex_cur.type != TOK_ID) fatal("line %d: include expects a library name", lex_cur.line);
@@ -833,12 +852,6 @@ static ASTNode *parse_stmt(void) {
     }
 
     ASTNode *e = parse_expr();
-    if (lex_cur.type == TOK_ASSIGN) {
-        lex_next();
-        ASTNode *target = parse_expr();
-        if (target->type != NODE_ID) fatal("line %d: assignment target must be a variable name", target->line);
-        return ast_assign(target->data.id, e);
-    }
     return e;
 }
 
@@ -1638,6 +1651,18 @@ static int exec_stmt(ASTNode *n) {
             }
             return 0;
         }
+        case NODE_TRY: {
+            jmp_buf old;
+            memcpy(old, error_jmp, sizeof(jmp_buf));
+            if (setjmp(error_jmp) == 0) {
+                exec_stmt(n->data.try_stmt.body);
+                memcpy(error_jmp, old, sizeof(jmp_buf));
+            } else {
+                memcpy(error_jmp, old, sizeof(jmp_buf));
+                exec_stmt(n->data.try_stmt.catch_body);
+            }
+            return 0;
+        }
         case NODE_IF: {
             int truthy;
             if (n->data.if_stmt.has_mode) {
@@ -1873,6 +1898,7 @@ static int is_cstmt(ASTNode *n) {
         case NODE_WHILE: return is_cstmt(n->data.while_stmt.body);
         case NODE_FORTO: return is_cstmt(n->data.forto.body);
         case NODE_LOOP: return is_cstmt(n->data.loop.body);
+        case NODE_TRY: return is_cstmt(n->data.try_stmt.body) && is_cstmt(n->data.try_stmt.catch_body);
         case NODE_BLOCK: {
             for (int i = 0; i < n->data.block.count; i++)
                 if (!is_cstmt(n->data.block.stmts[i])) return 0;
@@ -2268,6 +2294,10 @@ static void infer_type_stmt(ASTNode *n) {
             var_types[i] = TY_DYN;
             break;
         }
+        case NODE_TRY:
+            infer_type_stmt(n->data.try_stmt.body);
+            infer_type_stmt(n->data.try_stmt.catch_body);
+            break;
         default: break;
     }
 }
@@ -2304,6 +2334,7 @@ static void cg_collect_vars(ASTNode *n) {
         case NODE_INPUT:
         case NODE_STRIFY:
         case NODE_INTIFY: var_ensure(n->data.input.name); break;
+        case NODE_TRY: cg_collect_vars(n->data.try_stmt.body); cg_collect_vars(n->data.try_stmt.catch_body); break;
         default: break;
     }
 }

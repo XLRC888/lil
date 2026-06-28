@@ -24,11 +24,8 @@ x = "now im a string"
 
 This is fine. lil does not enforce type consistency.
 
-Assignment works both ways. `variable = expression` and `expression = variable` do the same thing:
+Assignment always goes `variable = expression`:
 
 ```lil
-y = x + 50    # store x+50 in y
-x + 50 = y    # same thing, store x+50 in y
+y = x + 50
 ```
-
-Use whichever reads better. The variable being assigned to is always on the side with the single name.
