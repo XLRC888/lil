@@ -2521,7 +2521,6 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
         }
         case NODE_FORTO: {
             int lid = cg_loop_id++;
-            int idx = var_find(n->data.forto.var);
             fprintf(f, "%s = val_tonum(", n->data.forto.var);
             cg_expr(f, n->data.forto.start, TY_DYN);
             fprintf(f, ");\n");
