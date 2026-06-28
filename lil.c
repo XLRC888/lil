@@ -19,7 +19,7 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_SLASH, TOK_MOD, TOK_EQ, TOK_NE, TOK_LT, TOK_GT, TOK_LE, TOK_GE, TOK_ASSIGN,
     TOK_LPAREN, TOK_RPAREN, TOK_LBRACE, TOK_RBRACE, TOK_COMMA,
     TOK_SEMI, TOK_NEWLINE, TOK_EOF, TOK_AND, TOK_OR, TOK_NOT,
-    TOK_LOOP, TOK_STOP, TOK_INCLUDE, TOK_FUNCTION,
+    TOK_LOOP, TOK_STOP, TOK_BREAK, TOK_INCLUDE, TOK_FUNCTION,
     TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
     TOK_LBRACKET, TOK_RBRACKET,
     TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET } TokenType;
@@ -41,7 +41,7 @@ typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_ASSIGN, NODE_PRINT, NODE_INPUT, NODE_IF, NODE_WHILE,
     NODE_FORTO, NODE_BLOCK, NODE_EXIT, NODE_EMPTY,
     NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_FUNCTION,
-    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL } NodeType;
+    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -300,6 +300,7 @@ static Token lex_scan(void) {
             if (!strcmp(word, "not"))     { free(word); t.type = TOK_NOT; return t; }
             if (!strcmp(word, "loop"))    { free(word); t.type = TOK_LOOP; return t; }
             if (!strcmp(word, "stop"))    { free(word); t.type = TOK_STOP; return t; }
+            if (!strcmp(word, "break"))   { free(word); t.type = TOK_BREAK; return t; }
             if (!strcmp(word, "include")) { free(word); t.type = TOK_INCLUDE; return t; }
             if (!strcmp(word, "function")) { free(word); t.type = TOK_FUNCTION; return t; }
             if (!strcmp(word, "has"))     { free(word); t.type = TOK_HAS; return t; }
@@ -765,7 +766,10 @@ static ASTNode *parse_stmt(void) {
         lex_next();
         return ast_stop();
     }
-
+    if (lex_cur.type == TOK_BREAK) {
+        lex_next();
+        return ast_alloc(NODE_BREAK);
+    }
     if (lex_cur.type == TOK_INCLUDE) {
         lex_next();
         if (lex_cur.type != TOK_ID) fatal("line %d: include expects a library name", lex_cur.line);
@@ -1627,6 +1631,7 @@ static int exec_stmt(ASTNode *n) {
             return 0;
         }
         case NODE_STOP:
+        case NODE_BREAK:
             return 2;
         case NODE_INCLUDE:
             return 0;
@@ -1781,7 +1786,7 @@ static int ce_expr(ASTNode *n) {
 static int is_cstmt(ASTNode *n) {
     if (!n) return 1;
     switch (n->type) {
-        case NODE_EMPTY: case NODE_EXIT: case NODE_STOP: return 1;
+        case NODE_EMPTY: case NODE_EXIT: case NODE_STOP: case NODE_BREAK: return 1;
         case NODE_PRINT:
             for (int i = 0; i < n->data.print.count; i++)
                 if (n->data.print.exprs[i]->type == NODE_FUNC_CALL
@@ -1862,9 +1867,11 @@ static void ce_stmt(ASTNode *n) {
             ce_expr(n->data.while_stmt.cond);
             emit(OP_JZ, 0);
             int pe = code_len - 1;
-            cur_loop++; ce_stmt(n->data.while_stmt.body); patch_fixups(code_len); cur_loop--;
+            cur_loop++; ce_stmt(n->data.while_stmt.body);
             emit(OP_JMP, ls);
             patch(pe, code_len);
+            patch_fixups(code_len);
+            cur_loop--;
             break;
         }
         case NODE_FORTO: {
@@ -1884,13 +1891,15 @@ static void ce_stmt(ASTNode *n) {
             emit(OP_LE, 0);
             emit(OP_JZ, 0);
             int pe = code_len - 1;
-            cur_loop++; ce_stmt(n->data.forto.body); patch_fixups(code_len); cur_loop--;
+            cur_loop++; ce_stmt(n->data.forto.body);
             emit(OP_VAR_GET_IDX, vidx);
             emit(OP_CONST, add_const(make_num(1)));
             emit(OP_ADD, 0);
             emit(OP_VAR_SET_IDX, vidx);
             emit(OP_JMP, ls);
             patch(pe, code_len);
+            patch_fixups(code_len);
+            cur_loop--;
             break;
         }
         case NODE_LOOP: {
@@ -1900,6 +1909,7 @@ static void ce_stmt(ASTNode *n) {
             break;
         }
         case NODE_STOP:
+        case NODE_BREAK:
             add_fixup(code_len);
             emit(OP_JMP, 0);
             break;
@@ -2475,7 +2485,8 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
             fprintf(f, "_lil_break_%d: ;\n", lid);
             break;
         }
-        case NODE_STOP: {
+        case NODE_STOP:
+        case NODE_BREAK: {
             if (loop_depth > 0)
                 fprintf(f, "goto _lil_break_%d;\n", loop_ids[loop_depth - 1]);
             break;
@@ -2523,7 +2534,7 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
             cg_stmt(f, n->data.forto.body, new_ids, loop_depth + 1);
             free(new_ids);
             fprintf(f, "    %s += 1;\n", n->data.forto.var);
-            fprintf(f, "  }\n}\n");
+            fprintf(f, "  }\n  _lil_break_%d: ;\n}\n", lid);
             break;
         }
         case NODE_BLOCK: {
