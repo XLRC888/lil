@@ -1,3 +1,0 @@
-print "this should error or be ignored"
-stop
-print "after stop"

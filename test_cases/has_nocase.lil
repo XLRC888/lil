@@ -1,1 +1,0 @@
-if "HELLO" has "ell" nocase { print "yes" }

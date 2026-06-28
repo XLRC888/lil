@@ -1,6 +1,0 @@
-print "testing string comparison"
-print "a" == "a"
-print "a" == "b"
-x = "hello"
-print x == "hello"
-print x != "world"
