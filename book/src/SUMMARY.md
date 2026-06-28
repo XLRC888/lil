@@ -20,6 +20,7 @@
 - [Functions](functions.md)
   - [Built-in Libraries](builtins.md)
   - [User-defined Functions](user_functions.md)
+- [Error Handling](error_handling.md)
 - [Advanced Features](advanced.md)
   - [Templates](templates.md)
   - [The Has Operator](has.md)

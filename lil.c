@@ -2705,6 +2705,17 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
             }
             break;
         }
+        case NODE_TRY: {
+            fprintf(f, "{\n  jmp_buf _save;\n  memcpy(_save,_try_jmp,sizeof(jmp_buf));\n");
+            fprintf(f, "  if (setjmp(_try_jmp) == 0) {\n");
+            cg_stmt(f, n->data.try_stmt.body, loop_ids, loop_depth);
+            fprintf(f, "    memcpy(_try_jmp,_save,sizeof(jmp_buf));\n");
+            fprintf(f, "  } else {\n");
+            fprintf(f, "    memcpy(_try_jmp,_save,sizeof(jmp_buf));\n");
+            cg_stmt(f, n->data.try_stmt.catch_body, loop_ids, loop_depth);
+            fprintf(f, "  }\n}\n");
+            break;
+        }
     }
 }
 
@@ -2740,9 +2751,10 @@ static int generate_c(const char *path, const char *outpath) {
     f = fopen(cpath, "w");
     if (!f) { fprintf(stderr, "error: cannot write '%s'\n", cpath); free(src); return 1; }
 
-    fprintf(f, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <stdint.h>\n#include <math.h>\n\n");
+    fprintf(f, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <stdint.h>\n#include <math.h>\n#include <setjmp.h>\n\n");
     fprintf(f, "typedef enum { VAL_NUM, VAL_STR } ValType;\n");
     fprintf(f, "typedef struct { ValType type; union { double num; char *str; } data; } Value;\n");
+    fprintf(f, "static jmp_buf _try_jmp;\n");
     fprintf(f, "static Value make_num(double n) { Value v = {VAL_NUM,{.num=n}}; return v; }\n");
     fprintf(f, "static Value make_str(const char *s) { Value v = {VAL_STR,{.str=strdup(s)}}; return v; }\n");
     fprintf(f, "static void val_free(Value v) { if (v.type == VAL_STR) free(v.data.str); }\n");
@@ -2758,7 +2770,7 @@ static int generate_c(const char *path, const char *outpath) {
     fprintf(f, "static double val_tonum(Value v) {\n");
     fprintf(f, "  if (v.type == VAL_NUM) return v.data.num;\n");
     fprintf(f, "  char *end; double d = strtod(v.data.str,&end);\n");
-    fprintf(f, "  if (*end) { fprintf(stderr,\"convert error\\n\"); exit(1); }\n");
+    fprintf(f, "  if (*end) { fprintf(stderr,\"convert error\\n\"); longjmp(_try_jmp,1); }\n");
     fprintf(f, "  return d;\n");
     fprintf(f, "}\n");
     fprintf(f, "static Value val_add(Value a, Value b) {\n");
@@ -2809,7 +2821,7 @@ static int generate_c(const char *path, const char *outpath) {
     fprintf(f, "static int var_count;\n");
     fprintf(f, "static int var_ensure(const char *name) {\n");
     fprintf(f, "  for (int i=0;i<var_count;i++) if(!strcmp(vars[i].name,name)) return i;\n");
-    fprintf(f, "  if (var_count>=MAX_VARS) { fprintf(stderr,\"too many vars\\n\"); exit(1); }\n");
+    fprintf(f, "  if (var_count>=MAX_VARS) { fprintf(stderr,\"too many vars\\n\"); longjmp(_try_jmp,1); }\n");
     fprintf(f, "  vars[var_count].name=strdup(name);\n");
     fprintf(f, "  vars[var_count].val=(Value){VAL_NUM,{.num=0}};\n");
     fprintf(f, "  return var_count++;\n");
