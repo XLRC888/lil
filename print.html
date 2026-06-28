@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-bf3ff565.js";
+            window.path_to_searchindex_js = "searchindex-603db682.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-200542aa.js"></script>
@@ -250,6 +250,11 @@ name = "alice"
 x = "now im a string"
 </code></pre>
 <p>This is fine. lil does not enforce type consistency.</p>
+<p>Assignment works both ways. <code>variable = expression</code> and <code>expression = variable</code> do the same thing:</p>
+<pre><code class="language-lil">y = x + 50    # store x+50 in y
+x + 50 = y    # same thing, store x+50 in y
+</code></pre>
+<p>Use whichever reads better. The variable being assigned to is always on the side with the single name.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="numbers-and-strings"><a class="header" href="#numbers-and-strings">Numbers and Strings</a></h1>
 <h2 id="numbers"><a class="header" href="#numbers">Numbers</a></h2>
