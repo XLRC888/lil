@@ -19,10 +19,10 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_SLASH, TOK_MOD, TOK_EQ, TOK_NE, TOK_LT, TOK_GT, TOK_LE, TOK_GE, TOK_ASSIGN,
     TOK_LPAREN, TOK_RPAREN, TOK_LBRACE, TOK_RBRACE, TOK_COMMA,
     TOK_SEMI, TOK_NEWLINE, TOK_EOF, TOK_AND, TOK_OR, TOK_NOT,
-    TOK_LOOP, TOK_STOP, TOK_BREAK, TOK_INCLUDE, TOK_FUNCTION, TOK_STRIFY, TOK_INTIFY,
+    TOK_LOOP, TOK_STOP, TOK_BREAK, TOK_CONTINUE, TOK_INCLUDE, TOK_FUNCTION, TOK_STRIFY, TOK_INTIFY,
     TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
     TOK_LBRACKET, TOK_RBRACKET,
-    TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET, TOK_TRY, TOK_CATCH } TokenType;
+    TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET, TOK_TRY, TOK_CATCH, TOK_RETURN } TokenType;
 
 typedef struct {
     TokenType type;
@@ -41,7 +41,7 @@ typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_ASSIGN, NODE_PRINT, NODE_INPUT, NODE_IF, NODE_WHILE,
     NODE_FORTO, NODE_BLOCK, NODE_EXIT, NODE_EMPTY,
     NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_FUNCTION,
-    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_STRIFY, NODE_INTIFY, NODE_TRY } NodeType;
+    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE, NODE_RETURN, NODE_STRIFY, NODE_INTIFY, NODE_TRY } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -60,8 +60,8 @@ typedef struct ASTNode {
         struct { struct ASTNode *cond, *body; } while_stmt;
         struct { char *var; struct ASTNode *start, *end, *body; } forto;
         struct { struct ASTNode *body; } loop;
-        struct { char *name; struct ASTNode *body; } func_def;
-        struct { char *name; } func_call;
+        struct { char *name; char **params; int nparams; struct ASTNode *body; } func_def;
+        struct { char *name; struct ASTNode **args; int nargs; } func_call;
         struct { char *name; } include;
         struct { char *lib; char **args; int argc; } funcall;
         struct { char *raw; } templ;
@@ -78,11 +78,14 @@ typedef struct {
 #define MAX_FUNCS 256
 typedef struct {
     char *name;
+    char **params;
+    int nparams;
     struct ASTNode *body;
 } FuncDef;
 
 static FuncDef funcs[MAX_FUNCS];
 static int func_count;
+static Value func_retval;
 
 static jmp_buf error_jmp;
 static int error_occurred;
@@ -306,6 +309,8 @@ static Token lex_scan(void) {
             if (!strcmp(word, "loop"))    { free(word); t.type = TOK_LOOP; return t; }
             if (!strcmp(word, "stop"))    { free(word); t.type = TOK_STOP; return t; }
             if (!strcmp(word, "break"))   { free(word); t.type = TOK_BREAK; return t; }
+            if (!strcmp(word, "continue")) { free(word); t.type = TOK_CONTINUE; return t; }
+            if (!strcmp(word, "return"))  { free(word); t.type = TOK_RETURN; return t; }
             if (!strcmp(word, "include")) { free(word); t.type = TOK_INCLUDE; return t; }
             if (!strcmp(word, "function")) { free(word); t.type = TOK_FUNCTION; return t; }
             if (!strcmp(word, "has"))     { free(word); t.type = TOK_HAS; return t; }
@@ -323,7 +328,13 @@ static Token lex_scan(void) {
             case '+': t.type = TOK_PLUS; return t;
             case '-': t.type = TOK_MINUS; return t;
             case '*': t.type = TOK_STAR; return t;
-            case '/': t.type = TOK_SLASH; return t;
+            case '/':
+                if (lex_pos < lex_len && lex_src[lex_pos] == '/') {
+                    lex_pos++;
+                    while (lex_pos < lex_len && lex_src[lex_pos] != '\n') lex_pos++;
+                    return lex_scan();
+                }
+                t.type = TOK_SLASH; return t;
             case '%': t.type = TOK_MOD; return t;
             case '(': t.type = TOK_LPAREN; return t;
             case ')': t.type = TOK_RPAREN; return t;
@@ -351,6 +362,9 @@ static Token lex_scan(void) {
             case '|':
                 if (lex_pos < lex_len && lex_src[lex_pos] == '|') { lex_pos++; t.type = TOK_OR; return t; }
                 fatal("line %d: expected '||'", lex_line); return t;
+            case '#':
+                while (lex_pos < lex_len && lex_src[lex_pos] != '\n') lex_pos++;
+                return lex_scan();
             case '@': t.type = TOK_AT; return t;
             case '^': t.type = TOK_CARET; return t;
             case '$': {
@@ -775,6 +789,10 @@ static ASTNode *parse_stmt(void) {
         lex_next();
         return ast_alloc(NODE_BREAK);
     }
+    if (lex_cur.type == TOK_CONTINUE) {
+        lex_next();
+        return ast_alloc(NODE_CONTINUE);
+    }
     if (lex_cur.type == TOK_TRY) {
         lex_next();
         if (lex_cur.type == TOK_NEWLINE) lex_next();
@@ -807,6 +825,15 @@ static ASTNode *parse_stmt(void) {
         n->data.input.name = name;
         return n;
     }
+    if (lex_cur.type == TOK_RETURN) {
+        lex_next();
+        ASTNode *val = NULL;
+        if (lex_cur.type != TOK_NEWLINE && lex_cur.type != TOK_EOF && lex_cur.type != TOK_RBRACE)
+            val = parse_expr();
+        ASTNode *n = ast_alloc(NODE_RETURN);
+        n->data.assign.value = val;
+        return n;
+    }
     if (lex_cur.type == TOK_INTIFY) {
         lex_next();
         if (lex_cur.type != TOK_ID) fatal("line %d: intify expects a variable name", lex_cur.line);
@@ -830,17 +857,34 @@ static ASTNode *parse_stmt(void) {
         return ast_assign(vname, ast_str(""));
     }
 
-    if (lex_cur.type == TOK_DOLLAR_ID) {
+    if (lex_cur.type == TOK_DOLLAR_ID && lex_peek_next().type == TOK_LPAREN) {
         char *fname = sdup(lex_cur.val.str);
-        lex_next();
-        if (lex_cur.type != TOK_LPAREN) fatal("line %d: expected '(' after function name", lex_cur.line);
-        lex_next();
+        lex_next(); lex_next();
+        ASTNode **exprs = NULL; int nexprs = 0, ecap = 0;
+        while (lex_cur.type != TOK_RPAREN && lex_cur.type != TOK_EOF) {
+            if (nexprs >= ecap) { ecap = ecap ? ecap * 2 : 4; exprs = realloc(exprs, ecap * sizeof(ASTNode*)); }
+            exprs[nexprs++] = parse_expr();
+            if (lex_cur.type == TOK_COMMA) lex_next();
+        }
         if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
         lex_next();
-        if (lex_cur.type == TOK_NEWLINE) lex_next();
-        if (lex_cur.type != TOK_LBRACE) fatal("line %d: expected '{' after function definition", lex_cur.line);
-        ASTNode *body = parse_block();
-        return ast_func_def(fname, body);
+        while (lex_cur.type == TOK_NEWLINE) lex_next();
+        if (lex_cur.type == TOK_LBRACE) {
+            char **params = malloc(nexprs * sizeof(char*));
+            for (int i = 0; i < nexprs; i++) {
+                if (exprs[i]->type != NODE_ID) fatal("line %d: parameter must be an identifier", exprs[i]->line);
+                params[i] = sdup(exprs[i]->data.id);
+            }
+            ASTNode *body = parse_block();
+            ASTNode *n = ast_alloc(NODE_FUNC_DEF);
+            n->data.func_def.name = fname; n->data.func_def.params = params;
+            n->data.func_def.nparams = nexprs; n->data.func_def.body = body;
+            return n;
+        }
+        ASTNode *n = ast_alloc(NODE_FUNC_CALL);
+        n->data.func_call.name = fname; n->data.func_call.args = exprs;
+        n->data.func_call.nargs = nexprs;
+        return n;
     }
 
     if (lex_cur.type == TOK_ID && lex_peek_next().type == TOK_ASSIGN) {
@@ -901,18 +945,30 @@ static ASTNode *parse_primary(void) {
         }
         return ast_function(lib, args, argc);
     }
-    if (lex_cur.type == TOK_ID) {
+    if (lex_cur.type == TOK_DOLLAR_ID || lex_cur.type == TOK_ID) {
+        int is_dollar = lex_cur.type == TOK_DOLLAR_ID;
+        char *fname = sdup(lex_cur.val.str);
         if (lex_peek_next().type == TOK_LPAREN) {
-            char *fname = sdup(lex_cur.val.str);
             lex_next();
             lex_next();
-            if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')' after function call", lex_cur.line);
+            ASTNode **args = NULL;
+            int nargs = 0, acap = 0;
+            while (lex_cur.type != TOK_RPAREN && lex_cur.type != TOK_EOF) {
+                if (nargs >= acap) { acap = acap ? acap * 2 : 4; args = realloc(args, acap * sizeof(ASTNode*)); }
+                args[nargs++] = parse_expr();
+                if (lex_cur.type == TOK_COMMA) lex_next();
+            }
+            if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
             lex_next();
-            return ast_func_call(fname);
+            ASTNode *n = ast_alloc(NODE_FUNC_CALL);
+            n->data.func_call.name = fname;
+            n->data.func_call.args = args;
+            n->data.func_call.nargs = nargs;
+            return n;
         }
-        char *name = sdup(lex_cur.val.str);
+        if (is_dollar) fatal("line %d: expected '(' after function name", lex_cur.line);
         lex_next();
-        return ast_id(name);
+        return ast_id(fname);
     }
     if (lex_cur.type == TOK_LPAREN) {
         lex_next();
@@ -1079,8 +1135,19 @@ static Value eval_expr(ASTNode *n) {
         case NODE_FUNC_CALL: {
             for (int i = 0; i < func_count; i++) {
                 if (!strcmp(funcs[i].name, n->data.func_call.name)) {
-                    exec_stmt(funcs[i].body);
-                    return make_num(0);
+                    int saved_count = var_count;
+                    Var saved_vars[MAX_VARS];
+                    memcpy(saved_vars, vars, sizeof(Var) * var_count);
+                    for (int j = 0; j < funcs[i].nparams && j < n->data.func_call.nargs; j++) {
+                        Value v = eval_expr(n->data.func_call.args[j]);
+                        var_set(funcs[i].params[j], v);
+                    }
+                    Value ret = make_num(0);
+                    int r = exec_stmt(funcs[i].body);
+                    if (r == 4) ret = func_retval;
+                    memcpy(vars, saved_vars, sizeof(Var) * saved_count);
+                    var_count = saved_count;
+                    return ret;
                 }
             }
             fatal("line %d: function '%s' not defined", n->line, n->data.func_call.name);
@@ -1692,6 +1759,7 @@ static int exec_stmt(ASTNode *n) {
                 int r = exec_stmt(n->data.while_stmt.body);
                 if (r == 1) return 1;
                 if (r == 2) break;
+                if (r == 3) continue;
             }
             return 0;
         }
@@ -1708,6 +1776,7 @@ static int exec_stmt(ASTNode *n) {
                 if (r == 1) return 1;
                 if (r == 2) break;
                 var_set(n->data.forto.var, make_num(c + 1));
+                if (r == 3) continue;
             }
             return 0;
         }
@@ -1723,12 +1792,15 @@ static int exec_stmt(ASTNode *n) {
                 int r = exec_stmt(n->data.loop.body);
                 if (r == 1) return 1;
                 if (r == 2) break;
+                if (r == 3) continue;
             }
             return 0;
         }
         case NODE_STOP:
         case NODE_BREAK:
             return 2;
+        case NODE_CONTINUE:
+            return 3;
         case NODE_INCLUDE:
             return 0;
         case NODE_FUNC_DEF: {
@@ -1739,9 +1811,15 @@ static int exec_stmt(ASTNode *n) {
             }
             if (func_count >= MAX_FUNCS) fatal("line %d: too many function definitions", n->line);
             funcs[func_count].name = sdup(n->data.func_def.name);
+            funcs[func_count].params = n->data.func_def.params;
+            funcs[func_count].nparams = n->data.func_def.nparams;
             funcs[func_count].body = n->data.func_def.body;
             func_count++;
             return 0;
+        }
+        case NODE_RETURN: {
+            func_retval = n->data.assign.value ? eval_expr(n->data.assign.value) : make_num(0);
+            return 4;
         }
         case NODE_EXIT:
             return 1;
@@ -1779,6 +1857,9 @@ static int cur_loop;
 static int *fixups;
 static int *fixup_lv;
 static int fixup_cap, fixup_len;
+static int *cont_fixups;
+static int *cont_lv;
+static int cont_cap, cont_len;
 static Value vm_stack[VM_STACK];
 static int sp;
 static int vm_exit;
@@ -1843,6 +1924,33 @@ static void patch_fixups(int target) {
     fixup_len = w;
 }
 
+static void add_cont_fixup(int addr) {
+    if (cont_len >= cont_cap) {
+        cont_cap = cont_cap ? cont_cap * 2 : 16;
+        cont_fixups = realloc(cont_fixups, cont_cap * sizeof(int));
+        cont_lv = realloc(cont_lv, cont_cap * sizeof(int));
+    }
+    cont_fixups[cont_len] = addr;
+    cont_lv[cont_len] = cur_loop;
+    cont_len++;
+}
+
+static void patch_cont_fixups(int target) {
+    for (int i = 0; i < cont_len; i++) {
+        if (cont_lv[i] == cur_loop)
+            patch(cont_fixups[i], target);
+    }
+    int w = 0;
+    for (int i = 0; i < cont_len; i++) {
+        if (cont_lv[i] != cur_loop) {
+            cont_fixups[w] = cont_fixups[i];
+            cont_lv[w] = cont_lv[i];
+            w++;
+        }
+    }
+    cont_len = w;
+}
+
 static int ce_expr(ASTNode *n) {
     if (!n) { emit(OP_CONST, add_const(make_num(0))); return 1; }
     switch (n->type) {
@@ -1882,7 +1990,7 @@ static int ce_expr(ASTNode *n) {
 static int is_cstmt(ASTNode *n) {
     if (!n) return 1;
     switch (n->type) {
-        case NODE_EMPTY: case NODE_EXIT: case NODE_STOP: case NODE_BREAK: return 1;
+        case NODE_EMPTY: case NODE_EXIT: case NODE_STOP: case NODE_BREAK: case NODE_CONTINUE: return 1;
         case NODE_PRINT:
             for (int i = 0; i < n->data.print.count; i++)
                 if (n->data.print.exprs[i]->type == NODE_FUNC_CALL
@@ -1929,13 +2037,15 @@ static void ce_stmt(ASTNode *n) {
             }
             if (is_inc) { emit(OP_INC_IDX, vidx); break; }
             if (is_dec) { emit(OP_DEC_IDX, vidx); break; }
-            ce_expr(n->data.assign.value);
+            if (!ce_expr(n->data.assign.value)) { emit(OP_FALLBACK, add_fallback(n)); break; }
             emit(OP_VAR_SET_IDX, vidx);
             break;
         }
         case NODE_PRINT: {
+            int ok = 1;
             for (int i = 0; i < n->data.print.count; i++)
-                ce_expr(n->data.print.exprs[i]);
+                if (!ce_expr(n->data.print.exprs[i])) ok = 0;
+            if (!ok) { emit(OP_FALLBACK, add_fallback(n)); break; }
             emit(OP_PRINT, n->data.print.count);
             break;
         }
@@ -1965,6 +2075,7 @@ static void ce_stmt(ASTNode *n) {
             emit(OP_JZ, 0);
             int pe = code_len - 1;
             cur_loop++; ce_stmt(n->data.while_stmt.body);
+            patch_cont_fixups(ls);
             emit(OP_JMP, ls);
             patch(pe, code_len);
             patch_fixups(code_len);
@@ -1989,10 +2100,12 @@ static void ce_stmt(ASTNode *n) {
             emit(OP_JZ, 0);
             int pe = code_len - 1;
             cur_loop++; ce_stmt(n->data.forto.body);
+            int cont = code_len;
             emit(OP_VAR_GET_IDX, vidx);
             emit(OP_CONST, add_const(make_num(1)));
             emit(OP_ADD, 0);
             emit(OP_VAR_SET_IDX, vidx);
+            patch_cont_fixups(cont);
             emit(OP_JMP, ls);
             patch(pe, code_len);
             patch_fixups(code_len);
@@ -2002,13 +2115,18 @@ static void ce_stmt(ASTNode *n) {
         case NODE_LOOP: {
             if (!is_cstmt(n)) { emit(OP_FALLBACK, add_fallback(n)); break; }
             int ls = code_len;
-            cur_loop++; ce_stmt(n->data.loop.body); emit(OP_JMP, ls); patch_fixups(code_len); cur_loop--;
+            cur_loop++; ce_stmt(n->data.loop.body); patch_cont_fixups(ls); emit(OP_JMP, ls); patch_fixups(code_len); cur_loop--;
             break;
         }
         case NODE_STOP:
         case NODE_BREAK:
             if (cur_loop == 0) fatal("line %d: stop/break outside a loop", n->line);
             add_fixup(code_len);
+            emit(OP_JMP, 0);
+            break;
+        case NODE_CONTINUE:
+            if (cur_loop == 0) fatal("line %d: continue outside a loop", n->line);
+            add_cont_fixup(code_len);
             emit(OP_JMP, 0);
             break;
         case NODE_EXIT:
@@ -2516,7 +2634,7 @@ static void cg_expr(FILE *f, ASTNode *n, VarType want) {
             break;
         }
         case NODE_FUNC_CALL: {
-            fprintf(f, "call_func(\"%s\")", n->data.func_call.name);
+            fprintf(f, want == TY_NUM ? "0" : "make_num(0)");
             break;
         }
         default: fprintf(f, want == TY_NUM ? "0" : "make_num(0)"); break;
@@ -2602,6 +2720,14 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
                 fprintf(f, "goto _lil_break_%d;\n", loop_ids[loop_depth - 1]);
             } else {
                 fatal("line %d: stop/break outside a loop", n->line);
+            }
+            break;
+        }
+        case NODE_CONTINUE: {
+            if (loop_depth > 0) {
+                fprintf(f, "continue;\n");
+            } else {
+                fatal("line %d: continue outside a loop", n->line);
             }
             break;
         }
