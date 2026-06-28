@@ -37,6 +37,7 @@ function math randint 1 10      # random integer between 1 and 10
 function math factors 12        # returns string of factors: "1 2 3 4 6 12"
 function math fib 10            # returns the 10th fibonacci number
 function math isprime 7         # returns 1 if prime, 0 otherwise
+function math sleep 0.5         # sleep for N seconds (can be fractional)
 function math hasops "2+3"      # returns 1 if string contains math operators
 function math choice "a" "b" "c"  # returns a random argument
 ```
@@ -57,7 +58,6 @@ listing = function file list "path"        # list directory contents, newline se
 ```lil
 output = function sys cmd "command"        # run shell command, returns stdout
 value = function sys env "VARNAME"         # get environment variable, returns "" if not set
-function sys sleep 1000                    # sleep for N milliseconds
 ```
 
 ## date library

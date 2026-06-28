@@ -1573,15 +1573,6 @@ static Value eval_expr(ASTNode *n) {
                     free(name);
                     return v;
                 }
-                if (!strcmp(fn, "sleep")) {
-                    if (n->data.funcall.argc < 2) fatal("line %d: sys sleep expects milliseconds", n->line);
-                    char *ms_str = resolve_arg(n->data.funcall.args[1]);
-                    double ms = strtod(ms_str, NULL);
-                    free(ms_str);
-                    struct timespec ts = { (time_t)(ms / 1000), (long)((ms - (double)(time_t)(ms / 1000) * 1000) * 1000000) };
-                    nanosleep(&ts, NULL);
-                    return make_num(0);
-                }
                 fatal("line %d: unknown sys function '%s'", n->line, fn);
             }
 
