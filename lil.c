@@ -8,6 +8,7 @@
 #include <setjmp.h>
 #include <time.h>
 #include <sys/time.h>
+#include <stdint.h>
 
 #define VERSION "0.1.0"
 #define MAX_VARS 1024
@@ -84,6 +85,8 @@ static int func_count;
 
 static jmp_buf error_jmp;
 static int error_occurred;
+static int compiled_header;
+static int compile_mode;
 
 static Token lex_scan(void);
 static Token lex_peek_next(void);
@@ -144,6 +147,15 @@ static Value var_get(const char *name) {
     return vars[i].val;
 }
 
+static int var_ensure(const char *name) {
+    int i = var_find(name);
+    if (i >= 0) return i;
+    if (var_count >= MAX_VARS) fatal("too many variables");
+    vars[var_count].name = sdup(name);
+    vars[var_count].val = (Value){VAL_NUM, {.num=0}};
+    return var_count++;
+}
+
 static void var_set(const char *name, Value v) {
     int i = var_find(name);
     if (i >= 0) {
@@ -182,6 +194,10 @@ static double val_tonum(Value v) {
     double d = strtod(v.data.str, &end);
     if (*end) fatal("cannot convert '%s' to number", v.data.str);
     return d;
+}
+
+static void val_free(Value v) {
+    if (v.type == VAL_STR) free(v.data.str);
 }
 
 static Token lex_cur;
@@ -1620,6 +1636,762 @@ static int exec_stmt(ASTNode *n) {
     }
 }
 
+enum {
+    OP_NOP, OP_CONST, OP_VAR_GET, OP_VAR_SET,
+    OP_VAR_GET_IDX, OP_VAR_SET_IDX, OP_INC_IDX, OP_DEC_IDX,
+    OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD, OP_NEG,
+    OP_EQ, OP_NE, OP_LT, OP_GT, OP_LE, OP_GE,
+    OP_AND, OP_OR, OP_NOT,
+    OP_PRINT, OP_JMP, OP_JZ, OP_HALT, OP_EXIT, OP_FALLBACK, OP_POP
+};
+
+#define CODE_INIT 4096
+#define CONST_INIT 256
+#define STR_INIT 256
+#define VM_STACK 4096
+#define FIXUP_INIT 1024
+
+typedef struct { uint16_t op; int arg; } Instr;
+
+static Instr *code;
+static int code_len, code_cap;
+static Value *consts;
+static int const_len, const_cap;
+static char **strtab;
+static ASTNode **fallbacks;
+static int fb_len, fb_cap;
+static int cur_loop;
+static int *fixups;
+static int *fixup_lv;
+static int fixup_cap, fixup_len;
+static Value vm_stack[VM_STACK];
+static int sp;
+static int vm_exit;
+static int for_counter;
+
+static int add_const(Value v) {
+    if (const_len >= const_cap) {
+        const_cap = const_cap ? const_cap * 2 : CONST_INIT;
+        consts = realloc(consts, const_cap * sizeof(Value));
+    }
+    consts[const_len] = v;
+    return const_len++;
+}
+
+static int add_fallback(ASTNode *n) {
+    if (fb_len >= fb_cap) {
+        fb_cap = fb_cap ? fb_cap * 2 : 128;
+        fallbacks = realloc(fallbacks, fb_cap * sizeof(ASTNode*));
+    }
+    fallbacks[fb_len] = n;
+    return fb_len++;
+}
+
+static void emit(uint16_t op, int arg) {
+    if (code_len >= code_cap) {
+        code_cap = code_cap ? code_cap * 2 : CODE_INIT;
+        code = realloc(code, code_cap * sizeof(Instr));
+    }
+    code[code_len].op = op;
+    code[code_len].arg = arg;
+    code_len++;
+}
+
+static void patch(int idx, int target) {
+    code[idx].arg = target;
+}
+
+static void add_fixup(int addr) {
+    if (fixup_len >= fixup_cap) {
+        fixup_cap = fixup_cap ? fixup_cap * 2 : FIXUP_INIT;
+        fixups = realloc(fixups, fixup_cap * sizeof(int));
+        fixup_lv = realloc(fixup_lv, fixup_cap * sizeof(int));
+    }
+    fixups[fixup_len] = addr;
+    fixup_lv[fixup_len] = cur_loop;
+    fixup_len++;
+}
+
+static void patch_fixups(int target) {
+    for (int i = 0; i < fixup_len; i++) {
+        if (fixup_lv[i] == cur_loop)
+            patch(fixups[i], target);
+    }
+    int w = 0;
+    for (int i = 0; i < fixup_len; i++) {
+        if (fixup_lv[i] != cur_loop) {
+            fixups[w] = fixups[i];
+            fixup_lv[w] = fixup_lv[i];
+            w++;
+        }
+    }
+    fixup_len = w;
+}
+
+static int ce_expr(ASTNode *n) {
+    if (!n) { emit(OP_CONST, add_const(make_num(0))); return 1; }
+    switch (n->type) {
+        case NODE_NUM: emit(OP_CONST, add_const(make_num(n->data.num))); return 1;
+        case NODE_STR: emit(OP_CONST, add_const(make_str(n->data.str))); return 1;
+        case NODE_ID: emit(OP_VAR_GET_IDX, var_ensure(n->data.id)); return 1;
+        case NODE_BINOP:
+            if (!ce_expr(n->data.binop.left)) return 0;
+            if (!ce_expr(n->data.binop.right)) return 0;
+            switch (n->data.binop.op) {
+                case TOK_PLUS: emit(OP_ADD, 0); break;
+                case TOK_MINUS: emit(OP_SUB, 0); break;
+                case TOK_STAR: emit(OP_MUL, 0); break;
+                case TOK_SLASH: emit(OP_DIV, 0); break;
+                case TOK_MOD: emit(OP_MOD, 0); break;
+                case TOK_EQ: emit(OP_EQ, 0); break;
+                case TOK_NE: emit(OP_NE, 0); break;
+                case TOK_LT: emit(OP_LT, 0); break;
+                case TOK_GT: emit(OP_GT, 0); break;
+                case TOK_LE: emit(OP_LE, 0); break;
+                case TOK_GE: emit(OP_GE, 0); break;
+                case TOK_AND: emit(OP_AND, 0); break;
+                case TOK_OR: emit(OP_OR, 0); break;
+            }
+            return 1;
+        case NODE_UNARY:
+            if (!ce_expr(n->data.unary.operand)) return 0;
+            if (n->data.unary.op == TOK_MINUS) emit(OP_NEG, 0);
+            else if (n->data.unary.op == TOK_NOT) emit(OP_NOT, 0);
+            return 1;
+        default: return 0;
+    }
+}
+
+static int is_cstmt(ASTNode *n) {
+    if (!n) return 1;
+    switch (n->type) {
+        case NODE_EMPTY: case NODE_EXIT: case NODE_STOP: return 1;
+        case NODE_PRINT:
+            for (int i = 0; i < n->data.print.count; i++)
+                if (n->data.print.exprs[i]->type == NODE_FUNC_CALL
+                    || n->data.print.exprs[i]->type == NODE_TEMPLATE) return 0;
+            return 1;
+        case NODE_ASSIGN:
+            return n->data.assign.value->type != NODE_FUNC_CALL
+                && n->data.assign.value->type != NODE_TEMPLATE;
+        case NODE_IF:
+            if (n->data.if_stmt.has_mode || n->data.if_stmt.flags) return 0;
+            return is_cstmt(n->data.if_stmt.then)
+                && (!n->data.if_stmt.els || is_cstmt(n->data.if_stmt.els));
+        case NODE_WHILE: return is_cstmt(n->data.while_stmt.body);
+        case NODE_FORTO: return is_cstmt(n->data.forto.body);
+        case NODE_LOOP: return is_cstmt(n->data.loop.body);
+        case NODE_BLOCK: {
+            for (int i = 0; i < n->data.block.count; i++)
+                if (!is_cstmt(n->data.block.stmts[i])) return 0;
+            return 1;
+        }
+        default: return 0;
+    }
+}
+
+static void ce_stmt(ASTNode *n) {
+    if (!n) return;
+    switch (n->type) {
+        case NODE_EMPTY: break;
+        case NODE_ASSIGN: {
+            int vidx = var_ensure(n->data.assign.name);
+            int is_inc = 0, is_dec = 0;
+            if (n->data.assign.value->type == NODE_BINOP) {
+                ASTNode *l = n->data.assign.value->data.binop.left;
+                ASTNode *r = n->data.assign.value->data.binop.right;
+                int opc = n->data.assign.value->data.binop.op;
+                if (l->type == NODE_ID && r->type == NODE_NUM && r->data.num == 1
+                    && strcmp(l->data.id, n->data.assign.name) == 0) {
+                    if (opc == TOK_PLUS) is_inc = 1;
+                    else if (opc == TOK_MINUS) is_dec = 1;
+                }
+                if (r->type == NODE_ID && l->type == NODE_NUM && l->data.num == 1
+                    && strcmp(r->data.id, n->data.assign.name) == 0 && opc == TOK_PLUS) is_inc = 1;
+            }
+            if (is_inc) { emit(OP_INC_IDX, vidx); break; }
+            if (is_dec) { emit(OP_DEC_IDX, vidx); break; }
+            ce_expr(n->data.assign.value);
+            emit(OP_VAR_SET_IDX, vidx);
+            break;
+        }
+        case NODE_PRINT: {
+            for (int i = 0; i < n->data.print.count; i++)
+                ce_expr(n->data.print.exprs[i]);
+            emit(OP_PRINT, n->data.print.count);
+            break;
+        }
+        case NODE_IF: {
+            if (n->data.if_stmt.has_mode || n->data.if_stmt.flags) {
+                emit(OP_FALLBACK, add_fallback(n)); break;
+            }
+            ce_expr(n->data.if_stmt.cond);
+            emit(OP_JZ, 0);
+            int pf = code_len - 1;
+            ce_stmt(n->data.if_stmt.then);
+            if (n->data.if_stmt.els) {
+                emit(OP_JMP, 0);
+                int pe = code_len - 1;
+                patch(pf, code_len);
+                ce_stmt(n->data.if_stmt.els);
+                patch(pe, code_len);
+            } else {
+                patch(pf, code_len);
+            }
+            break;
+        }
+        case NODE_WHILE: {
+            if (!is_cstmt(n)) { emit(OP_FALLBACK, add_fallback(n)); break; }
+            int ls = code_len;
+            ce_expr(n->data.while_stmt.cond);
+            emit(OP_JZ, 0);
+            int pe = code_len - 1;
+            cur_loop++; ce_stmt(n->data.while_stmt.body); patch_fixups(code_len); cur_loop--;
+            emit(OP_JMP, ls);
+            patch(pe, code_len);
+            break;
+        }
+        case NODE_FORTO: {
+            if (!is_cstmt(n)) { emit(OP_FALLBACK, add_fallback(n)); break; }
+            int vidx = var_ensure(n->data.forto.var);
+            ce_expr(n->data.forto.start);
+            emit(OP_VAR_SET_IDX, vidx);
+            ce_expr(n->data.forto.end);
+            int fid = for_counter++;
+            char h[64];
+            snprintf(h, sizeof(h), "__for_%d", fid);
+            int hidx = var_ensure(h);
+            emit(OP_VAR_SET_IDX, hidx);
+            int ls = code_len;
+            emit(OP_VAR_GET_IDX, vidx);
+            emit(OP_VAR_GET_IDX, hidx);
+            emit(OP_LE, 0);
+            emit(OP_JZ, 0);
+            int pe = code_len - 1;
+            cur_loop++; ce_stmt(n->data.forto.body); patch_fixups(code_len); cur_loop--;
+            emit(OP_VAR_GET_IDX, vidx);
+            emit(OP_CONST, add_const(make_num(1)));
+            emit(OP_ADD, 0);
+            emit(OP_VAR_SET_IDX, vidx);
+            emit(OP_JMP, ls);
+            patch(pe, code_len);
+            break;
+        }
+        case NODE_LOOP: {
+            if (!is_cstmt(n)) { emit(OP_FALLBACK, add_fallback(n)); break; }
+            int ls = code_len;
+            cur_loop++; ce_stmt(n->data.loop.body); emit(OP_JMP, ls); patch_fixups(code_len); cur_loop--;
+            break;
+        }
+        case NODE_STOP:
+            add_fixup(code_len);
+            emit(OP_JMP, 0);
+            break;
+        case NODE_EXIT:
+            emit(OP_EXIT, 0);
+            break;
+        case NODE_BLOCK:
+            for (int i = 0; i < n->data.block.count; i++)
+                ce_stmt(n->data.block.stmts[i]);
+            break;
+        default:
+            emit(OP_FALLBACK, add_fallback(n));
+            break;
+    }
+}
+
+static void compile_prog(ASTNode **stmts, int nstmts) {
+    for (int i = 0; i < nstmts; i++)
+        ce_stmt(stmts[i]);
+    emit(OP_HALT, 0);
+}
+
+static int truthy(Value v) {
+    if (v.type == VAL_STR) return strlen(v.data.str) != 0;
+    return v.data.num != 0;
+}
+
+static void vm_run(void) {
+    int ip = 0;
+    sp = 0;
+    vm_exit = 0;
+    void *dtab[] = { &&OP_NOP, &&OP_CONST, &&OP_VAR_GET, &&OP_VAR_SET,
+        &&OP_VAR_GET_IDX, &&OP_VAR_SET_IDX, &&OP_INC_IDX, &&OP_DEC_IDX,
+        &&OP_ADD, &&OP_SUB, &&OP_MUL, &&OP_DIV, &&OP_MOD, &&OP_NEG,
+        &&OP_CMP, &&OP_CMP, &&OP_CMP, &&OP_CMP, &&OP_CMP, &&OP_CMP,
+        &&OP_AND, &&OP_OR, &&OP_NOT,
+        &&OP_PRINT, &&OP_JMP, &&OP_JZ, &&OP_HALT, &&OP_EXIT, &&OP_FALLBACK, &&OP_POP };
+    goto *dtab[code[ip].op];
+
+OP_NOP: ip++; goto *dtab[code[ip].op];
+OP_CONST: {
+    Value v = consts[code[ip].arg];
+    if (v.type == VAL_STR) v.data.str = sdup(v.data.str);
+    vm_stack[sp++] = v; ip++; goto *dtab[code[ip].op];
+}
+OP_VAR_GET: {
+    Value v = var_get(strtab[code[ip].arg]);
+    if (v.type == VAL_STR) v.data.str = sdup(v.data.str);
+    vm_stack[sp++] = v; ip++; goto *dtab[code[ip].op];
+}
+OP_VAR_SET: {
+    var_set(strtab[code[ip].arg], vm_stack[--sp]); ip++; goto *dtab[code[ip].op];
+}
+OP_VAR_GET_IDX: {
+    Value v = vars[code[ip].arg].val;
+    if (v.type == VAL_STR) v.data.str = sdup(v.data.str);
+    vm_stack[sp++] = v; ip++; goto *dtab[code[ip].op];
+}
+OP_VAR_SET_IDX: {
+    int idx = code[ip].arg;
+    Value v = vm_stack[--sp];
+    if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);
+    vars[idx].val = v;
+    ip++; goto *dtab[code[ip].op];
+}
+OP_INC_IDX: {
+    int idx = code[ip].arg;
+    if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);
+    vars[idx].val.data.num += 1;
+    vars[idx].val.type = VAL_NUM;
+    ip++; goto *dtab[code[ip].op];
+}
+OP_DEC_IDX: {
+    int idx = code[ip].arg;
+    if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);
+    vars[idx].val.data.num -= 1;
+    vars[idx].val.type = VAL_NUM;
+    ip++; goto *dtab[code[ip].op];
+}
+OP_ADD: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    if (a.type == VAL_STR || b.type == VAL_STR) {
+        char *as = val_tostr(a), *bs = val_tostr(b);
+        char *r = malloc(strlen(as) + strlen(bs) + 1);
+        strcpy(r, as); strcat(r, bs);
+        val_free(a); val_free(b); free(as); free(bs);
+        vm_stack[sp++] = make_str(r); free(r);
+    } else {
+        val_free(a); val_free(b); vm_stack[sp++] = make_num(a.data.num + b.data.num);
+    }
+    ip++; goto *dtab[code[ip].op];
+}
+OP_SUB: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }
+    else { val_free(a); val_free(b); vm_stack[sp++] = make_num(a.data.num - b.data.num); }
+    ip++; goto *dtab[code[ip].op];
+}
+OP_MUL: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }
+    else { val_free(a); val_free(b); vm_stack[sp++] = make_num(a.data.num * b.data.num); }
+    ip++; goto *dtab[code[ip].op];
+}
+OP_DIV: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }
+    else {
+        double rd = b.data.num;
+        if (rd == 0) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }
+        else { val_free(a); val_free(b); vm_stack[sp++] = make_num(a.data.num / rd); }
+    }
+    ip++; goto *dtab[code[ip].op];
+}
+OP_MOD: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }
+    else {
+        int rd = (int)b.data.num;
+        if (rd == 0) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }
+        else { val_free(a); val_free(b); vm_stack[sp++] = make_num((double)((int)a.data.num % rd)); }
+    }
+    ip++; goto *dtab[code[ip].op];
+}
+OP_NEG: {
+    Value a = vm_stack[--sp];
+    if (a.type == VAL_STR) { val_free(a); vm_stack[sp++] = make_num(0); }
+    else { double r = -a.data.num; val_free(a); vm_stack[sp++] = make_num(r); }
+    ip++; goto *dtab[code[ip].op];
+}
+OP_CMP: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    int r;
+    uint16_t oc = code[ip].op;
+    if (a.type == VAL_STR || b.type == VAL_STR) {
+        char *as = val_tostr(a), *bs = val_tostr(b);
+        int c = strcmp(as, bs);
+        free(as); free(bs);
+        if (oc == OP_EQ) r = c == 0; else if (oc == OP_NE) r = c != 0;
+        else if (oc == OP_LT) r = c < 0; else if (oc == OP_GT) r = c > 0;
+        else if (oc == OP_LE) r = c <= 0; else r = c >= 0;
+    } else {
+        double av = a.data.num, bv = b.data.num;
+        if (oc == OP_EQ) r = av == bv; else if (oc == OP_NE) r = av != bv;
+        else if (oc == OP_LT) r = av < bv; else if (oc == OP_GT) r = av > bv;
+        else if (oc == OP_LE) r = av <= bv; else r = av >= bv;
+    }
+    val_free(a); val_free(b); vm_stack[sp++] = make_num(r);
+    ip++; goto *dtab[code[ip].op];
+}
+OP_AND: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    int r = truthy(a) && truthy(b);
+    val_free(a); val_free(b); vm_stack[sp++] = make_num(r);
+    ip++; goto *dtab[code[ip].op];
+}
+OP_OR: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    int r = truthy(a) || truthy(b);
+    val_free(a); val_free(b); vm_stack[sp++] = make_num(r);
+    ip++; goto *dtab[code[ip].op];
+}
+OP_NOT: {
+    Value a = vm_stack[--sp];
+    int r = !truthy(a);
+    val_free(a); vm_stack[sp++] = make_num(r);
+    ip++; goto *dtab[code[ip].op];
+}
+OP_PRINT: {
+    int n = code[ip].arg;
+    Value *vals = malloc(n * sizeof(Value));
+    for (int i = n - 1; i >= 0; i--)
+        vals[i] = vm_stack[--sp];
+    for (int i = 0; i < n; i++) {
+        if (vals[i].type == VAL_STR) { printf("%s", vals[i].data.str); free(vals[i].data.str); }
+        else printf("%g", vals[i].data.num);
+    }
+    free(vals); printf("\n");
+    ip++; goto *dtab[code[ip].op];
+}
+OP_JMP: {
+    ip = code[ip].arg; goto *dtab[code[ip].op];
+}
+OP_JZ: {
+    Value a = vm_stack[--sp];
+    int t = truthy(a); val_free(a);
+    ip = t ? ip + 1 : code[ip].arg;
+    goto *dtab[code[ip].op];
+}
+OP_HALT: return;
+OP_EXIT: return;
+OP_POP: {
+    val_free(vm_stack[--sp]); ip++; goto *dtab[code[ip].op];
+}
+OP_FALLBACK: {
+    int r = exec_stmt(fallbacks[code[ip].arg]);
+    if (r == 1) return;
+    ip++; goto *dtab[code[ip].op];
+}
+}
+
+static int generate_c(const char *path, const char *outpath) {
+    FILE *f = fopen(path, "rb");
+    if (!f) { fprintf(stderr, "error: cannot open '%s': %s\n", path, strerror(errno)); return 1; }
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    rewind(f);
+    char *src = malloc(sz + 1);
+    if (!src) { fclose(f); fprintf(stderr, "out of memory\n"); return 1; }
+    long got = fread(src, 1, sz, f);
+    fclose(f);
+    if (got < sz) fprintf(stderr, "warning: short read from '%s'\n", path);
+    src[got] = 0;
+
+    char *psrc = src;
+    while (*psrc == ' ' || *psrc == '\t' || *psrc == '\n' || *psrc == '\r') psrc++;
+    if (psrc[0] == '[' && strncmp(psrc, "[compiled]", 10) == 0
+        && (psrc[10] == '\n' || psrc[10] == '\r' || psrc[10] == 0)) {
+        psrc = psrc + 10;
+        while (*psrc == '\n' || *psrc == '\r') psrc++;
+    }
+
+    if (setjmp(error_jmp)) { free(src); return 1; }
+
+    lex_init(psrc);
+    lex_next();
+    ASTNode *prog = parse_program();
+    code_len = 0; const_len = 0; fb_len = 0;
+    fixup_len = 0; cur_loop = 0; for_counter = 0;
+    compile_prog(prog->data.block.stmts, prog->data.block.count);
+
+    for (int i = 0; i < code_len; i++)
+        if (code[i].op == OP_FALLBACK) {
+            fprintf(stderr, "error: cannot compile - program uses non-compilable features\n");
+            free(src); return 1;
+        }
+
+    char cpath[1024];
+    snprintf(cpath, sizeof(cpath), "%s.c", outpath);
+    f = fopen(cpath, "w");
+    if (!f) { fprintf(stderr, "error: cannot write '%s'\n", cpath); free(src); return 1; }
+
+    fprintf(f, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <stdint.h>\n#include <stdarg.h>\n#include <errno.h>\n#include <setjmp.h>\n#include <time.h>\n#include <sys/time.h>\n#include <math.h>\n\n");
+
+    fprintf(f, "typedef enum { VAL_NUM, VAL_STR } ValType;\n");
+    fprintf(f, "typedef struct { ValType type; union { double num; char *str; } data; } Value;\n\n");
+    fprintf(f, "static Value make_num(double n) { Value v = {VAL_NUM, {.num=n}}; return v; }\n");
+    fprintf(f, "static Value make_str(const char *s) { Value v = {VAL_STR, {.str=strdup(s)}}; return v; }\n");
+    fprintf(f, "static char *val_tostr(Value v) {\n");
+    fprintf(f, "  if (v.type == VAL_STR) return strdup(v.data.str);\n");
+    fprintf(f, "  char buf[128]; double d = v.data.num;\n");
+    fprintf(f, "  if (d == (long)d) snprintf(buf,sizeof(buf),\"%%ld\",(long)d); else snprintf(buf,sizeof(buf),\"%%.10g\",d);\n");
+    fprintf(f, "  return strdup(buf);\n");
+    fprintf(f, "}\n");
+    fprintf(f, "static double val_tonum(Value v) {\n");
+    fprintf(f, "  if (v.type == VAL_NUM) return v.data.num;\n");
+    fprintf(f, "  char *end; double d = strtod(v.data.str, &end);\n");
+    fprintf(f, "  if (*end) { fprintf(stderr,\"cannot convert to number\\n\"); exit(1); }\n");
+    fprintf(f, "  return d;\n");
+    fprintf(f, "}\n");
+    fprintf(f, "static void val_free(Value v) { if (v.type == VAL_STR) free(v.data.str); }\n\n");
+
+    fprintf(f, "#define MAX_VARS 1024\ntypedef struct { char *name; Value val; } Var;\n");
+    fprintf(f, "static Var vars[MAX_VARS];\nstatic int var_count;\n");
+    fprintf(f, "static int var_find(const char *name) {\n");
+    fprintf(f, "  for (int i = 0; i < var_count; i++) if (!strcmp(vars[i].name, name)) return i;\n");
+    fprintf(f, "  return -1;\n");
+    fprintf(f, "}\n");
+    fprintf(f, "static Value var_get(const char *name) {\n");
+    fprintf(f, "  int i = var_find(name);\n");
+    fprintf(f, "  if (i < 0) { Value v = {VAL_NUM, {.num=0}}; return v; }\n");
+    fprintf(f, "  return vars[i].val;\n");
+    fprintf(f, "}\n");
+    fprintf(f, "static void var_set(const char *name, Value v) {\n");
+    fprintf(f, "  int i = var_find(name);\n");
+    fprintf(f, "  if (i >= 0) { if (vars[i].val.type == VAL_STR) free(vars[i].val.data.str); vars[i].val = v; }\n");
+    fprintf(f, "  else { if (var_count >= MAX_VARS) { fprintf(stderr,\"too many vars\\n\"); exit(1); }\n");
+    fprintf(f, "    vars[var_count].name = strdup(name); vars[var_count].val = v; var_count++; }\n");
+    fprintf(f, "}\n");
+    fprintf(f, "static int var_ensure(const char *name) {\n");
+    fprintf(f, "  int i = var_find(name); if (i >= 0) return i;\n");
+    fprintf(f, "  if (var_count >= MAX_VARS) { fprintf(stderr,\"too many vars\\n\"); exit(1); }\n");
+    fprintf(f, "  vars[var_count].name = strdup(name); vars[var_count].val = (Value){VAL_NUM,{.num=0}};\n");
+    fprintf(f, "  return var_count++;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "enum {\n");
+    fprintf(f, "  OP_NOP,OP_CONST,OP_VAR_GET,OP_VAR_SET,OP_VAR_GET_IDX,OP_VAR_SET_IDX,\n");
+    fprintf(f, "  OP_INC_IDX,OP_DEC_IDX,OP_ADD,OP_SUB,OP_MUL,OP_DIV,OP_MOD,OP_NEG,\n");
+    fprintf(f, "  OP_EQ,OP_NE,OP_LT,OP_GT,OP_LE,OP_GE,OP_AND,OP_OR,OP_NOT,\n");
+    fprintf(f, "  OP_PRINT,OP_JMP,OP_JZ,OP_HALT,OP_EXIT,OP_FALLBACK,OP_POP\n");
+    fprintf(f, "};\n");
+    fprintf(f, "typedef struct { uint16_t op; int arg; } Instr;\n");
+    fprintf(f, "static Instr *code;\n");
+    fprintf(f, "static int code_len;\n");
+    fprintf(f, "static Value *consts;\n");
+    fprintf(f, "static int const_len;\n");
+    fprintf(f, "#define VM_STACK 4096\n");
+    fprintf(f, "static Value vm_stack[VM_STACK];\n");
+    fprintf(f, "static int sp;\n");
+    fprintf(f, "static int vm_exit;\n\n");
+
+    fprintf(f, "static int truthy(Value v) {\n");
+    fprintf(f, "  if (v.type == VAL_STR) return strlen(v.data.str) != 0;\n");
+    fprintf(f, "  return v.data.num != 0;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "static void vm_run(void) {\n");
+    fprintf(f, "  int ip = 0; sp = 0; vm_exit = 0;\n");
+    fprintf(f, "  void *dtab[] = { &&OP_NOP,&&OP_CONST,&&OP_VAR_GET,&&OP_VAR_SET,\n");
+    fprintf(f, "    &&OP_VAR_GET_IDX,&&OP_VAR_SET_IDX,&&OP_INC_IDX,&&OP_DEC_IDX,\n");
+    fprintf(f, "    &&OP_ADD,&&OP_SUB,&&OP_MUL,&&OP_DIV,&&OP_MOD,&&OP_NEG,\n");
+    fprintf(f, "    &&OP_CMP,&&OP_CMP,&&OP_CMP,&&OP_CMP,&&OP_CMP,&&OP_CMP,\n");
+    fprintf(f, "    &&OP_AND,&&OP_OR,&&OP_NOT,\n");
+    fprintf(f, "    &&OP_PRINT,&&OP_JMP,&&OP_JZ,&&OP_HALT,&&OP_EXIT,&&OP_FALLBACK,&&OP_POP };\n");
+    fprintf(f, "  goto *dtab[code[ip].op];\n");
+
+    fprintf(f, "OP_NOP: ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "OP_CONST: {\n");
+    fprintf(f, "  Value v = consts[code[ip].arg];\n");
+    fprintf(f, "  if (v.type == VAL_STR) v.data.str = strdup(v.data.str);\n");
+    fprintf(f, "  vm_stack[sp++] = v; ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_VAR_GET: { ip++; goto *dtab[code[ip].op]; }\n");
+    fprintf(f, "OP_VAR_SET: { ip++; goto *dtab[code[ip].op]; }\n");
+    fprintf(f, "OP_VAR_GET_IDX: {\n");
+    fprintf(f, "  Value v = vars[code[ip].arg].val;\n");
+    fprintf(f, "  if (v.type == VAL_STR) v.data.str = strdup(v.data.str);\n");
+    fprintf(f, "  vm_stack[sp++] = v; ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_VAR_SET_IDX: {\n");
+    fprintf(f, "  int idx = code[ip].arg; Value v = vm_stack[--sp];\n");
+    fprintf(f, "  if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);\n");
+    fprintf(f, "  vars[idx].val = v; ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_INC_IDX: {\n");
+    fprintf(f, "  int idx = code[ip].arg;\n");
+    fprintf(f, "  if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);\n");
+    fprintf(f, "  vars[idx].val.data.num += 1; vars[idx].val.type = VAL_NUM;\n");
+    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_DEC_IDX: {\n");
+    fprintf(f, "  int idx = code[ip].arg;\n");
+    fprintf(f, "  if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);\n");
+    fprintf(f, "  vars[idx].val.data.num -= 1; vars[idx].val.type = VAL_NUM;\n");
+    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_ADD: {\n");
+    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
+    fprintf(f, "  if (a.type == VAL_STR || b.type == VAL_STR) {\n");
+    fprintf(f, "    char *as = val_tostr(a), *bs = val_tostr(b);\n");
+    fprintf(f, "    char *r = malloc(strlen(as)+strlen(bs)+1); strcpy(r,as); strcat(r,bs);\n");
+    fprintf(f, "    val_free(a); val_free(b); free(as); free(bs);\n");
+    fprintf(f, "    vm_stack[sp++] = make_str(r); free(r);\n");
+    fprintf(f, "  } else { val_free(a); val_free(b); vm_stack[sp++] = make_num(a.data.num + b.data.num); }\n");
+    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_SUB: {\n");
+    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
+    fprintf(f, "  if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }\n");
+    fprintf(f, "  else { val_free(a); val_free(b); vm_stack[sp++] = make_num(a.data.num - b.data.num); }\n");
+    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_MUL: {\n");
+    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
+    fprintf(f, "  if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }\n");
+    fprintf(f, "  else { val_free(a); val_free(b); vm_stack[sp++] = make_num(a.data.num * b.data.num); }\n");
+    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_DIV: {\n");
+    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
+    fprintf(f, "  if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }\n");
+    fprintf(f, "  else { double rd = b.data.num; if (rd==0) { val_free(a); val_free(b); vm_stack[sp++]=make_num(0); }\n");
+    fprintf(f, "  else { val_free(a); val_free(b); vm_stack[sp++] = make_num(a.data.num / rd); } }\n");
+    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_MOD: {\n");
+    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
+    fprintf(f, "  if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }\n");
+    fprintf(f, "  else { int rd = (int)b.data.num; if (rd==0) { val_free(a); val_free(b); vm_stack[sp++]=make_num(0); }\n");
+    fprintf(f, "  else { val_free(a); val_free(b); vm_stack[sp++] = make_num((double)((int)a.data.num %% rd)); } }\n");
+    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_NEG: {\n");
+    fprintf(f, "  Value a = vm_stack[--sp];\n");
+    fprintf(f, "  if (a.type == VAL_STR) { val_free(a); vm_stack[sp++] = make_num(0); }\n");
+    fprintf(f, "  else { double r = -a.data.num; val_free(a); vm_stack[sp++] = make_num(r); }\n");
+    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_CMP: {\n");
+    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp]; int r; uint16_t oc = code[ip].op;\n");
+    fprintf(f, "  if (a.type == VAL_STR || b.type == VAL_STR) {\n");
+    fprintf(f, "    char *as = val_tostr(a), *bs = val_tostr(b); int c = strcmp(as, bs); free(as); free(bs);\n");
+    fprintf(f, "    if (oc==OP_EQ) r=c==0; else if (oc==OP_NE) r=c!=0; else if (oc==OP_LT) r=c<0;\n");
+    fprintf(f, "    else if (oc==OP_GT) r=c>0; else if (oc==OP_LE) r=c<=0; else r=c>=0;\n");
+    fprintf(f, "  } else {\n");
+    fprintf(f, "    double av=a.data.num, bv=b.data.num;\n");
+    fprintf(f, "    if (oc==OP_EQ) r=av==bv; else if (oc==OP_NE) r=av!=bv; else if (oc==OP_LT) r=av<bv;\n");
+    fprintf(f, "    else if (oc==OP_GT) r=av>bv; else if (oc==OP_LE) r=av<=bv; else r=av>=bv;\n");
+    fprintf(f, "  }\n");
+    fprintf(f, "  val_free(a); val_free(b); vm_stack[sp++] = make_num(r);\n");
+    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_AND: {\n");
+    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
+    fprintf(f, "  int r = truthy(a) && truthy(b); val_free(a); val_free(b); vm_stack[sp++] = make_num(r);\n");
+    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_OR: {\n");
+    fprintf(f, "  Value b = vm_stack[--sp], a = vm_stack[--sp];\n");
+    fprintf(f, "  int r = truthy(a) || truthy(b); val_free(a); val_free(b); vm_stack[sp++] = make_num(r);\n");
+    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_NOT: {\n");
+    fprintf(f, "  Value a = vm_stack[--sp];\n");
+    fprintf(f, "  int r = !truthy(a); val_free(a); vm_stack[sp++] = make_num(r);\n");
+    fprintf(f, "  ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_PRINT: {\n");
+    fprintf(f, "  int n = code[ip].arg; Value *vals = malloc(n * sizeof(Value));\n");
+    fprintf(f, "  for (int i = n-1; i >= 0; i--) vals[i] = vm_stack[--sp];\n");
+    fprintf(f, "  for (int i = 0; i < n; i++) {\n");
+    fprintf(f, "    if (vals[i].type == VAL_STR) { printf(\"%%s\", vals[i].data.str); free(vals[i].data.str); }\n");
+    fprintf(f, "    else printf(\"%%g\", vals[i].data.num);\n");
+    fprintf(f, "  }\n");
+    fprintf(f, "  free(vals); printf(\"\\n\"); ip++; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_JMP: { ip = code[ip].arg; goto *dtab[code[ip].op]; }\n");
+    fprintf(f, "OP_JZ: {\n");
+    fprintf(f, "  Value a = vm_stack[--sp]; int t = truthy(a); val_free(a);\n");
+    fprintf(f, "  ip = t ? ip + 1 : code[ip].arg; goto *dtab[code[ip].op];\n");
+    fprintf(f, "}\n");
+    fprintf(f, "OP_HALT: return;\n");
+    fprintf(f, "OP_EXIT: return;\n");
+    fprintf(f, "OP_POP: { val_free(vm_stack[--sp]); ip++; goto *dtab[code[ip].op]; }\n");
+    fprintf(f, "OP_FALLBACK: return;\n");
+    fprintf(f, "}\n\n");
+
+    fprintf(f, "#define CODE_LEN %d\n", code_len);
+    fprintf(f, "#define CONST_LEN %d\n", const_len);
+    fprintf(f, "static uint16_t code_ops[CODE_LEN] = {");
+    for (int i = 0; i < code_len; i++) {
+        if (i % 16 == 0) fprintf(f, "\n  ");
+        fprintf(f, "%d,", code[i].op);
+    }
+    fprintf(f, "\n};\n");
+    fprintf(f, "static int code_args[CODE_LEN] = {");
+    for (int i = 0; i < code_len; i++) {
+        if (i % 16 == 0) fprintf(f, "\n  ");
+        fprintf(f, "%d,", code[i].arg);
+    }
+    fprintf(f, "\n};\n");
+    fprintf(f, "static int const_types[CONST_LEN] = {");
+    for (int i = 0; i < const_len; i++) {
+        if (i % 16 == 0) fprintf(f, "\n  ");
+        fprintf(f, "%d,", consts[i].type);
+    }
+    fprintf(f, "\n};\n");
+    fprintf(f, "static double const_nums[CONST_LEN] = {");
+    for (int i = 0; i < const_len; i++) {
+        if (i % 16 == 0) fprintf(f, "\n  ");
+        fprintf(f, "%.17g,", consts[i].data.num);
+    }
+    fprintf(f, "\n};\n");
+    fprintf(f, "static char *const_strs[CONST_LEN] = {");
+    for (int i = 0; i < const_len; i++) {
+        if (i % 8 == 0) fprintf(f, "\n  ");
+        if (consts[i].type == VAL_STR) fprintf(f, "\"%s\",", consts[i].data.str);
+        else fprintf(f, "NULL,");
+    }
+    fprintf(f, "\n};\n\n");
+
+    fprintf(f, "int main() {\n");
+    fprintf(f, "  code_len = CODE_LEN;\n");
+    fprintf(f, "  code = malloc(CODE_LEN * sizeof(Instr));\n");
+    fprintf(f, "  for (int i = 0; i < CODE_LEN; i++) {\n");
+    fprintf(f, "    code[i].op = code_ops[i];\n");
+    fprintf(f, "    code[i].arg = code_args[i];\n");
+    fprintf(f, "  }\n");
+    fprintf(f, "  const_len = CONST_LEN;\n");
+    fprintf(f, "  consts = malloc(CONST_LEN * sizeof(Value));\n");
+    fprintf(f, "  for (int i = 0; i < CONST_LEN; i++) {\n");
+    fprintf(f, "    consts[i].type = const_types[i];\n");
+    fprintf(f, "    if (const_types[i] == VAL_STR) consts[i].data.str = strdup(const_strs[i]);\n");
+    fprintf(f, "    else consts[i].data.num = const_nums[i];\n");
+    fprintf(f, "  }\n");
+    fprintf(f, "  var_count = 0;\n");
+    fprintf(f, "  vm_run();\n");
+    fprintf(f, "  for (int i = 0; i < var_count; i++) if (vars[i].val.type == VAL_STR) free(vars[i].val.data.str);\n");
+    fprintf(f, "  free(consts); free(code);\n");
+    fprintf(f, "  return 0;\n");
+    fprintf(f, "}\n");
+    fclose(f);
+
+    char cmd[2048];
+    snprintf(cmd, sizeof(cmd), "gcc -O2 -o %s %s -lm 2>&1", outpath, cpath);
+    int ret = system(cmd);
+    if (ret) {
+        fprintf(stderr, "error: compilation failed (gcc returned %d)\n", ret);
+        free(src);
+        return 1;
+    }
+
+    printf("compiled: %s\n", outpath);
+    free(src);
+    return 0;
+}
+
 static void run_file(const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) { fprintf(stderr, "error: cannot open '%s': %s\n", path, strerror(errno)); return; }
@@ -1633,15 +2405,33 @@ static void run_file(const char *path) {
     if (got < sz) fprintf(stderr, "warning: short read from '%s'\n", path);
     src[got] = 0;
 
-    if (setjmp(error_jmp)) return;
+    compiled_header = 0;
+    char *psrc = src;
+    while (*psrc == ' ' || *psrc == '\t' || *psrc == '\n' || *psrc == '\r') psrc++;
+    if (psrc[0] == '[' && strncmp(psrc, "[compiled]", 10) == 0
+        && (psrc[10] == '\n' || psrc[10] == '\r' || psrc[10] == 0)) {
+        compiled_header = 1;
+        psrc = psrc + 10;
+        while (*psrc == '\n' || *psrc == '\r') psrc++;
+    }
+    if (compiled_header && !compile_mode) {
+        fprintf(stderr, "error: code is in compiled mode (use -c to compile)\n");
+        free(src);
+        return;
+    }
 
-    lex_init(src);
+    if (setjmp(error_jmp)) { free(src); return; }
+
+    lex_init(psrc);
     lex_next();
 
     ASTNode *prog = parse_program();
     free(src);
 
-    if (exec_stmt(prog) == 1) return;
+    code_len = 0; const_len = 0; fb_len = 0;
+    fixup_len = 0; cur_loop = 0; for_counter = 0;
+    compile_prog(prog->data.block.stmts, prog->data.block.count);
+    vm_run();
 }
 
 static void repl(void) {
@@ -1675,14 +2465,46 @@ static void repl(void) {
 
 int main(int argc, char **argv) {
     error_occurred = 0;
-    if (argc > 1) {
-        if (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-h")) {
-            printf("usage: lil [file.lil]\n");
-            printf("  no args    - start REPL\n");
-            printf("  file.lil   - execute file\n");
+    compile_mode = 0;
+    const char *inpath = NULL;
+    const char *outpath = NULL;
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h")) {
+            printf("usage: lil [options] [file.lil]\n");
+            printf("  no args      start REPL\n");
+            printf("  file.lil     execute file\n");
+            printf("  -c file.lil  compile to standalone binary\n");
+            printf("  -o output    output filename (default: a.out)\n");
             return 0;
+        } else if (!strcmp(argv[i], "-c") || !strcmp(argv[i], "--compile")) {
+            compile_mode = 1;
+        } else if (!strcmp(argv[i], "-o")) {
+            if (i + 1 < argc) outpath = argv[++i];
+            else { fprintf(stderr, "error: -o requires an argument\n"); return 1; }
+        } else if (argv[i][0] != '-') {
+            inpath = argv[i];
+        } else {
+            fprintf(stderr, "error: unknown option '%s'\n", argv[i]);
+            return 1;
         }
-        run_file(argv[1]);
+    }
+    if (compile_mode) {
+        if (!outpath) {
+            const char *dot = inpath ? strrchr(inpath, '.') : NULL;
+            if (dot) {
+                size_t n = dot - inpath;
+                char *buf = malloc(n + 1);
+                memcpy(buf, inpath, n); buf[n] = 0;
+                outpath = buf;
+            } else {
+                outpath = "a.out";
+            }
+        }
+        if (!inpath) { fprintf(stderr, "error: no input file\n"); return 1; }
+        return generate_c(inpath, outpath);
+    }
+    if (inpath) {
+        run_file(inpath);
     } else {
         repl();
     }
