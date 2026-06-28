@@ -45,18 +45,23 @@ x = 42
 strify x     # x is now "42"
 ```
 
-`intify` converts a variable to a number:
+`intify` converts a variable to a number. If the string is not numeric, it produces an error:
 
 ```lil
 x = "42"
 intify x     # x is now 42
 x = x + 5
 print x      # prints 47
+
+x = "hello"
+intify x     # error: cannot convert to number
 ```
 
-If the string does not contain a valid number, `intify` produces an error:
+`intify` can also format a string as binary, hex, or octal byte representation:
 
 ```lil
 x = "hello"
-intify x     # error: cannot convert to number
+intify x binary   # x is now "01101000 01100101 01101100 01101100 01101111"
+intify x hex      # x is now "68 65 6c 6c 6f"
+intify x octal    # x is now "150 145 154 154 157"
 ```

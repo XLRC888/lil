@@ -793,8 +793,14 @@ static ASTNode *parse_stmt(void) {
         if (lex_cur.type != TOK_ID) fatal("line %d: intify expects a variable name", lex_cur.line);
         char *name = sdup(lex_cur.val.str);
         lex_next();
+        char *fmt = NULL;
+        if (lex_cur.type == TOK_ID && (!strcmp(lex_cur.val.str, "binary") || !strcmp(lex_cur.val.str, "hex") || !strcmp(lex_cur.val.str, "octal"))) {
+            fmt = sdup(lex_cur.val.str);
+            lex_next();
+        }
         ASTNode *n = ast_alloc(NODE_INTIFY);
         n->data.input.name = name;
+        n->data.input.prompt = fmt;
         return n;
     }
 
@@ -1588,16 +1594,42 @@ static int exec_stmt(ASTNode *n) {
             return 0;
         }
         case NODE_STRIFY: {
-            Value v = var_get(n->data.input.name);
-            char *s = val_tostr(v);
+            int idx = var_find(n->data.input.name);
+            if (idx < 0) { var_set(n->data.input.name, make_str("")); idx = var_count - 1; }
+            char *s = val_tostr(vars[idx].val);
             var_set(n->data.input.name, make_str(s));
             free(s);
             return 0;
         }
         case NODE_INTIFY: {
-            Value v = var_get(n->data.input.name);
-            double d = val_tonum(v);
-            var_set(n->data.input.name, make_num(d));
+            if (n->data.input.prompt) {
+                int idx = var_find(n->data.input.name);
+                if (idx < 0) { var_set(n->data.input.name, make_str("")); idx = var_count - 1; }
+                char *s = val_tostr(vars[idx].val);
+                size_t slen = strlen(s);
+                char *out = malloc(slen * 16 + 1);
+                if (!out) fatal("out of memory");
+                out[0] = 0;
+                for (size_t i = 0; i < slen; i++) {
+                    if (i > 0) strcat(out, " ");
+                    if (!strcmp(n->data.input.prompt, "binary")) {
+                        for (int b = 7; b >= 0; b--) strcat(out, ((unsigned char)s[i] >> b) & 1 ? "1" : "0");
+                    } else if (!strcmp(n->data.input.prompt, "hex")) {
+                        char buf[16]; snprintf(buf, sizeof(buf), "%02x", (unsigned char)s[i]);
+                        strcat(out, buf);
+                    } else {
+                        char buf[16]; snprintf(buf, sizeof(buf), "%03o", (unsigned char)s[i]);
+                        strcat(out, buf);
+                    }
+                }
+                free(s);
+                var_set(n->data.input.name, make_str(out));
+                free(out);
+            } else {
+                Value v = var_get(n->data.input.name);
+                double d = val_tonum(v);
+                var_set(n->data.input.name, make_num(d));
+            }
             return 0;
         }
         case NODE_IF: {
@@ -2613,8 +2645,27 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
             break;
         }
         case NODE_INTIFY: {
-            fprintf(f, "%s.data.num = val_tonum(%s);\n", n->data.input.name, n->data.input.name);
-            fprintf(f, "%s.type = VAL_NUM;\n", n->data.input.name);
+            if (n->data.input.prompt) {
+                char *fmt = n->data.input.prompt;
+                fprintf(f, "{\n  char *_s = val_tostr(%s);\n", n->data.input.name);
+                fprintf(f, "  size_t _n = strlen(_s);\n");
+                fprintf(f, "  char *_o = malloc(_n * 16 + 1); _o[0] = 0;\n");
+                fprintf(f, "  for (size_t _i = 0; _i < _n; _i++) {\n");
+                fprintf(f, "    if (_i > 0) strcat(_o, \" \");\n");
+                if (!strcmp(fmt, "binary")) {
+                    fprintf(f, "    for (int _b = 7; _b >= 0; _b--) strcat(_o, ((unsigned char)_s[_i] >> _b) & 1 ? \"1\" : \"0\");\n");
+                } else if (!strcmp(fmt, "hex")) {
+                    fprintf(f, "    { char _b[16]; snprintf(_b,16,\"%%02x\",(unsigned char)_s[_i]); strcat(_o,_b); }\n");
+                } else {
+                    fprintf(f, "    { char _b[16]; snprintf(_b,16,\"%%03o\",(unsigned char)_s[_i]); strcat(_o,_b); }\n");
+                }
+                fprintf(f, "  }\n");
+                fprintf(f, "  free(_s); val_free(%s); %s = make_str(_o); free(_o);\n", n->data.input.name, n->data.input.name);
+                fprintf(f, "}\n");
+            } else {
+                fprintf(f, "%s.data.num = val_tonum(%s);\n", n->data.input.name, n->data.input.name);
+                fprintf(f, "%s.type = VAL_NUM;\n", n->data.input.name);
+            }
             break;
         }
     }
