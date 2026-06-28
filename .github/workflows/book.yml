@@ -3,11 +3,11 @@ on:
   push:
     branches: [main]
     paths: ['book/**']
-permissions:
-  contents: write
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - uses: actions/checkout@v4
     - uses: peaceiris/actions-mdbook@v2
