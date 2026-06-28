@@ -22,7 +22,7 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_LOOP, TOK_STOP, TOK_INCLUDE, TOK_FUNCTION,
     TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
     TOK_LBRACKET, TOK_RBRACKET,
-    TOK_TEMPLATE, TOK_DOLLAR_ID } TokenType;
+    TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET } TokenType;
 
 typedef struct {
     TokenType type;
@@ -345,6 +345,8 @@ static Token lex_scan(void) {
             case '|':
                 if (lex_pos < lex_len && lex_src[lex_pos] == '|') { lex_pos++; t.type = TOK_OR; return t; }
                 fatal("line %d: expected '||'", lex_line); return t;
+            case '@': t.type = TOK_AT; return t;
+            case '^': t.type = TOK_CARET; return t;
             case '$': {
                 if (lex_pos < lex_len && (isalpha(lex_src[lex_pos]) || lex_src[lex_pos] == '_')) {
                     int start = lex_pos;
@@ -895,6 +897,16 @@ static ASTNode *parse_unary(void) {
         ASTNode *o = parse_unary();
         return ast_unary(TOK_NOT, o);
     }
+    if (lex_cur.type == TOK_AT) {
+        lex_next();
+        ASTNode *o = parse_unary();
+        return ast_unary(TOK_AT, o);
+    }
+    if (lex_cur.type == TOK_CARET) {
+        lex_next();
+        ASTNode *o = parse_unary();
+        return ast_unary(TOK_CARET, o);
+    }
     return parse_primary();
 }
 
@@ -1037,6 +1049,8 @@ static Value eval_expr(ASTNode *n) {
                 if (o.type == VAL_STR) return make_num(strlen(o.data.str) == 0 ? 1 : 0);
                 return make_num(o.data.num == 0 ? 1 : 0);
             }
+            if (n->data.unary.op == TOK_AT || n->data.unary.op == TOK_CARET)
+                fatal("line %d: '@' and '^' are only available in compiled mode", n->line);
             return o;
         }
         case NODE_BINOP: {
@@ -1757,6 +1771,8 @@ static int ce_expr(ASTNode *n) {
             if (!ce_expr(n->data.unary.operand)) return 0;
             if (n->data.unary.op == TOK_MINUS) emit(OP_NEG, 0);
             else if (n->data.unary.op == TOK_NOT) emit(OP_NOT, 0);
+            else if (n->data.unary.op == TOK_AT || n->data.unary.op == TOK_CARET)
+                fatal("line %d: '@' and '^' are only available in compiled mode", n->line);
             return 1;
         default: return 0;
     }
@@ -2104,13 +2120,87 @@ static char *cescape(const char *s) {
 
 static int cg_loop_id;
 
+typedef enum { TY_NUM, TY_STR, TY_DYN } VarType;
+static VarType var_types[MAX_VARS];
+
+static VarType infer_expr_type(ASTNode *n) {
+    if (!n) return TY_NUM;
+    switch (n->type) {
+        case NODE_NUM: return TY_NUM;
+        case NODE_STR: return TY_STR;
+        case NODE_ID: {
+            int i = var_find(n->data.id);
+            if (i < 0) return TY_NUM;
+            return var_types[i];
+        }
+        case NODE_BINOP: {
+            int op = n->data.binop.op;
+            VarType lt = infer_expr_type(n->data.binop.left);
+            VarType rt = infer_expr_type(n->data.binop.right);
+            if (op == TOK_AND || op == TOK_OR || op == TOK_EQ || op == TOK_NE || op == TOK_LT || op == TOK_GT || op == TOK_LE || op == TOK_GE)
+                return TY_NUM;
+            if (op == TOK_PLUS && (lt == TY_STR || rt == TY_STR)) return TY_STR;
+            if (lt == TY_NUM && rt == TY_NUM) return TY_NUM;
+            return TY_DYN;
+        }
+        case NODE_UNARY: {
+            VarType ot = infer_expr_type(n->data.unary.operand);
+            if (n->data.unary.op == TOK_NOT) return TY_NUM;
+            if (n->data.unary.op == TOK_MINUS && ot == TY_NUM) return TY_NUM;
+            if (n->data.unary.op == TOK_MINUS) return TY_DYN;
+            if (n->data.unary.op == TOK_AT || n->data.unary.op == TOK_CARET) return TY_NUM;
+            return ot;
+        }
+        case NODE_TEMPLATE: return TY_STR;
+        case NODE_FUNC_CALL: return TY_DYN;
+        default: return TY_DYN;
+    }
+}
+
+static void infer_type_stmt(ASTNode *n) {
+    if (!n) return;
+    switch (n->type) {
+        case NODE_ASSIGN: {
+            int i = var_find(n->data.assign.name);
+            if (i < 0) { var_ensure(n->data.assign.name); i = var_count - 1; }
+            var_types[i] = infer_expr_type(n->data.assign.value);
+            break;
+        }
+        case NODE_WHILE: infer_type_stmt(n->data.while_stmt.cond); infer_type_stmt(n->data.while_stmt.body); break;
+        case NODE_IF: infer_type_stmt(n->data.if_stmt.cond); infer_type_stmt(n->data.if_stmt.then); infer_type_stmt((ASTNode*)n->data.if_stmt.els); break;
+        case NODE_LOOP: infer_type_stmt(n->data.loop.body); break;
+        case NODE_FORTO: {
+            int i = var_ensure(n->data.forto.var);
+            var_types[i] = TY_NUM;
+            break;
+        }
+        case NODE_BLOCK: for (int i = 0; i < n->data.block.count; i++) infer_type_stmt(n->data.block.stmts[i]); break;
+        case NODE_INPUT: {
+            int i = var_ensure(n->data.input.name);
+            var_types[i] = TY_STR;
+            break;
+        }
+        default: break;
+    }
+}
+
 static void cg_collect_vars(ASTNode *n);
 static void cg_varinit(FILE *f, ASTNode *prog) {
     var_count = 0;
     for (int i = 0; i < prog->data.block.count; i++)
         cg_collect_vars(prog->data.block.stmts[i]);
-    for (int i = 0; i < var_count; i++)
-        fprintf(f, "  var_ensure(\"%s\");\n", vars[i].name);
+    for (int i = 0; i < var_count; i++) {
+        VarType t = var_types[i];
+        if (t == TY_NUM)
+            fprintf(f, "  double %s = 0;\n", vars[i].name);
+        else if (t == TY_STR) {
+            fprintf(f, "  Value %s = {VAL_STR,{.str=NULL}};\n", vars[i].name);
+            fprintf(f, "  var_ensure(\"%s\");\n", vars[i].name);
+        } else {
+            fprintf(f, "  Value %s = {VAL_NUM,{.num=0}};\n", vars[i].name);
+            fprintf(f, "  var_ensure(\"%s\");\n", vars[i].name);
+        }
+    }
 }
 
 static void cg_collect_vars(ASTNode *n) {
@@ -2124,18 +2214,18 @@ static void cg_collect_vars(ASTNode *n) {
         case NODE_BLOCK: for (int i = 0; i < n->data.block.count; i++) cg_collect_vars(n->data.block.stmts[i]); break;
         case NODE_PRINT: for (int i = 0; i < n->data.print.count; i++) cg_collect_vars(n->data.print.exprs[i]); break;
         case NODE_INPUT: var_ensure(n->data.input.name); break;
-        case NODE_TEMPLATE: break;
-        case NODE_FUNC_DEF: break;
-        case NODE_INCLUDE: break;
-        case NODE_FUNC_CALL: break;
         default: break;
     }
 }
 
-static void cg_expr(FILE *f, ASTNode *n) {
-    if (!n) { fprintf(f, "make_num(0)"); return; }
+static void cg_expr(FILE *f, ASTNode *n, VarType want) {
+    if (!n) { fprintf(f, want == TY_NUM ? "0" : "make_num(0)"); return; }
     switch (n->type) {
-        case NODE_NUM: fprintf(f, "make_num(%.17g)", n->data.num); break;
+        case NODE_NUM: {
+            if (want == TY_NUM) fprintf(f, "%.17g", n->data.num);
+            else fprintf(f, "make_num(%.17g)", n->data.num);
+            break;
+        }
         case NODE_STR: {
             char *esc = cescape(n->data.str);
             fprintf(f, "make_str(\"%s\")", esc);
@@ -2144,61 +2234,155 @@ static void cg_expr(FILE *f, ASTNode *n) {
         }
         case NODE_ID: {
             int idx = var_find(n->data.id);
-            fprintf(f, "copy_val(vars[%d].val)", idx);
+            VarType vt = idx >= 0 ? var_types[idx] : TY_NUM;
+            if (vt == TY_NUM) {
+                if (want == TY_NUM) fprintf(f, "%s", n->data.id);
+                else fprintf(f, "make_num(%s)", n->data.id);
+            } else {
+                if (want == TY_NUM) { fprintf(f, "val_tonum(%s)", n->data.id); }
+                else fprintf(f, "copy_val(%s)", n->data.id);
+            }
             break;
         }
         case NODE_BINOP: {
             int op = n->data.binop.op;
+            VarType lt = infer_expr_type(n->data.binop.left);
+            VarType rt = infer_expr_type(n->data.binop.right);
             if (op == TOK_AND || op == TOK_OR) {
-                fprintf(f, "make_num(truthy(");
-                cg_expr(f, n->data.binop.left);
-                fprintf(f, ") %s truthy(", op == TOK_AND ? "&&" : "||");
-                cg_expr(f, n->data.binop.right);
-                fprintf(f, "))");
-                break;
-            }
-            if (op == TOK_PLUS) {
-                fprintf(f, "val_add(");
-                cg_expr(f, n->data.binop.left);
-                fprintf(f, ",");
-                cg_expr(f, n->data.binop.right);
-                fprintf(f, ")");
+                if (want == TY_NUM) {
+                    fprintf(f, "(truthy(");
+                    cg_expr(f, n->data.binop.left, TY_DYN);
+                    fprintf(f, ") %s truthy(", op == TOK_AND ? "&&" : "||");
+                    cg_expr(f, n->data.binop.right, TY_DYN);
+                    fprintf(f, "))");
+                } else {
+                    fprintf(f, "make_num(truthy(");
+                    cg_expr(f, n->data.binop.left, TY_DYN);
+                    fprintf(f, ") %s truthy(", op == TOK_AND ? "&&" : "||");
+                    cg_expr(f, n->data.binop.right, TY_DYN);
+                    fprintf(f, "))");
+                }
                 break;
             }
             if (op == TOK_EQ || op == TOK_NE || op == TOK_LT || op == TOK_GT || op == TOK_LE || op == TOK_GE) {
-                fprintf(f, "make_num(val_cmp(");
-                cg_expr(f, n->data.binop.left);
-                fprintf(f, ",");
-                cg_expr(f, n->data.binop.right);
-                if (op == TOK_EQ) fprintf(f, ",0))");
-                else if (op == TOK_NE) fprintf(f, ",1))");
-                else if (op == TOK_LT) fprintf(f, ",2))");
-                else if (op == TOK_GT) fprintf(f, ",3))");
-                else if (op == TOK_LE) fprintf(f, ",4))");
-                else fprintf(f, ",5))");
+                if (lt == TY_NUM && rt == TY_NUM) {
+                    char *opstr = "=="; int neg = 0;
+                    if (op == TOK_EQ) opstr = "==";
+                    else if (op == TOK_NE) { opstr = "=="; neg = 1; }
+                    else if (op == TOK_LT) opstr = "<";
+                    else if (op == TOK_GT) opstr = ">";
+                    else if (op == TOK_LE) opstr = "<=";
+                    else if (op == TOK_GE) opstr = ">=";
+                    if (neg) {
+                        fprintf(f, "(!(");
+                        cg_expr(f, n->data.binop.left, TY_NUM);
+                        fprintf(f, " %s ", opstr);
+                        cg_expr(f, n->data.binop.right, TY_NUM);
+                        fprintf(f, "))");
+                    } else {
+                        fprintf(f, "(");
+                        cg_expr(f, n->data.binop.left, TY_NUM);
+                        fprintf(f, " %s ", opstr);
+                        cg_expr(f, n->data.binop.right, TY_NUM);
+                        fprintf(f, ")");
+                    }
+                    if (want != TY_NUM) fprintf(f, "?1:0");
+                } else {
+                    fprintf(f, "make_num(val_cmp(");
+                    cg_expr(f, n->data.binop.left, TY_DYN);
+                    fprintf(f, ",");
+                    cg_expr(f, n->data.binop.right, TY_DYN);
+                    if (op == TOK_EQ) fprintf(f, ",0))");
+                    else if (op == TOK_NE) fprintf(f, ",1))");
+                    else if (op == TOK_LT) fprintf(f, ",2))");
+                    else if (op == TOK_GT) fprintf(f, ",3))");
+                    else if (op == TOK_LE) fprintf(f, ",4))");
+                    else fprintf(f, ",5))");
+                }
                 break;
             }
-            fprintf(f, "val_arith(");
-            cg_expr(f, n->data.binop.left);
-            fprintf(f, ",");
-            cg_expr(f, n->data.binop.right);
-            if (op == TOK_PLUS) fprintf(f, ",1)");
-            else if (op == TOK_MINUS) fprintf(f, ",2)");
-            else if (op == TOK_STAR) fprintf(f, ",3)");
-            else if (op == TOK_SLASH) fprintf(f, ",4)");
-            else if (op == TOK_MOD) fprintf(f, ",5)");
-            else fprintf(f, ",1)");
+            if (op == TOK_PLUS && (lt == TY_STR || rt == TY_STR)) {
+                fprintf(f, "val_add(");
+                cg_expr(f, n->data.binop.left, TY_DYN);
+                fprintf(f, ",");
+                cg_expr(f, n->data.binop.right, TY_DYN);
+                fprintf(f, ")");
+                break;
+            }
+            if (lt == TY_NUM && rt == TY_NUM) {
+                if (op == TOK_MOD) {
+                    if (want == TY_NUM) fprintf(f, "(");
+                    else fprintf(f, "make_num(");
+                    fprintf(f, "(double)((int)");
+                    cg_expr(f, n->data.binop.left, TY_NUM);
+                    fprintf(f, "%%(int)");
+                    cg_expr(f, n->data.binop.right, TY_NUM);
+                    fprintf(f, ")");
+                    fprintf(f, ")");
+                } else {
+                    if (want == TY_NUM) fprintf(f, "(");
+                    else fprintf(f, "make_num(");
+                    cg_expr(f, n->data.binop.left, TY_NUM);
+                    if (op == TOK_PLUS) fprintf(f, "+");
+                    else if (op == TOK_MINUS) fprintf(f, "-");
+                    else if (op == TOK_STAR) fprintf(f, "*");
+                    else if (op == TOK_SLASH) fprintf(f, "/");
+                    cg_expr(f, n->data.binop.right, TY_NUM);
+                    fprintf(f, ")");
+                }
+            } else {
+                fprintf(f, "val_arith(");
+                cg_expr(f, n->data.binop.left, TY_DYN);
+                fprintf(f, ",");
+                cg_expr(f, n->data.binop.right, TY_DYN);
+                if (op == TOK_PLUS) fprintf(f, ",1)");
+                else if (op == TOK_MINUS) fprintf(f, ",2)");
+                else if (op == TOK_STAR) fprintf(f, ",3)");
+                else if (op == TOK_SLASH) fprintf(f, ",4)");
+                else if (op == TOK_MOD) fprintf(f, ",5)");
+                else fprintf(f, ",1)");
+            }
             break;
         }
         case NODE_UNARY: {
             if (n->data.unary.op == TOK_MINUS) {
-                fprintf(f, "val_neg(");
-                cg_expr(f, n->data.unary.operand);
-                fprintf(f, ")");
-            } else {
+                VarType ot = infer_expr_type(n->data.unary.operand);
+                if (ot == TY_NUM) {
+                    if (want == TY_NUM) { fprintf(f, "-("); cg_expr(f, n->data.unary.operand, TY_NUM); fprintf(f, ")"); }
+                    else { fprintf(f, "make_num(-("); cg_expr(f, n->data.unary.operand, TY_NUM); fprintf(f, "))"); }
+                } else {
+                    fprintf(f, "val_neg(");
+                    cg_expr(f, n->data.unary.operand, TY_DYN);
+                    fprintf(f, ")");
+                }
+            } else if (n->data.unary.op == TOK_NOT) {
                 fprintf(f, "make_num(!truthy(");
-                cg_expr(f, n->data.unary.operand);
+                cg_expr(f, n->data.unary.operand, TY_DYN);
                 fprintf(f, "))");
+            } else if (n->data.unary.op == TOK_AT) {
+                VarType ot = infer_expr_type(n->data.unary.operand);
+                if (ot == TY_NUM) {
+                    if (want == TY_NUM) {
+                        fprintf(f, "(double)(uintptr_t)&");
+                        cg_expr(f, n->data.unary.operand, TY_NUM);
+                    } else {
+                        fprintf(f, "make_num((double)(uintptr_t)&");
+                        cg_expr(f, n->data.unary.operand, TY_NUM);
+                        fprintf(f, ")");
+                    }
+                } else {
+                    fprintf(f, want == TY_NUM ? "0" : "make_num(0)");
+                }
+            } else if (n->data.unary.op == TOK_CARET) {
+                if (want == TY_NUM) {
+                    fprintf(f, "*(double*)(unsigned long)(");
+                    cg_expr(f, n->data.unary.operand, TY_NUM);
+                    fprintf(f, ")");
+                } else {
+                    fprintf(f, "make_num(*(double*)(unsigned long)(");
+                    cg_expr(f, n->data.unary.operand, TY_NUM);
+                    fprintf(f, "))");
+                }
             }
             break;
         }
@@ -2214,7 +2398,7 @@ static void cg_expr(FILE *f, ASTNode *n) {
             fprintf(f, "call_func(\"%s\")", n->data.func_call.name);
             break;
         }
-        default: fprintf(f, "make_num(0)"); break;
+        default: fprintf(f, want == TY_NUM ? "0" : "make_num(0)"); break;
     }
 }
 
@@ -2224,28 +2408,52 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
         case NODE_EMPTY: break;
         case NODE_ASSIGN: {
             int idx = var_find(n->data.assign.name);
-            fprintf(f, "val_free(vars[%d].val); vars[%d].val = ", idx, idx);
-            cg_expr(f, n->data.assign.value);
-            fprintf(f, ";\n");
+            VarType vt = idx >= 0 ? var_types[idx] : TY_DYN;
+            if (vt == TY_NUM) {
+                fprintf(f, "%s = ", n->data.assign.name);
+                cg_expr(f, n->data.assign.value, TY_NUM);
+                fprintf(f, ";\n");
+            } else if (vt == TY_STR) {
+                fprintf(f, "val_free(%s); %s = ", n->data.assign.name, n->data.assign.name);
+                cg_expr(f, n->data.assign.value, TY_DYN);
+                fprintf(f, ";\n");
+            } else {
+                fprintf(f, "val_free(%s); %s = ", n->data.assign.name, n->data.assign.name);
+                cg_expr(f, n->data.assign.value, TY_DYN);
+                fprintf(f, ";\n");
+            }
             break;
         }
         case NODE_PRINT: {
             for (int i = 0; i < n->data.print.count; i++) {
+                VarType et = infer_expr_type(n->data.print.exprs[i]);
                 if (i > 0) fprintf(f, "printf(\" \");\n");
-                fprintf(f, "{\n  Value _v = ");
-                cg_expr(f, n->data.print.exprs[i]);
-                fprintf(f, ";\n  if (_v.type == VAL_STR) { printf(\"%%s\",_v.data.str); val_free(_v); }\n");
-                fprintf(f, "  else printf(\"%%g\",_v.data.num);\n}\n");
+                if (et == TY_NUM) {
+                    fprintf(f, "printf(\"%%g\",");
+                    cg_expr(f, n->data.print.exprs[i], TY_NUM);
+                    fprintf(f, ");\n");
+                } else {
+                    fprintf(f, "{\n  Value _v = ");
+                    cg_expr(f, n->data.print.exprs[i], TY_DYN);
+                    fprintf(f, ";\n  if (_v.type == VAL_STR) { printf(\"%%s\",_v.data.str); val_free(_v); }\n");
+                    fprintf(f, "  else printf(\"%%g\",_v.data.num);\n}\n");
+                }
             }
             fprintf(f, "printf(\"\\n\");\n");
             break;
         }
         case NODE_WHILE: {
             int lid = cg_loop_id++;
-            fprintf(f, "while (truthy(");
-            cg_expr(f, n->data.while_stmt.cond);
-            fprintf(f, ")");
-            fprintf(f, ") {\n");
+            VarType ct = infer_expr_type(n->data.while_stmt.cond);
+            if (ct == TY_NUM) {
+                fprintf(f, "while (");
+                cg_expr(f, n->data.while_stmt.cond, TY_NUM);
+                fprintf(f, ") {\n");
+            } else {
+                fprintf(f, "while (truthy(");
+                cg_expr(f, n->data.while_stmt.cond, TY_DYN);
+                fprintf(f, ")) {\n");
+            }
             int *new_ids = malloc((loop_depth + 1) * sizeof(int));
             if (loop_depth > 0) memcpy(new_ids, loop_ids, loop_depth * sizeof(int));
             new_ids[loop_depth] = lid;
@@ -2274,9 +2482,16 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
         }
         case NODE_EXIT: fprintf(f, "return 0;\n"); break;
         case NODE_IF: {
-            fprintf(f, "if (truthy(");
-            cg_expr(f, n->data.if_stmt.cond);
-            fprintf(f, ")) {\n");
+            VarType ct = infer_expr_type(n->data.if_stmt.cond);
+            fprintf(f, "if (");
+            if (ct == TY_NUM) {
+                cg_expr(f, n->data.if_stmt.cond, TY_NUM);
+            } else {
+                fprintf(f, "truthy(");
+                cg_expr(f, n->data.if_stmt.cond, TY_DYN);
+                fprintf(f, ")");
+            }
+            fprintf(f, ") {\n");
             cg_stmt(f, n->data.if_stmt.then, loop_ids, loop_depth);
             if (n->data.if_stmt.els) {
                 if (((ASTNode*)n->data.if_stmt.els)->type == NODE_IF)
@@ -2296,21 +2511,19 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
         case NODE_FORTO: {
             int lid = cg_loop_id++;
             int idx = var_find(n->data.forto.var);
-            fprintf(f, "val_free(vars[%d].val);\n", idx);
-            fprintf(f, "vars[%d].val = make_num(val_tonum(", idx);
-            cg_expr(f, n->data.forto.start);
-            fprintf(f, "));\n");
-            fprintf(f, "double _end = val_tonum(");
-            cg_expr(f, n->data.forto.end);
+            fprintf(f, "%s = val_tonum(", n->data.forto.var);
+            cg_expr(f, n->data.forto.start, TY_DYN);
             fprintf(f, ");\n");
-            fprintf(f, "while (vars[%d].val.data.num <= _end) {\n", idx);
+            fprintf(f, "{\n  double _end = val_tonum(");
+            cg_expr(f, n->data.forto.end, TY_DYN);
+            fprintf(f, ");\n  while (%s <= _end) {\n", n->data.forto.var);
             int *new_ids = malloc((loop_depth + 1) * sizeof(int));
             if (loop_depth > 0) memcpy(new_ids, loop_ids, loop_depth * sizeof(int));
             new_ids[loop_depth] = lid;
             cg_stmt(f, n->data.forto.body, new_ids, loop_depth + 1);
             free(new_ids);
-            fprintf(f, "  vars[%d].val.data.num += 1;\n", idx);
-            fprintf(f, "}\n");
+            fprintf(f, "    %s += 1;\n", n->data.forto.var);
+            fprintf(f, "  }\n}\n");
             break;
         }
         case NODE_BLOCK: {
@@ -2321,6 +2534,7 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
         }
         case NODE_INPUT: {
             int idx = var_find(n->data.input.name);
+            VarType vt = idx >= 0 ? var_types[idx] : TY_STR;
             fprintf(f, "{\n  char _buf[4096];\n");
             if (n->data.input.prompt) {
                 char *esc = cescape(n->data.input.prompt);
@@ -2330,7 +2544,11 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
             fprintf(f, "  if (fgets(_buf,4096,stdin)) {\n");
             fprintf(f, "    size_t _l = strlen(_buf);\n");
             fprintf(f, "    if (_l>0 && _buf[_l-1]=='\\n') _buf[_l-1]=0;\n");
-            fprintf(f, "    val_free(vars[%d].val); vars[%d].val = make_str(_buf);\n", idx, idx);
+            if (vt == TY_NUM) {
+                fprintf(f, "    %s = val_tonum(make_str(_buf));\n", n->data.input.name);
+            } else {
+                fprintf(f, "    val_free(%s); %s = make_str(_buf);\n", n->data.input.name, n->data.input.name);
+            }
             fprintf(f, "  }\n}\n");
             break;
         }
@@ -2446,6 +2664,9 @@ static int generate_c(const char *path, const char *outpath) {
 
     var_count = 0;
     cg_loop_id = 0;
+    for (int i = 0; i < MAX_VARS; i++) var_types[i] = TY_DYN;
+    for (int i = 0; i < prog->data.block.count; i++)
+        infer_type_stmt(prog->data.block.stmts[i]);
 
     fprintf(f, "int main() {\n");
     cg_varinit(f, prog);
