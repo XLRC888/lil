@@ -36,9 +36,27 @@ print x   # prints "score: 42"
 
 ## Type conversion
 
-Use `val_tonum()` semantics implicitly through arithmetic. If you need to convert a string to a number, arithmetic with `0` works:
+Use `strify` and `intify` to convert between types explicitly.
+
+`strify` converts a variable to its string representation:
+
+```lil
+x = 42
+strify x     # x is now "42"
+```
+
+`intify` converts a variable to a number:
 
 ```lil
 x = "42"
-y = x + 0    # y is the number 42
+intify x     # x is now 42
+x = x + 5
+print x      # prints 47
+```
+
+If the string does not contain a valid number, `intify` produces an error:
+
+```lil
+x = "hello"
+intify x     # error: cannot convert to number
 ```
