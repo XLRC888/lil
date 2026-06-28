@@ -1494,6 +1494,97 @@ static Value eval_expr(ASTNode *n) {
                 fatal("line %d: unknown string function '%s'", n->line, fn);
             }
 
+            if (!strcmp(n->data.funcall.lib, "file")) {
+                if (!strcmp(fn, "read")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: file read expects a path", n->line);
+                    char *path = resolve_arg(n->data.funcall.args[1]);
+                    FILE *fp = fopen(path, "rb");
+                    if (!fp) { free(path); return make_str(""); }
+                    fseek(fp, 0, SEEK_END); long sz = ftell(fp); rewind(fp);
+                    char *buf = malloc(sz + 1); if (!buf) { fclose(fp); free(path); fatal("out of memory"); }
+                    long got = fread(buf, 1, sz, fp); fclose(fp);
+                    buf[got] = 0; free(path);
+                    Value v = make_str(buf); free(buf); return v;
+                }
+                if (!strcmp(fn, "write")) {
+                    if (n->data.funcall.argc < 3) fatal("line %d: file write expects path and content", n->line);
+                    char *path = resolve_arg(n->data.funcall.args[1]);
+                    char *content = resolve_arg(n->data.funcall.args[2]);
+                    FILE *fp = fopen(path, "wb");
+                    if (fp) { fwrite(content, 1, strlen(content), fp); fclose(fp); }
+                    free(path); free(content);
+                    return make_num(0);
+                }
+                if (!strcmp(fn, "append")) {
+                    if (n->data.funcall.argc < 3) fatal("line %d: file append expects path and content", n->line);
+                    char *path = resolve_arg(n->data.funcall.args[1]);
+                    char *content = resolve_arg(n->data.funcall.args[2]);
+                    FILE *fp = fopen(path, "ab");
+                    if (fp) { fwrite(content, 1, strlen(content), fp); fclose(fp); }
+                    free(path); free(content);
+                    return make_num(0);
+                }
+                if (!strcmp(fn, "delete")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: file delete expects a path", n->line);
+                    char *path = resolve_arg(n->data.funcall.args[1]);
+                    int r = remove(path);
+                    free(path);
+                    return make_num(r == 0 ? 1 : 0);
+                }
+                if (!strcmp(fn, "exists")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: file exists expects a path", n->line);
+                    char *path = resolve_arg(n->data.funcall.args[1]);
+                    FILE *fp = fopen(path, "rb");
+                    int r = fp ? 1 : 0;
+                    if (fp) fclose(fp);
+                    free(path);
+                    return make_num(r);
+                }
+                if (!strcmp(fn, "list")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: file list expects a path", n->line);
+                    char *path = resolve_arg(n->data.funcall.args[1]);
+                    char cmd[4096]; snprintf(cmd, sizeof(cmd), "ls -1 \"%s\"", path);
+                    FILE *fp = popen(cmd, "r");
+                    if (!fp) { free(path); return make_str(""); }
+                    char buf[65536]; size_t total = 0;
+                    while (fgets(buf + total, sizeof(buf) - total, fp)) total = strlen(buf);
+                    pclose(fp); free(path);
+                    return make_str(buf);
+                }
+                fatal("line %d: unknown file function '%s'", n->line, fn);
+            }
+
+            if (!strcmp(n->data.funcall.lib, "sys")) {
+                if (!strcmp(fn, "cmd")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: sys cmd expects a command", n->line);
+                    char *cmd = resolve_arg(n->data.funcall.args[1]);
+                    FILE *fp = popen(cmd, "r");
+                    if (!fp) { free(cmd); return make_str(""); }
+                    char buf[65536]; size_t total = 0;
+                    while (fgets(buf + total, sizeof(buf) - total, fp)) total = strlen(buf);
+                    pclose(fp); free(cmd);
+                    return make_str(buf);
+                }
+                if (!strcmp(fn, "env")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: sys env expects a variable name", n->line);
+                    char *name = resolve_arg(n->data.funcall.args[1]);
+                    char *val = getenv(name);
+                    Value v = val ? make_str(val) : make_str("");
+                    free(name);
+                    return v;
+                }
+                if (!strcmp(fn, "sleep")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: sys sleep expects milliseconds", n->line);
+                    char *ms_str = resolve_arg(n->data.funcall.args[1]);
+                    double ms = strtod(ms_str, NULL);
+                    free(ms_str);
+                    struct timespec ts = { (time_t)(ms / 1000), (long)((ms - (double)(time_t)(ms / 1000) * 1000) * 1000000) };
+                    nanosleep(&ts, NULL);
+                    return make_num(0);
+                }
+                fatal("line %d: unknown sys function '%s'", n->line, fn);
+            }
+
             fatal("line %d: unknown library '%s'", n->line, n->data.funcall.lib);
             return make_num(0);
         }

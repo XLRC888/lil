@@ -41,6 +41,25 @@ function math hasops "2+3"      # returns 1 if string contains math operators
 function math choice "a" "b" "c"  # returns a random argument
 ```
 
+## file library
+
+```lil
+content = function file read "path"       # read entire file, returns string
+function file write "path" "content"       # write to file (overwrites)
+function file append "path" "content"      # append to file
+function file delete "path"                # delete file, returns 1 on success
+exists = function file exists "path"       # returns 1 if file exists, 0 otherwise
+listing = function file list "path"        # list directory contents, newline separated
+```
+
+## sys library
+
+```lil
+output = function sys cmd "command"        # run shell command, returns stdout
+value = function sys env "VARNAME"         # get environment variable, returns "" if not set
+function sys sleep 1000                    # sleep for N milliseconds
+```
+
 ## date library
 
 ```lil
