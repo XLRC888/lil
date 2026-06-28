@@ -833,6 +833,12 @@ static ASTNode *parse_stmt(void) {
     }
 
     ASTNode *e = parse_expr();
+    if (lex_cur.type == TOK_ASSIGN) {
+        lex_next();
+        ASTNode *target = parse_expr();
+        if (target->type != NODE_ID) fatal("line %d: assignment target must be a variable name", target->line);
+        return ast_assign(target->data.id, e);
+    }
     return e;
 }
 
