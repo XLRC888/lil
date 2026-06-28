@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4f6b4598.js";
+            window.path_to_searchindex_js = "searchindex-bf3ff565.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-200542aa.js"></script>
@@ -201,15 +201,20 @@ print x   # prints "score: 42"
 <pre><code class="language-lil">x = 42
 strify x     # x is now "42"
 </code></pre>
-<p><code>intify</code> converts a variable to a number:</p>
+<p><code>intify</code> converts a variable to a number. If the string is not numeric, it produces an error:</p>
 <pre><code class="language-lil">x = "42"
 intify x     # x is now 42
 x = x + 5
 print x      # prints 47
-</code></pre>
-<p>If the string does not contain a valid number, <code>intify</code> produces an error:</p>
-<pre><code class="language-lil">x = "hello"
+
+x = "hello"
 intify x     # error: cannot convert to number
+</code></pre>
+<p><code>intify</code> can also format a string as binary, hex, or octal byte representation:</p>
+<pre><code class="language-lil">x = "hello"
+intify x binary   # x is now "01101000 01100101 01101100 01101100 01101111"
+intify x hex      # x is now "68 65 6c 6c 6f"
+intify x octal    # x is now "150 145 154 154 157"
 </code></pre>
 
                     </main>
