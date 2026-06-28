@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f7750c4d.js";
+            window.path_to_searchindex_js = "searchindex-ffaaf58a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-200542aa.js"></script>
+        <script src="toc-100b604f.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -250,11 +250,9 @@ name = "alice"
 x = "now im a string"
 </code></pre>
 <p>This is fine. lil does not enforce type consistency.</p>
-<p>Assignment works both ways. <code>variable = expression</code> and <code>expression = variable</code> do the same thing:</p>
-<pre><code class="language-lil">y = x + 50    # store x+50 in y
-x + 50 = y    # same thing, store x+50 in y
+<p>Assignment always goes <code>variable = expression</code>:</p>
+<pre><code class="language-lil">y = x + 50
 </code></pre>
-<p>Use whichever reads better. The variable being assigned to is always on the side with the single name.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="numbers-and-strings"><a class="header" href="#numbers-and-strings">Numbers and Strings</a></h1>
 <h2 id="numbers"><a class="header" href="#numbers">Numbers</a></h2>
@@ -592,6 +590,50 @@ print x    # prints 1
 </code></pre>
 <p>This loads and runs the file <code>mylib.lil</code>, which can define functions and variables that the including file can use.</p>
 <p>Functions currently do not have local scope or parameters. They run in the global scope and can access and modify all variables.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h1>
+<p>lil has a <code>try</code>/<code>catch</code> mechanism for handling runtime errors without crashing.</p>
+<h2 id="basic-trycatch"><a class="header" href="#basic-trycatch">Basic try/catch</a></h2>
+<p>Wrap code that might fail in a <code>try</code> block, and handle the error in a <code>catch</code> block:</p>
+<pre><code class="language-lil">try {
+  x = "hello"
+  intify x
+  print "this line never runs"
+} catch {
+  print "caught an error"
+}
+print "execution continues here"
+</code></pre>
+<p>If no error occurs, the <code>catch</code> block is skipped:</p>
+<pre><code class="language-lil">try {
+  x = "42"
+  intify x
+  print "this runs fine"
+} catch {
+  print "this never runs"
+}
+</code></pre>
+<h2 id="what-gets-caught"><a class="header" href="#what-gets-caught">What gets caught</a></h2>
+<p>Any error inside the <code>try</code> block triggers the <code>catch</code> block:</p>
+<ul>
+<li>Failed type conversion (<code>intify</code> on a non-numeric string)</li>
+<li>Division by zero</li>
+<li>Variable limit exceeded</li>
+</ul>
+<p>The error message is still printed to stderr, but execution continues from the <code>catch</code> block instead of stopping the program.</p>
+<h2 id="nesting"><a class="header" href="#nesting">Nesting</a></h2>
+<p>Try/catch blocks can be nested:</p>
+<pre><code class="language-lil">try {
+  try {
+    intify "oops"
+  } catch {
+    print "inner catch"
+  }
+} catch {
+  print "outer catch never runs"
+}
+</code></pre>
+<p>Errors inside a <code>catch</code> block are not caught by the same <code>try</code>. They propagate to the enclosing <code>try</code> or stop the program if there is none.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="advanced-features"><a class="header" href="#advanced-features">Advanced Features</a></h1>
 <p>This chapter covers templates, the has operator, compiled mode, and C extensions.</p>
