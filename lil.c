@@ -1910,6 +1910,7 @@ static void ce_stmt(ASTNode *n) {
         }
         case NODE_STOP:
         case NODE_BREAK:
+            if (cur_loop == 0) fatal("line %d: stop/break outside a loop", n->line);
             add_fixup(code_len);
             emit(OP_JMP, 0);
             break;
@@ -2487,8 +2488,11 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
         }
         case NODE_STOP:
         case NODE_BREAK: {
-            if (loop_depth > 0)
+            if (loop_depth > 0) {
                 fprintf(f, "goto _lil_break_%d;\n", loop_ids[loop_depth - 1]);
+            } else {
+                fatal("line %d: stop/break outside a loop", n->line);
+            }
             break;
         }
         case NODE_EXIT: fprintf(f, "return 0;\n"); break;
