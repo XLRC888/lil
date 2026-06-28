@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Hello, World - lil Book</title>
+        <title>Functions with Parameters - lil Book</title>
 
 
         <!-- Custom HTML head -->
@@ -174,31 +174,48 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="hello-world"><a class="header" href="#hello-world">Hello, World</a></h1>
-<p>Create a file called <code>hello.lil</code>:</p>
-<pre><code class="language-lil">print "hello, world"
+                        <h1 id="functions-with-parameters"><a class="header" href="#functions-with-parameters">Functions with Parameters</a></h1>
+<p>Functions can take parameters and return values.</p>
+<h2 id="defining-a-function"><a class="header" href="#defining-a-function">Defining a function</a></h2>
+<p>Use <code>$name(params)</code> syntax followed by the function body in braces:</p>
+<pre><code class="language-lil">$add(a, b) {
+  return a + b
+}
 </code></pre>
-<p>Run it:</p>
-<pre><code class="language-bash">lil hello.lil
+<h2 id="calling-a-function"><a class="header" href="#calling-a-function">Calling a function</a></h2>
+<p>Call a function with <code>$name(args)</code>:</p>
+<pre><code class="language-lil">result = $add(3, 4)
+print result    # prints 7
 </code></pre>
-<p>The <code>print</code> statement outputs text to stdout and appends a newline. You can print numbers and strings:</p>
-<pre><code class="language-lil">print 42
-print "hello"
+<p>Parameters are passed by value. Inside the function, parameters act as local variables that shadow any global variables with the same name.</p>
+<h2 id="return-values"><a class="header" href="#return-values">Return values</a></h2>
+<p>Use <code>return</code> to send a value back to the caller:</p>
+<pre><code class="language-lil">$double(x) {
+  return x * 2
+}
+
+print $double(21)   # prints 42
 </code></pre>
-<p>You can print multiple values by separating them with commas:</p>
-<pre><code class="language-lil">print "the answer is", 42
+<p>If a function does not have a <code>return</code> statement, it returns 0.</p>
+<pre><code class="language-lil">$noop() {
+  print "no return"
+}
+
+x = $noop()
+print x             # prints 0
 </code></pre>
-<p>This prints: <code>the answer is 42</code></p>
+<h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
+<p>Parameters and return values currently only work in interpreted mode. Compiled mode does not yet support function calls with return values.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="installation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="continue.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="basics.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="error_handling.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -208,11 +225,11 @@ print "hello"
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="installation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="continue.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="basics.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="error_handling.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

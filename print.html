@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ffaaf58a.js";
+            window.path_to_searchindex_js = "searchindex-f5589888.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-100b604f.js"></script>
+        <script src="toc-25e58df7.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -590,6 +590,59 @@ print x    # prints 1
 </code></pre>
 <p>This loads and runs the file <code>mylib.lil</code>, which can define functions and variables that the including file can use.</p>
 <p>Functions currently do not have local scope or parameters. They run in the global scope and can access and modify all variables.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="comments"><a class="header" href="#comments">Comments</a></h1>
+<p>lil supports line comments with <code>#</code> and <code>//</code>:</p>
+<pre><code class="language-lil">x = 42  # this is a comment
+// this is also a comment
+print x
+</code></pre>
+<p>Comments are ignored by the parser. They are useful for documenting your code.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="continue"><a class="header" href="#continue">Continue</a></h1>
+<p>The <code>continue</code> keyword skips the rest of the current loop iteration and jumps to the next one.</p>
+<pre><code class="language-lil">i = 0
+while i &lt; 10 {
+  i = i + 1
+  if i == 5 { continue }
+  print i
+}
+</code></pre>
+<p>This prints 1, 2, 3, 4, 6, 7, 8, 9, 10. The number 5 is skipped because <code>continue</code> jumps back to the loop condition without printing.</p>
+<p><code>continue</code> works in <code>while</code>, <code>for</code>, and <code>loop</code> blocks.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="functions-with-parameters"><a class="header" href="#functions-with-parameters">Functions with Parameters</a></h1>
+<p>Functions can take parameters and return values.</p>
+<h2 id="defining-a-function"><a class="header" href="#defining-a-function">Defining a function</a></h2>
+<p>Use <code>$name(params)</code> syntax followed by the function body in braces:</p>
+<pre><code class="language-lil">$add(a, b) {
+  return a + b
+}
+</code></pre>
+<h2 id="calling-a-function"><a class="header" href="#calling-a-function">Calling a function</a></h2>
+<p>Call a function with <code>$name(args)</code>:</p>
+<pre><code class="language-lil">result = $add(3, 4)
+print result    # prints 7
+</code></pre>
+<p>Parameters are passed by value. Inside the function, parameters act as local variables that shadow any global variables with the same name.</p>
+<h2 id="return-values"><a class="header" href="#return-values">Return values</a></h2>
+<p>Use <code>return</code> to send a value back to the caller:</p>
+<pre><code class="language-lil">$double(x) {
+  return x * 2
+}
+
+print $double(21)   # prints 42
+</code></pre>
+<p>If a function does not have a <code>return</code> statement, it returns 0.</p>
+<pre><code class="language-lil">$noop() {
+  print "no return"
+}
+
+x = $noop()
+print x             # prints 0
+</code></pre>
+<h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
+<p>Parameters and return values currently only work in interpreted mode. Compiled mode does not yet support function calls with return values.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h1>
 <p>lil has a <code>try</code>/<code>catch</code> mechanism for handling runtime errors without crashing.</p>
