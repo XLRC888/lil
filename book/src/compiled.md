@@ -20,17 +20,6 @@ lil -c myscript.lil -o myprogram
 
 If you omit `-o`, the output name is derived from the input filename (the `.lil` extension is removed). If that fails, it defaults to `a.out`.
 
-## The [compiled] header
-
-If a file starts with `[compiled]`, it can only be compiled. This is useful for scripts that use C extensions (which are not available in interpreted mode).
-
-```lil
-[compiled]
-print "this file can only be compiled"
-```
-
-Trying to interpret a file with `[compiled]` produces an error.
-
 ## Performance
 
 Compiled mode is significantly faster than interpreted mode, especially for numeric code. The type inference pass eliminates the overhead of dynamic type checks for variables that are proven to always hold numbers.

@@ -21,8 +21,6 @@ lil -c file.lil       # compile to standalone binary
 lil -c file.lil -o myprog  # compile with custom output name
 ```
 
-files starting with `[compiled]` can only be compiled, not interpreted.
-
 ## performance
 
 | benchmark  | python3 | lil (vm) | lil (aot) | C |
