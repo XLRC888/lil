@@ -1,6 +1,6 @@
 # C Extensions
 
-lil provides two operators that give you direct access to memory. These only work in compiled mode.
+lil provides two operators that give you direct access to memory. These only work when compiling with `lil -c`. Running them with the interpreter produces an error.
 
 ## Address-of (@)
 
@@ -25,4 +25,4 @@ print value    # prints 42
 
 These are useful for low-level programming and interfacing with hardware at specific memory addresses (MMIO).
 
-In interpreted mode, both operators produce a compile error.
+In the interpreter (`lil file.lil`), both operators produce an error.
