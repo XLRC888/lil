@@ -24,14 +24,55 @@ You can concatenate strings with `+`:
 a = "hello "
 b = "world"
 c = a + b
-print c   # prints "hello world"
+print c
 ```
 
 If you add a string to a number, the number is converted to a string first:
 
 ```lil
 x = "score: " + 42
-print x   # prints "score: 42"
+print x
+```
+
+## Using library functions with strings
+
+The `&string|len` function returns the length of a string. In Python you call `len(x)`, in lil you call `&string|len $x` (the `$` prefix tells lil to use the variable's value):
+
+```lil
+name = "alice"
+len = &string|len $name
+print name, "has", len, "characters"
+```
+
+You can pass a literal string too:
+
+```lil
+print &string|len "hello"
+```
+
+Other string functions work similarly:
+
+```lil
+msg = "hello world"
+print &string|upper $msg
+print &string|lower $msg
+print &string|reverse $msg
+```
+
+## Using library functions with numbers
+
+The `&math|eval` function evaluates a math expression string and returns a number. Store the result in a variable:
+
+```lil
+result = &math|eval "3.14 * 2"
+print result
+```
+
+`&math|random` returns a random number between 0 and 1:
+
+```lil
+r = &math|random
+print r
 ```
 
 ## Type conversion
@@ -42,26 +83,26 @@ Use `strify` and `intify` to convert between types explicitly.
 
 ```lil
 x = 42
-strify x     # x is now "42"
+strify x
 ```
 
 `intify` converts a variable to a number. If the string is not numeric, it produces an error:
 
 ```lil
 x = "42"
-intify x     # x is now 42
+intify x
 x = x + 5
-print x      # prints 47
+print x
 
 x = "hello"
-intify x     # error: cannot convert to number
+intify x
 ```
 
 `intify` can also format a string as binary, hex, or octal byte representation:
 
 ```lil
 x = "hello"
-intify x binary   # x is now "01101000 01100101 01101100 01101100 01101111"
-intify x hex      # x is now "68 65 6c 6c 6f"
-intify x octal    # x is now "150 145 154 154 157"
+intify x binary
+intify x hex
+intify x octal
 ```

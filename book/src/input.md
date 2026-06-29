@@ -14,4 +14,24 @@ input "what is your name? " name
 print "nice to meet you,", name
 ```
 
-If the user does not enter anything (EOF), the variable is set to an empty string.
+If the user does not enter anything (EOF), the variable is set to an empty string:
+
+```lil
+input "press enter to continue" x
+print "ok, continuing"
+```
+
+Force input as a number and do a calculation:
+
+```lil
+force int input "age: " age
+print "next year youll be", age + 1
+```
+
+Read a number input and use it in an expression directly after:
+
+```lil
+force int input "enter a number: " n
+result = n * 2
+print "doubled:", result
+```

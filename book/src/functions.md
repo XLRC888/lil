@@ -1,3 +1,44 @@
 # Functions
 
-lil has two kinds of functions: built-in library functions and user-defined functions.
+lil has two kinds of functions: built-in library functions from the standard libraries, and user-defined functions you write yourself.
+
+## Built-in Library Functions
+
+These are functions that come with lil, organized by library like `math`, `string`, `file`, `sys`, and `date`. You call them with `&` syntax:
+
+```lil
+&math|randint 1 6
+```
+
+In Python, you'd write `import random` then `random.randint(1, 6)`. In lil, it's `&math|randint 1 6` in one step. The library name comes after `&`, then `|`, then the function name, then space-separated arguments.
+
+```lil
+name = "alice"
+upper = &string|upper $name
+print upper
+```
+
+See the [Built-in Libraries](builtins.md) page for the full list of available functions.
+
+## User-defined Functions
+
+When you need custom logic, define your own functions with `$` syntax:
+
+```lil
+$add(a, b) {
+  a + b
+}
+```
+
+In Python, you'd write `def add(a, b): return a + b`. In lil, there's no `def`, no colon, and no `return` keyword. The function body is a block in braces, and the last expression's value is automatically returned.
+
+```lil
+result = $add(3, 4)
+print result
+```
+
+See [User-defined Functions](user_functions.md) and [Advanced Functions](functions_advanced.md) for details.
+
+## Choosing Which to Use
+
+Library functions handle built-in operations: math, strings, files, dates, system commands. User-defined functions let you organize your own code, avoid repetition, and build reusable abstractions. You'll typically use both together.

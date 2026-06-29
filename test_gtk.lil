@@ -1,47 +1,47 @@
 include gtk
 
-function gtk window win "GTK Test" 500 400
-function gtk vbox box 10
-function gtk hbox hb 5
+&gtk|window win "GTK Test" 500 400
+&gtk|vbox box 10
+&gtk|hbox hb 5
 
-function gtk button btn "Click me!"
-function gtk button exitbtn "Exit"
-function gtk label lbl "Hello from lil"
-function gtk entry e "Type here"
+&gtk|button btn "Click me!"
+&gtk|button exitbtn "Exit"
+&gtk|label lbl "Hello from lil"
+&gtk|entry e "Type here"
 
-function gtk add box lbl
-function gtk add box hb
-function gtk add box e
-function gtk add hb btn
-function gtk add hb exitbtn
-function gtk add win box
+&gtk|add box lbl
+&gtk|add box hb
+&gtk|add box e
+&gtk|add hb btn
+&gtk|add hb exitbtn
+&gtk|add win box
 
-function gtk on btn clicked ev
-function gtk on exitbtn clicked exitev
-function gtk on e changed etext
-function gtk on win destroy closed
+&gtk|on btn clicked ev
+&gtk|on exitbtn clicked exitev
+&gtk|on e changed etext
+&gtk|on win destroy closed
 
-function gtk show win
+&gtk|show win
 
 loop {
-    function gtk wait
+    &gtk|wait
 
     if ev == 1 {
-        function gtk set btn label "Clicked!"
-        function gtk set lbl label "Button was clicked"
+        &gtk|set btn label "Clicked!"
+        &gtk|set lbl label "Button was clicked"
         ev = 0
     }
 
     if exitev == 1 {
-        function gtk set lbl label "Goodbye!"
-        function gtk set btn sensitive false
+        &gtk|set lbl label "Goodbye!"
+        &gtk|set btn sensitive false
         exitev = 0
-        function math sleep 0.5
+        &math|sleep 0.5
         stop
     }
 
     if etext != "" {
-        function gtk set lbl label $etext
+        &gtk|set lbl label $etext
         etext = ""
     }
 

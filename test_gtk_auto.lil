@@ -1,31 +1,31 @@
 include gtk
 
-function gtk window win "Auto Test" 400 300
-function gtk vbox box 5
-function gtk button btn "Button"
-function gtk label lbl "initial"
-function gtk entry e "type here"
-function gtk add box btn
-function gtk add box lbl
-function gtk add box e
-function gtk add win box
+&gtk|window win "Auto Test" 400 300
+&gtk|vbox box 5
+&gtk|button btn "Button"
+&gtk|label lbl "initial"
+&gtk|entry e "type here"
+&gtk|add box btn
+&gtk|add box lbl
+&gtk|add box e
+&gtk|add win box
 
-function gtk on btn clicked ev
-function gtk on e changed etext
-function gtk on win destroy closed
+&gtk|on btn clicked ev
+&gtk|on e changed etext
+&gtk|on win destroy closed
 
-function gtk show win
+&gtk|show win
 
 loop {
-    function gtk wait
+    &gtk|wait
 
     if ev == 1 {
-        function gtk set lbl label "clicked"
+        &gtk|set lbl label "clicked"
         ev = 0
     }
 
     if etext != "" {
-        function gtk set lbl label $etext
+        &gtk|set lbl label $etext
         etext = ""
     }
 

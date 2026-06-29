@@ -30,10 +30,11 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_SLASH, TOK_MOD, TOK_EQ, TOK_NE, TOK_LT, TOK_GT, TOK_LE, TOK_GE, TOK_ASSIGN,
     TOK_LPAREN, TOK_RPAREN, TOK_LBRACE, TOK_RBRACE, TOK_COMMA,
     TOK_SEMI, TOK_NEWLINE, TOK_EOF, TOK_AND, TOK_OR, TOK_NOT,
-    TOK_LOOP, TOK_STOP, TOK_BREAK, TOK_CONTINUE, TOK_INCLUDE, TOK_FUNCTION, TOK_STRIFY, TOK_INTIFY,
+    TOK_LOOP, TOK_STOP, TOK_BREAK, TOK_CONTINUE, TOK_INCLUDE, TOK_STRIFY, TOK_INTIFY,
     TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
     TOK_LBRACKET, TOK_RBRACKET,
-    TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET, TOK_TRY, TOK_CATCH, TOK_FORCE, TOK_UNFORCE } TokenType;
+    TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET, TOK_AMPERSAND, TOK_PIPE,
+    TOK_TRY, TOK_CATCH, TOK_FORCE, TOK_UNFORCE } TokenType;
 
 typedef struct {
     TokenType type;
@@ -114,6 +115,7 @@ static Value stmt_val(ASTNode *n);
 static double math_parse_expr(const char **p);
 static double math_parse_term(const char **p);
 static double math_parse_factor(const char **p);
+static char *str_lower(const char *s);
 
 static void fatal(const char *fmt, ...) {
     error_occurred = 1;
@@ -325,7 +327,6 @@ static Token lex_scan(void) {
             if (!strcmp(word, "break"))   { free(word); t.type = TOK_BREAK; return t; }
             if (!strcmp(word, "continue")) { free(word); t.type = TOK_CONTINUE; return t; }
             if (!strcmp(word, "include")) { free(word); t.type = TOK_INCLUDE; return t; }
-            if (!strcmp(word, "function")) { free(word); t.type = TOK_FUNCTION; return t; }
             if (!strcmp(word, "has"))     { free(word); t.type = TOK_HAS; return t; }
             if (!strcmp(word, "nocase"))  { free(word); t.type = TOK_NOCASE; return t; }
             if (!strcmp(word, "anywhere")) { free(word); t.type = TOK_ANYWHERE; return t; }
@@ -373,10 +374,10 @@ static Token lex_scan(void) {
                 t.type = TOK_GT; return t;
             case '&':
                 if (lex_pos < lex_len && lex_src[lex_pos] == '&') { lex_pos++; t.type = TOK_AND; return t; }
-                fatal("line %d: expected '&&'", lex_line); return t;
+                t.type = TOK_AMPERSAND; return t;
             case '|':
                 if (lex_pos < lex_len && lex_src[lex_pos] == '|') { lex_pos++; t.type = TOK_OR; return t; }
-                fatal("line %d: expected '||'", lex_line); return t;
+                t.type = TOK_PIPE; return t;
             case '#':
                 while (lex_pos < lex_len && lex_src[lex_pos] != '\n') lex_pos++;
                 return lex_scan();
@@ -955,16 +956,22 @@ static ASTNode *parse_primary(void) {
         lex_next();
         return ast_templ(r);
     }
-    if (lex_cur.type == TOK_FUNCTION) {
+    if (lex_cur.type == TOK_AMPERSAND) {
         lex_next();
-        if (lex_cur.type != TOK_ID) fatal("line %d: function expects a library name", lex_cur.line);
+        if (lex_cur.type != TOK_ID) fatal("line %d: expected library name after '&'", lex_cur.line);
         char *lib = sdup(lex_cur.val.str);
         lex_next();
+        if (lex_cur.type != TOK_PIPE) fatal("line %d: expected '|' after library name", lex_cur.line);
+        lex_next();
+        if (lex_cur.type != TOK_ID) fatal("line %d: expected function name after '|'", lex_cur.line);
         char **args = NULL;
         int argc = 0, cap = 0;
+        if (argc >= cap) { cap = 4; args = malloc(sizeof(char*) * cap); if (!args) fatal("out of memory"); }
+        args[argc++] = sdup(lex_cur.val.str);
+        lex_next();
         while (lex_cur.type == TOK_ID || lex_cur.type == TOK_STR || lex_cur.type == TOK_NUM || lex_cur.type == TOK_TEMPLATE || lex_cur.type == TOK_DOLLAR_ID) {
             if (argc >= cap) {
-                cap = cap ? cap * 2 : 4;
+                cap *= 2;
                 args = realloc(args, sizeof(char*) * cap);
                 if (!args) fatal("out of memory");
             }
@@ -1332,13 +1339,16 @@ static Value eval_expr(ASTNode *n) {
                 struct tm *tm = localtime(&t);
                 static int date_mode = 0;
 
-                if (!strcmp(fn, "set")) {
-                    if (n->data.funcall.argc > 1 && !strcmp(n->data.funcall.args[1], "format")) {
-                        if (n->data.funcall.argc < 3) fatal("line %d: set format expects a region", n->line);
-                        if (!strcmp(n->data.funcall.args[2], "US")) date_mode = 1;
-                        else if (!strcmp(n->data.funcall.args[2], "EU")) date_mode = 0;
-                        else fatal("line %d: unknown date format '%s'", n->line, n->data.funcall.args[2]);
+                if (!strcmp(fn, "format")) {
+                    if (n->data.funcall.argc < 2) {
+                        return make_str(date_mode ? "US" : "EU");
                     }
+                    char *f = resolve_arg(n->data.funcall.args[1]);
+                    char *fl = str_lower(f);
+                    if (!strcmp(fl, "us")) date_mode = 1;
+                    else if (!strcmp(fl, "eu")) date_mode = 0;
+                    else { free(fl); free(f); fatal("line %d: unknown date format '%s'", n->line, n->data.funcall.args[1]); }
+                    free(fl); free(f);
                     return make_str("");
                 }
 
@@ -3080,7 +3090,7 @@ static void cg_expr(FILE *f, ASTNode *n, VarType want) {
                     fprintf(f, "({time_t t=time(NULL);struct tm*tm=localtime(&t);char b[64];strftime(b,64,\"%%d.%%m.%%Y %%A %%H:%%M:%%S\",tm);make_str(strdup(b));})");
                 else if (!strcmp(fn, "fullplus"))
                     fprintf(f, "({time_t t=time(NULL);struct tm*tm=localtime(&t);struct timeval tv;gettimeofday(&tv,0);char b[64];strftime(b,64,\"%%d.%%m.%%Y %%A %%H:%%M:%%S\",tm);char r[80];snprintf(r,80,\"%%s.%%03ld\",b,(long)tv.tv_usec/1000);make_str(r);})");
-                else if (!strcmp(fn, "set"))
+                else if (!strcmp(fn, "format"))
                     fprintf(f, "make_str(\"\")");
                 else
                     fprintf(f, want == TY_NUM ? "0" : "make_num(0)");

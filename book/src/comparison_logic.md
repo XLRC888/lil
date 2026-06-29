@@ -2,7 +2,7 @@
 
 ## Comparisons
 
-Comparisons return `1` (true) or `0` (false):
+Comparisons return `1` (true) or `0` (false). The operators are the same as Python:
 
 ```lil
 x = 5 == 5    # 1 (true)
@@ -13,11 +13,60 @@ w = 5 >= 10   # 0
 
 Full list: `==`, `!=`, `<`, `>`, `<=`, `>=`
 
-You can compare strings lexicographically:
+You can compare strings lexicographically, same as Python:
 
 ```lil
 print "apple" < "banana"   # 1
 print "abc" == "abc"        # 1
+```
+
+## Complex conditions
+
+Combine comparisons with `and`, `or`, `not`:
+
+```lil
+x = 7
+if x > 0 and x < 10 {
+  print "in range"
+}
+```
+
+Store the result of a complex condition:
+
+```lil
+in_range = x > 0 and x < 10
+if in_range {
+  print "x is between 1 and 9"
+}
+```
+
+## Using not for negation
+
+```lil
+logged_in = 0
+if not logged_in {
+  print "please log in"
+}
+```
+
+## Comparison with library function results
+
+String functions return values you can compare:
+
+```lil
+name = "alexander"
+if &string|len name > 5 {
+  print "long name"
+}
+```
+
+Store and use multiple comparisons:
+
+```lil
+len = &string|len name
+if len > 2 and len < 10 {
+  print "name length is reasonable"
+}
 ```
 
 ## Logical operators

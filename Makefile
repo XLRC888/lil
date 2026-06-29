@@ -1,6 +1,8 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -O2 -std=c99
 TARGET = lil
+PREFIX ?= $(HOME)/.local
+BINDIR = $(PREFIX)/bin
 GTK_CFLAGS = $(shell pkg-config --cflags gtk+-3.0 2>/dev/null)
 GTK_LIBS = $(shell pkg-config --libs gtk+-3.0 2>/dev/null)
 
@@ -13,10 +15,18 @@ gtk: lil.c
 clean:
 	rm -f $(TARGET)
 
+install: $(TARGET)
+	mkdir -p $(BINDIR)
+	cp $(TARGET) $(BINDIR)/$(TARGET)
+
+install-gtk: gtk
+	mkdir -p $(BINDIR)
+	cp $(TARGET) $(BINDIR)/$(TARGET)
+
 test: $(TARGET)
 	./$(TARGET) test.lil
 
 repl: $(TARGET)
 	./$(TARGET)
 
-.PHONY: clean test repl gtk
+.PHONY: clean test repl gtk install install-gtk

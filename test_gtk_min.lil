@@ -1,11 +1,11 @@
 include gtk
 
-function gtk window win "Mini Test" 300 200
-function gtk on win destroy closed
-function gtk show win
+&gtk|window win "Mini Test" 300 200
+&gtk|on win destroy closed
+&gtk|show win
 
 print "waiting..."
-function gtk wait
+&gtk|wait
 print "back from wait, closed=" closed
 
 if closed == 1 {

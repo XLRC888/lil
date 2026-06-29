@@ -1,6 +1,8 @@
 # GTK GUI Library
 
-lil has a built-in GTK+3 library for graphical user interfaces. Widgets are referenced by string names, and events set lil variables that you poll in a loop. No callback functions needed.
+lil has a built-in GTK+3 library for graphical user interfaces. Where Python has tkinter (built-in) and PyQt/PySide (external), lil ships GTK support out of the box.
+
+Widgets are referenced by string names, and events set lil variables that you poll in a loop. No callback functions needed. This is the biggest difference from Python's signal/slot pattern: in PyQt you write `button.clicked.connect(self.on_click)`, in lil you check a variable.
 
 ## Building with GTK
 
@@ -8,30 +10,33 @@ The default `make` builds lil without GTK support. Use `make gtk` to include it:
 
 ```sh
 make gtk
+make install-gtk    # install the gtk-enabled binary to PATH
 ```
 
 This requires `libgtk-3-dev` (or your distro's GTK+3 development package).
 
 ## Widgets
 
-Create widgets with `function gtk` commands. Every widget gets a string name you choose:
+Create widgets with `&gtk|` commands. Every widget gets a string name you choose:
 
 ```lil
-function gtk window "main" "hello" 400 300    # name, title, width, height
-function gtk vbox "box" 10                     # vertical box with 10px spacing
-function gtk hbox "row" 5                      # horizontal box with 5px spacing
-function gtk button "btn" "click me"           # button with label
-function gtk label "lbl" "hello world"         # static text label
-function gtk entry "input" "type here..."      # text entry with placeholder
+&gtk|window "main" "hello" 400 300    # name, title, width, height
+&gtk|vbox "box" 10                     # vertical box with 10px spacing
+&gtk|hbox "row" 5                      # horizontal box with 5px spacing
+&gtk|button "btn" "click me"           # button with label
+&gtk|label "lbl" "hello world"         # static text label
+&gtk|entry "input" "type here..."      # text entry with placeholder
 ```
+
+Widgets are referred to by string names, not objects. In Python you'd write `button.set_label("text")`, in lil you write `&gtk|set "btn" "label" "text"`.
 
 ## Layout
 
 Build a hierarchy by adding children to containers:
 
 ```lil
-function gtk add "box" "btn" "lbl" "input"    # add multiple children at once
-function gtk show "box"                        # show the container and all children
+&gtk|add "box" "btn" "lbl" "input"    # add multiple children at once
+&gtk|show "box"                        # show the container and all children
 ```
 
 ## Properties
@@ -39,21 +44,28 @@ function gtk show "box"                        # show the container and all chil
 Set and get widget properties at runtime:
 
 ```lil
-function gtk set "lbl" "label" "new text"      # change button/label text
-function gtk set "input" "text" "hello"        # change entry text
-function gtk set "main" "title" "my app"       # change window title
-function gtk set "btn" "sensitive" "false"     # disable a widget
-function gtk set "btn" "visible" "true"        # show/hide
-function gtk set "btn" "width" 100             # set size
-function gtk set "input" "placeholder" "name"  # change placeholder text
+&gtk|set "lbl" "label" "new text"      # change button/label text
+&gtk|set "input" "text" "hello"        # change entry text
+&gtk|set "main" "title" "my app"       # change window title
+&gtk|set "btn" "sensitive" "false"     # disable a widget
+&gtk|set "btn" "visible" "true"        # show/hide
+&gtk|set "btn" "width" 100             # set size
+&gtk|set "input" "placeholder" "name"  # change placeholder text
+```
+
+You can combine GTK with other lil features, like setting a label to a random number:
+
+```lil
+r = &math|random
+&gtk|set "lbl" "label" $r
 ```
 
 Get values back:
 
 ```lil
-function gtk get "input" "text"                # returns entry text
-function gtk get "lbl" "text"                  # returns label text
-function gtk get "main" "title"                # returns window title
+&gtk|get "input" "text"                # returns entry text
+&gtk|get "lbl" "text"                  # returns label text
+&gtk|get "main" "title"                # returns window title
 ```
 
 ## Events
@@ -61,19 +73,19 @@ function gtk get "main" "title"                # returns window title
 Connect signals to lil variables. When the signal fires, the variable is set:
 
 ```lil
-function gtk on "btn" "clicked" "clicked_var"
-function gtk on "input" "changed" "input_text"
+&gtk|on "btn" "clicked" "clicked_var"
+&gtk|on "input" "changed" "input_text"
 ```
 
 The variable starts as `""` and gets set to `"1"` for most signals. For entry `changed` signals, the variable gets the current text of the entry.
 
 ## Event Loop
 
-Poll for events in a loop using `function gtk wait`:
+Poll for events in a loop using `&gtk|wait`:
 
 ```lil
 loop {
-    function gtk wait
+    &gtk|wait
     if clicked_var != "" {
         print "button was clicked"
         clicked_var = ""
@@ -89,7 +101,7 @@ loop {
 }
 ```
 
-`function gtk wait` blocks until a signal fires (or the window is closed). Each signal callback sets its variable then returns control to your script.
+`&gtk|wait` blocks until a signal fires (or the window is closed). Each signal callback sets its variable then returns control to your script.
 
 The special variable `__gtk_quit` is set to `"1"` when the window is destroyed. Check it to exit your loop cleanly.
 
@@ -101,38 +113,38 @@ If you need a small delay between event loop iterations (e.g. for smooth animati
 
 ```lil
 loop {
-    function gtk wait
+    &gtk|wait
     if clicked_var == "1" {
         print "clicked"
         clicked_var = ""
     }
-    function math sleep 0.05
+    &math|sleep 0.05
 }
 ```
 
-`function math sleep` takes seconds (including fractional), so `0.05` is 50ms. It works in both interpreted and compiled mode.
+`&math|sleep` takes seconds (including fractional), so `0.05` is 50ms. It works in both interpreted and compiled mode.
 
 ## Complete Example
 
 A window with a button and a counter:
 
 ```lil
-function gtk window "win" "counter" 300 150
-function gtk vbox "box" 10
-function gtk label "lbl" "0"
-function gtk button "btn" "increment"
-function gtk add "box" "lbl" "btn"
-function gtk show "win"
+&gtk|window "win" "counter" 300 150
+&gtk|vbox "box" 10
+&gtk|label "lbl" "0"
+&gtk|button "btn" "increment"
+&gtk|add "box" "lbl" "btn"
+&gtk|show "win"
 
-function gtk on "btn" "clicked" "click"
+&gtk|on "btn" "clicked" "click"
 
 n = 0
 
 loop {
-    function gtk wait
+    &gtk|wait
     if click != "" {
         n = n + 1
-        function gtk set "lbl" "label" n
+        &gtk|set "lbl" "label" n
         click = ""
     }
     if __gtk_quit != "" {
@@ -165,7 +177,7 @@ loop {
 
 ## Signal Reference
 
-Common signals you can connect with `function gtk on`:
+Common signals you can connect with `&gtk|on`:
 
 | Signal | Fires When | Variable Value |
 |--------|------------|----------------|
@@ -183,4 +195,4 @@ Common signals you can connect with `function gtk on`:
 - GTK functions only work in interpreted (VM) mode. Compiled mode silently returns 0.
 - Widgets are automatically removed from the internal registry when destroyed.
 - All event variables are initialized to `""` when connected, so you can check `if varname != ""` before any signal fires.
-- Use `function gtk run` instead of a polling loop if you only need to handle a single event (it blocks until the window is closed).
+- Use `&gtk|run` instead of a polling loop if you only need to handle a single event (it blocks until the window is closed).

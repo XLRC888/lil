@@ -12,6 +12,17 @@ if has x {
 
 This checks whether the variable `x` has been assigned. If the variable was never assigned, this is false.
 
+A practical use: check if a library call returned something useful:
+
+```lil
+content = &file|read "data.txt"
+if has content {
+  print "file read successfully, length=&string|len content"
+}
+```
+
+The `&file|read` function returns nothing (unset variable) if the file doesn't exist. `has content` tells you if it succeeded.
+
 ## Substring search
 
 ```lil
@@ -20,6 +31,27 @@ if text has "world" {
   print "found"
 }
 ```
+
+Check if a URL contains a protocol:
+
+```lil
+url = "https://example.com"
+if url has "https" {
+  print "secure connection"
+}
+```
+
+## Multiple has conditions combined
+
+You can chain `not` with `has`:
+
+```lil
+if has result and result has "error" {
+  print "got an error response"
+}
+```
+
+If `result` was never set, the first `has` is false and the substring check is never evaluated. This is a safe way to check both existence and content.
 
 ## Flags
 
@@ -46,3 +78,19 @@ if text has nocase anywhere "WORLD" {
   print "found"
 }
 ```
+
+## Has vs regular comparison
+
+`has` checks existence, not value. Use `==` to check a value:
+
+```lil
+x = 0
+if has x { print "x exists" }   # prints (x was assigned)
+if x == 0 { print "x is zero" } # also prints
+
+y = ""
+if has y { print "y exists" }   # prints (y was assigned, even empty)
+if y == "" { print "y is empty" } # also prints
+```
+
+A variable can exist but hold a falsy value. Use `has` when you care whether it was assigned at all, not what it holds.

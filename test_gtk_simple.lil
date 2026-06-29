@@ -1,17 +1,17 @@
 include gtk
 
-function gtk window win "Simple Test" 300 200
-function gtk vbox box
-function gtk button btn "Hello"
-function gtk label lbl "World"
-function gtk add box btn
-function gtk add box lbl
-function gtk add win box
-function gtk on win destroy closed
-function gtk show win
+&gtk|window win "Simple Test" 300 200
+&gtk|vbox box
+&gtk|button btn "Hello"
+&gtk|label lbl "World"
+&gtk|add box btn
+&gtk|add box lbl
+&gtk|add win box
+&gtk|on win destroy closed
+&gtk|show win
 
 loop {
-    function gtk wait
+    &gtk|wait
     if closed == 1 { stop }
 }
 

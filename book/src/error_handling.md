@@ -1,16 +1,24 @@
 # Error Handling
 
-lil has a `try`/`catch` mechanism for handling runtime errors without crashing.
+lil uses `try`/`catch` for handling runtime errors, similar to Python's `try`/`except`.
 
 ## Basic try/catch
 
-Wrap code that might fail in a `try` block, and handle the error in a `catch` block:
+Python:
+
+```python
+try:
+    x = int("hello")
+except:
+    print("caught an error")
+```
+
+lil:
 
 ```lil
 try {
   x = "hello"
   intify x
-  print "this line never runs"
 } catch {
   print "caught an error"
 }
@@ -29,7 +37,51 @@ try {
 }
 ```
 
-## What gets caught
+## File Operation Example
+
+A file might not exist. try/catch handles it gracefully:
+
+```lil
+try {
+  data = &file|read "maybe.tmp"
+  print data
+} catch {
+  print "could not read file"
+}
+```
+
+## Input Validation with intify
+
+Use `intify` inside try/catch to convert and validate in one step:
+
+```lil
+input "enter a number: " s
+try {
+  intify s
+  print "valid number:", s
+} catch {
+  print "that was not a number"
+}
+```
+
+Keep asking until the user enters something valid:
+
+```lil
+loop {
+  input "enter a number: " s
+  ok = 1
+  try {
+    intify s
+  } catch {
+    ok = 0
+    print "try again"
+  }
+  if ok == 1 { stop }
+}
+print "you entered:", s
+```
+
+## What Gets Caught
 
 Any error inside the `try` block triggers the `catch` block:
 

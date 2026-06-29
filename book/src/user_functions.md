@@ -1,6 +1,6 @@
 # User-defined Functions
 
-Define a function with `$name(params)` syntax:
+Define a function with `$name(params)` syntax followed by a block in braces:
 
 ```lil
 $greet() {
@@ -10,7 +10,18 @@ $greet() {
 $greet()
 ```
 
-Functions can take parameters and return the last expression's value:
+## Parameters and Return Values
+
+Functions take parameters and return the last expression's value. There's no `return` keyword.
+
+Python:
+
+```python
+def add(a, b):
+    return a + b
+```
+
+lil:
 
 ```lil
 $add(a, b) {
@@ -18,10 +29,47 @@ $add(a, b) {
 }
 
 result = $add(3, 4)
-print result    # prints 7
+print result
 ```
 
-Parameters are local to the function call — they don't leak to the caller:
+## Practical Examples
+
+Convert Fahrenheit to Celsius:
+
+```lil
+$fahr_to_celsius(f) {
+  (f - 32) * 5 / 9
+}
+
+temp = $fahr_to_celsius(100)
+print temp
+```
+
+Roll a die using a library function inside a user function:
+
+```lil
+$roll_dice() {
+  &math|randint 1 6
+}
+
+roll = $roll_dice()
+print "you rolled", roll
+```
+
+Check if a number is even:
+
+```lil
+$is_even(n) {
+  n % 2 == 0
+}
+
+x = $is_even(10)
+print x
+```
+
+## Scope
+
+Parameters are local to the function call and don't leak to the caller:
 
 ```lil
 x = 10
@@ -31,10 +79,10 @@ $set_x(val) {
 }
 
 $set_x(5)
-print x         # still prints 10 outside
+print x
 ```
 
-Functions can modify non-parameter variables (which are global):
+Non-parameter variables inside a function refer to global variables:
 
 ```lil
 x = 0
@@ -44,15 +92,44 @@ $increment() {
 }
 
 $increment()
-print x    # prints 1
+print x
 ```
 
-Functions defined in included libraries can be called from other files using the `include` statement:
+## Include
+
+Functions defined in other files can be loaded with `include`:
 
 ```lil
-include mylib
+include dice
+
+roll = $roll_dice()
+print roll
 ```
 
-This loads and runs the file `mylib.lil`, which can define functions and variables that the including file can use.
+This loads and runs `dice.lil`, making its functions available. For example, `dice.lil` might contain:
 
-Functions support recursion and work in both interpreted and compiled (AOT) mode.
+```lil
+$roll_dice() {
+  &math|randint 1 6
+}
+```
+
+Then your main script includes it and uses `$roll_dice` like any local function.
+
+## Recursion
+
+Functions can call themselves:
+
+```lil
+$fib(n) {
+  if n <= 2 {
+    1
+  } else {
+    $fib(n - 1) + $fib(n - 2)
+  }
+}
+
+print $fib(10)
+```
+
+lil's functions work in both interpreted and compiled (AOT) mode.

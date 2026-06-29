@@ -1,8 +1,8 @@
 # Functions with Parameters
 
-Functions can take parameters and return values.
+Functions can take parameters and return values. This page covers practical patterns, library integration, and advanced behavior.
 
-## Defining a function
+## Defining a Function
 
 Use `$name(params)` syntax followed by the function body in braces:
 
@@ -12,30 +12,81 @@ $add(a, b) {
 }
 ```
 
-## Calling a function
-
-Call a function with `$name(args)`:
+## Calling a Function
 
 ```lil
 result = $add(3, 4)
-print result    # prints 7
+print result
 ```
 
-Parameters are passed by value. Inside the function, parameters act as local variables that don't leak to the caller's scope.
+## Practical Predicate Functions
 
-## Return values
+Functions that return 0 or 1 as boolean results:
 
-The last expression in the function body is the return value. There is no `return` keyword:
+```lil
+$is_even(n) {
+  n % 2 == 0
+}
+
+$is_odd(n) {
+  not $is_even(n)
+}
+
+print $is_even(42)
+print $is_odd(42)
+```
+
+## Using Library Functions Inside User Functions
+
+Built-in library functions work inside your user-defined functions:
+
+```lil
+$random_in_range(min, max) {
+  &math|randint $min $max
+}
+
+r = $random_in_range(5, 10)
+print r
+```
+
+The `$min` and `$max` prefix tells lil to use the parameter's value instead of the literal string "min".
+
+```lil
+$rand_name() {
+  &math|choice "alice" "bob" "charlie"
+}
+
+$greet() {
+  name = $rand_name()
+  print "hello", name
+}
+
+$greet()
+```
+
+```lil
+$slugify(s) {
+  lower = &string|lower $s
+  &string|replace $lower " " "-"
+}
+
+slug = $slugify("Hello World")
+print slug
+```
+
+## Return Values
+
+The last expression in the function body is the return value:
 
 ```lil
 $double(x) {
   x * 2
 }
 
-print $double(21)   # prints 42
+print $double(21)
 ```
 
-If the function ends with an `if` expression, the taken branch's last expression is returned:
+If a function ends with an `if` expression, the taken branch's last value is returned:
 
 ```lil
 $sign(n) {
@@ -48,10 +99,10 @@ $sign(n) {
   }
 }
 
-print $sign(-5)   # prints -1
+print $sign(-5)
 ```
 
-If a function doesn't end with a value-producing expression, it returns 0:
+If there's no value-producing expression, it returns 0:
 
 ```lil
 $noop() {
@@ -59,12 +110,40 @@ $noop() {
 }
 
 x = $noop()
-print x             # prints 0
+print x
+```
+
+## Variable Save/Restore
+
+When you call a function, lil saves all current variables before running the function body and restores them after. Parameters and any variables changed inside stay contained:
+
+```lil
+x = "hello"
+
+$test() {
+  x = "world"
+  print x
+}
+
+$test()
+print x
+```
+
+Parameters are always save/restored independently of global variables:
+
+```lil
+x = 100
+
+$f(x) {
+  x = x + 1
+  print x
+}
+
+$f(5)
+print x
 ```
 
 ## Recursion
-
-Functions can call themselves:
 
 ```lil
 $fib(n) {
@@ -75,7 +154,7 @@ $fib(n) {
   }
 }
 
-print $fib(10)      # prints 55
+print $fib(10)
 ```
 
 ## Notes
