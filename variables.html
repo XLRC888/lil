@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4480de0f.js";
+            window.path_to_searchindex_js = "searchindex-da51dd9f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f8620e39.js"></script>
@@ -207,32 +207,19 @@ print "number:", n
 print "area is", area
 </code></pre>
 <h2 id="forcing-variable-types"><a class="header" href="#forcing-variable-types">Forcing variable types</a></h2>
-<p>You can lock a variable to its current type with <code>force</code>. This prevents <code>strify</code>, <code>intify</code>, and <code>swify</code> from converting it:</p>
+<p><code>force</code> locks a variable completely. Once forced, you cannot change it with <code>strify</code>, <code>intify</code>, <code>swify</code>, or regular assignment:</p>
 <pre><code class="language-lil">x = 42
 force x
+x = 30        # ERROR: cannot assign to a forced variable
 strify x      # ERROR: cannot strify a forced variable
-unforce x
-strify x
-print x
+unforce x     # unlock it
+x = 30        # works again
 </code></pre>
 <p>Combined assignment and force:</p>
 <pre><code class="language-lil">force x = 42
 unforce x = 56
 </code></pre>
-<h3 id="type-locked-force"><a class="header" href="#type-locked-force">Type-locked force</a></h3>
-<p>Specify <code>int</code> or <code>str</code> to lock the variable to that specific type. Assigning the opposite type will error:</p>
-<pre><code class="language-lil">force int x = 42
-x = "hi"      # ERROR: cannot assign a string to int-forced variable
-
-force str y = "hello"
-y = 42        # ERROR: cannot assign a number to str-forced variable
-</code></pre>
-<p>Plain <code>force</code> (without a type keyword) only blocks <code>strify</code>/<code>intify</code>/<code>swify</code> but allows any assignment:</p>
-<pre><code class="language-lil">x = 42
-force x
-x = "hi"      # allowed (no type restriction)
-strify x      # ERROR: forced
-</code></pre>
+<p><code>unforce</code> unlocks the variable so it can be changed again.</p>
 <p><code>force int input</code> reads input, validates it as a number, and forces the variable:</p>
 <pre><code class="language-lil">force int input "Enter your age: " age
 print "next year you will be", age + 1
