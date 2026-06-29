@@ -28,4 +28,5 @@
   - [Templates](templates.md)
   - [The Has Operator](has.md)
   - [Compiled Mode](compiled.md)
+  - [Force and Unforce](force_unforce.md)
   - [C Extensions](c_ext.md)

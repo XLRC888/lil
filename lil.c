@@ -10,6 +10,17 @@
 #include <sys/time.h>
 #include <stdint.h>
 
+#ifdef HAVE_GTK
+#include <gtk/gtk.h>
+#define MAX_GTK_WIDGETS 256
+typedef struct { char name[64]; GtkWidget *widget; } GtkW;
+static GtkW gtk_ws[MAX_GTK_WIDGETS];
+static int gtk_wc;
+typedef struct { char vname[64]; char sig[64]; } GtkSigData;
+static int gtk_window_gone;
+static int gtk_in_main;
+#endif
+
 #define VERSION "0.1.0"
 #define MAX_VARS 1024
 #define BUF_SIZE 4096
@@ -22,7 +33,7 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_LOOP, TOK_STOP, TOK_BREAK, TOK_CONTINUE, TOK_INCLUDE, TOK_FUNCTION, TOK_STRIFY, TOK_INTIFY,
     TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
     TOK_LBRACKET, TOK_RBRACKET,
-    TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET, TOK_TRY, TOK_CATCH, TOK_RETURN } TokenType;
+    TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET, TOK_TRY, TOK_CATCH, TOK_FORCE, TOK_UNFORCE } TokenType;
 
 typedef struct {
     TokenType type;
@@ -41,7 +52,7 @@ typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_ASSIGN, NODE_PRINT, NODE_INPUT, NODE_IF, NODE_WHILE,
     NODE_FORTO, NODE_BLOCK, NODE_EXIT, NODE_EMPTY,
     NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_FUNCTION,
-    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE, NODE_RETURN, NODE_STRIFY, NODE_INTIFY, NODE_TRY } NodeType;
+    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE, NODE_STRIFY, NODE_INTIFY, NODE_TRY, NODE_FORCE, NODE_UNFORCE } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -54,7 +65,7 @@ typedef struct ASTNode {
         struct { int op; struct ASTNode *operand; } unary;
         struct { char *name; struct ASTNode *value; } assign;
         struct { struct ASTNode **exprs; int count; int cap; } print;
-        struct { char *name; char *prompt; } input;
+        struct { char *name; char *prompt; int force_type; } input;
         struct { struct ASTNode *cond, *then, *els; int flags; int has_mode;
             struct ASTNode *has_item; struct ASTNode **has_items; int has_nitems; } if_stmt;
         struct { struct ASTNode *cond, *body; } while_stmt;
@@ -73,6 +84,7 @@ typedef struct ASTNode {
 typedef struct {
     char *name;
     Value val;
+    int forced;
 } Var;
 
 #define MAX_FUNCS 256
@@ -85,7 +97,6 @@ typedef struct {
 
 static FuncDef funcs[MAX_FUNCS];
 static int func_count;
-static Value func_retval;
 
 static jmp_buf error_jmp;
 static int error_occurred;
@@ -99,12 +110,14 @@ static ASTNode *parse_stmt(void);
 static ASTNode *parse_block(void);
 static Value eval_expr(ASTNode *n);
 static int exec_stmt(ASTNode *n);
+static Value stmt_val(ASTNode *n);
 static double math_parse_expr(const char **p);
 static double math_parse_term(const char **p);
 static double math_parse_factor(const char **p);
 
 static void fatal(const char *fmt, ...) {
     error_occurred = 1;
+    fprintf(stderr, "\033[1;31merror:\033[0m ");
     va_list ap;
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
@@ -157,6 +170,7 @@ static int var_ensure(const char *name) {
     if (var_count >= MAX_VARS) fatal("too many variables");
     vars[var_count].name = sdup(name);
     vars[var_count].val = (Value){VAL_NUM, {.num=0}};
+    vars[var_count].forced = 0;
     return var_count++;
 }
 
@@ -310,13 +324,14 @@ static Token lex_scan(void) {
             if (!strcmp(word, "stop"))    { free(word); t.type = TOK_STOP; return t; }
             if (!strcmp(word, "break"))   { free(word); t.type = TOK_BREAK; return t; }
             if (!strcmp(word, "continue")) { free(word); t.type = TOK_CONTINUE; return t; }
-            if (!strcmp(word, "return"))  { free(word); t.type = TOK_RETURN; return t; }
             if (!strcmp(word, "include")) { free(word); t.type = TOK_INCLUDE; return t; }
             if (!strcmp(word, "function")) { free(word); t.type = TOK_FUNCTION; return t; }
             if (!strcmp(word, "has"))     { free(word); t.type = TOK_HAS; return t; }
             if (!strcmp(word, "nocase"))  { free(word); t.type = TOK_NOCASE; return t; }
             if (!strcmp(word, "anywhere")) { free(word); t.type = TOK_ANYWHERE; return t; }
             if (!strcmp(word, "word"))    { free(word); t.type = TOK_WORD; return t; }
+            if (!strcmp(word, "force"))   { free(word); t.type = TOK_FORCE; return t; }
+            if (!strcmp(word, "unforce")) { free(word); t.type = TOK_UNFORCE; return t; }
 
             t.type = TOK_ID;
             t.val.str = word;
@@ -825,15 +840,6 @@ static ASTNode *parse_stmt(void) {
         n->data.input.name = name;
         return n;
     }
-    if (lex_cur.type == TOK_RETURN) {
-        lex_next();
-        ASTNode *val = NULL;
-        if (lex_cur.type != TOK_NEWLINE && lex_cur.type != TOK_EOF && lex_cur.type != TOK_RBRACE)
-            val = parse_expr();
-        ASTNode *n = ast_alloc(NODE_RETURN);
-        n->data.assign.value = val;
-        return n;
-    }
     if (lex_cur.type == TOK_INTIFY) {
         lex_next();
         if (lex_cur.type != TOK_ID) fatal("line %d: intify expects a variable name", lex_cur.line);
@@ -857,36 +863,6 @@ static ASTNode *parse_stmt(void) {
         return ast_assign(vname, ast_str(""));
     }
 
-    if (lex_cur.type == TOK_DOLLAR_ID && lex_peek_next().type == TOK_LPAREN) {
-        char *fname = sdup(lex_cur.val.str);
-        lex_next(); lex_next();
-        ASTNode **exprs = NULL; int nexprs = 0, ecap = 0;
-        while (lex_cur.type != TOK_RPAREN && lex_cur.type != TOK_EOF) {
-            if (nexprs >= ecap) { ecap = ecap ? ecap * 2 : 4; exprs = realloc(exprs, ecap * sizeof(ASTNode*)); }
-            exprs[nexprs++] = parse_expr();
-            if (lex_cur.type == TOK_COMMA) lex_next();
-        }
-        if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
-        lex_next();
-        while (lex_cur.type == TOK_NEWLINE) lex_next();
-        if (lex_cur.type == TOK_LBRACE) {
-            char **params = malloc(nexprs * sizeof(char*));
-            for (int i = 0; i < nexprs; i++) {
-                if (exprs[i]->type != NODE_ID) fatal("line %d: parameter must be an identifier", exprs[i]->line);
-                params[i] = sdup(exprs[i]->data.id);
-            }
-            ASTNode *body = parse_block();
-            ASTNode *n = ast_alloc(NODE_FUNC_DEF);
-            n->data.func_def.name = fname; n->data.func_def.params = params;
-            n->data.func_def.nparams = nexprs; n->data.func_def.body = body;
-            return n;
-        }
-        ASTNode *n = ast_alloc(NODE_FUNC_CALL);
-        n->data.func_call.name = fname; n->data.func_call.args = exprs;
-        n->data.func_call.nargs = nexprs;
-        return n;
-    }
-
     if (lex_cur.type == TOK_ID && lex_peek_next().type == TOK_ASSIGN) {
         char *name = sdup(lex_cur.val.str);
         lex_next();
@@ -895,7 +871,71 @@ static ASTNode *parse_stmt(void) {
         return ast_assign(name, val);
     }
 
+    if (lex_cur.type == TOK_FORCE) {
+        lex_next();
+        if (lex_cur.type == TOK_ID && (!strcmp(lex_cur.val.str, "int") || !strcmp(lex_cur.val.str, "str"))
+            && lex_peek_next().type == TOK_INPUT) {
+            int is_int = !strcmp(lex_cur.val.str, "int");
+            lex_next(); lex_next();
+            char *prompt = NULL;
+            if (lex_cur.type == TOK_STR) {
+                prompt = sdup(lex_cur.val.str);
+                lex_next();
+            }
+            if (lex_cur.type != TOK_ID) fatal("line %d: force input expects a variable name", lex_cur.line);
+            ASTNode *n = ast_alloc(NODE_INPUT);
+            n->data.input.name = sdup(lex_cur.val.str);
+            n->data.input.prompt = prompt;
+            n->data.input.force_type = is_int ? 1 : 2;
+            lex_next();
+            return n;
+        }
+        if (lex_cur.type != TOK_ID) fatal("line %d: force expects a variable name", lex_cur.line);
+        ASTNode *n = ast_alloc(NODE_FORCE);
+        n->data.assign.name = sdup(lex_cur.val.str);
+        lex_next();
+        n->data.assign.value = NULL;
+        if (lex_cur.type == TOK_ASSIGN) {
+            lex_next();
+            n->data.assign.value = parse_expr();
+        }
+        return n;
+    }
+    if (lex_cur.type == TOK_UNFORCE) {
+        lex_next();
+        if (lex_cur.type != TOK_ID) fatal("line %d: unforce expects a variable name", lex_cur.line);
+        ASTNode *n = ast_alloc(NODE_UNFORCE);
+        n->data.assign.name = sdup(lex_cur.val.str);
+        lex_next();
+        n->data.assign.value = NULL;
+        if (lex_cur.type == TOK_ASSIGN) {
+            lex_next();
+            n->data.assign.value = parse_expr();
+        }
+        return n;
+    }
+
     ASTNode *e = parse_expr();
+    if (e->type == NODE_FUNC_CALL) {
+        while (lex_cur.type == TOK_NEWLINE) lex_next();
+        if (lex_cur.type == TOK_LBRACE) {
+            int np = e->data.func_call.nargs;
+            char **params = malloc(np * sizeof(char*));
+            for (int i = 0; i < np; i++) {
+                if (e->data.func_call.args[i]->type != NODE_ID)
+                    fatal("line %d: parameter must be an identifier", e->data.func_call.args[i]->line);
+                params[i] = sdup(e->data.func_call.args[i]->data.id);
+            }
+            ASTNode *body = parse_block();
+            ASTNode *n = ast_alloc(NODE_FUNC_DEF);
+            n->data.func_def.name = e->data.func_call.name;
+            n->data.func_def.params = params;
+            n->data.func_def.nparams = np;
+            n->data.func_def.body = body;
+            return n;
+        }
+    }
+
     return e;
 }
 
@@ -972,7 +1012,7 @@ static ASTNode *parse_primary(void) {
     }
     if (lex_cur.type == TOK_LPAREN) {
         lex_next();
-        ASTNode *e = parse_expr();
+    ASTNode *e = parse_expr();
         if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
         lex_next();
         return e;
@@ -1082,6 +1122,34 @@ static char *resolve_arg(char *arg) {
     return sdup(arg);
 }
 
+#ifdef HAVE_GTK
+static GtkWidget *gtk_find_w(const char *name) {
+    for (int i = 0; i < gtk_wc; i++) if (!strcmp(gtk_ws[i].name, name)) return gtk_ws[i].widget;
+    return NULL;
+}
+static void gtk_reg_w(const char *name, GtkWidget *w) {
+    if (gtk_wc >= MAX_GTK_WIDGETS) { fprintf(stderr, "too many gtk widgets\n"); return; }
+    strncpy(gtk_ws[gtk_wc].name, name, 63); gtk_ws[gtk_wc].name[63] = 0;
+    gtk_ws[gtk_wc].widget = w; gtk_wc++;
+}
+static void gtk_destroy_cb(GtkWidget *w, gpointer d) {
+    (void)d;
+    gtk_window_gone = 1;
+    if (gtk_in_main) gtk_main_quit();
+}
+static void gtk_sig_cb(GtkWidget *w, gpointer d) {
+    GtkSigData *sd = (GtkSigData *)d;
+    if (!strcmp(sd->sig, "changed")) {
+        if (!GTK_IS_ENTRY(w)) { var_set(sd->vname, make_str("")); return; }
+        var_set(sd->vname, make_str(gtk_entry_get_text(GTK_ENTRY(w))));
+    }
+    else
+        var_set(sd->vname, make_str("1"));
+    if (gtk_in_main && strcmp(sd->vname, "__gtk_quit"))
+        gtk_main_quit();
+}
+#endif
+
 static Value eval_expr(ASTNode *n) {
     if (!n) return make_num(0);
     switch (n->type) {
@@ -1144,7 +1212,13 @@ static Value eval_expr(ASTNode *n) {
                     }
                     Value ret = make_num(0);
                     int r = exec_stmt(funcs[i].body);
-                    if (r == 4) ret = func_retval;
+                    if (r == 1) { memcpy(vars, saved_vars, sizeof(Var) * saved_count); var_count = saved_count; return make_num(0); }
+                    if (funcs[i].body->type == NODE_BLOCK && funcs[i].body->data.block.count > 0) {
+                        ASTNode *last = funcs[i].body->data.block.stmts[funcs[i].body->data.block.count - 1];
+                        if (last) {
+                            ret = stmt_val(last);
+                        }
+                    }
                     memcpy(vars, saved_vars, sizeof(Var) * saved_count);
                     var_count = saved_count;
                     return ret;
@@ -1576,6 +1650,201 @@ static Value eval_expr(ASTNode *n) {
                 fatal("line %d: unknown sys function '%s'", n->line, fn);
             }
 
+            if (!strcmp(n->data.funcall.lib, "gtk")) {
+#ifdef HAVE_GTK
+                if (n->data.funcall.argc < 1) fatal("line %d: gtk expects a function name", n->line);
+                char *fn = n->data.funcall.args[0];
+                if (!strcmp(fn, "init")) {
+                    if (!gtk_init_check(NULL, NULL))
+                        fatal("line %d: failed to initialize gtk", n->line);
+                    return make_str("");
+                }
+                if (!strcmp(fn, "window")) {
+                    if (n->data.funcall.argc < 5) fatal("line %d: gtk window expects name,title,w,h", n->line);
+                    { static int gtk_inited; if (!gtk_inited) { if (!gtk_init_check(NULL, NULL)) fatal("line %d: failed to initialize gtk", n->line); gtk_inited = 1; } }
+                    char *name = resolve_arg(n->data.funcall.args[1]);
+                    char *title = resolve_arg(n->data.funcall.args[2]);
+                    int w = (int)strtod(resolve_arg(n->data.funcall.args[3]), NULL);
+                    int h = (int)strtod(resolve_arg(n->data.funcall.args[4]), NULL);
+                    GtkWidget *win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+                    gtk_window_set_title(GTK_WINDOW(win), title);
+                    gtk_window_set_default_size(GTK_WINDOW(win), w, h);
+                    g_signal_connect(win, "destroy", G_CALLBACK(gtk_destroy_cb), NULL);
+                    gtk_reg_w(name, win);
+                    gtk_window_gone = 0;
+                    return make_str("");
+                }
+                if (!strcmp(fn, "vbox") || !strcmp(fn, "hbox")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: gtk box expects a name", n->line);
+                    char *name = resolve_arg(n->data.funcall.args[1]);
+                    int spacing = n->data.funcall.argc > 2 ? (int)strtod(resolve_arg(n->data.funcall.args[2]), NULL) : 0;
+                    GtkWidget *box = gtk_box_new(!strcmp(fn, "vbox") ? GTK_ORIENTATION_VERTICAL : GTK_ORIENTATION_HORIZONTAL, spacing);
+                    gtk_reg_w(name, box);
+                    return make_str("");
+                }
+                if (!strcmp(fn, "button")) {
+                    if (n->data.funcall.argc < 3) fatal("line %d: gtk button expects name and label", n->line);
+                    char *name = resolve_arg(n->data.funcall.args[1]);
+                    char *label = resolve_arg(n->data.funcall.args[2]);
+                    GtkWidget *b = gtk_button_new_with_label(label);
+                    gtk_reg_w(name, b);
+                    return make_str("");
+                }
+                if (!strcmp(fn, "label")) {
+                    if (n->data.funcall.argc < 3) fatal("line %d: gtk label expects name and text", n->line);
+                    char *name = resolve_arg(n->data.funcall.args[1]);
+                    char *text = resolve_arg(n->data.funcall.args[2]);
+                    GtkWidget *l = gtk_label_new(text);
+                    gtk_reg_w(name, l);
+                    return make_str("");
+                }
+                if (!strcmp(fn, "entry")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: gtk entry expects a name", n->line);
+                    char *name = resolve_arg(n->data.funcall.args[1]);
+                    GtkWidget *e = gtk_entry_new();
+                    if (n->data.funcall.argc > 2) {
+                        char *placeholder = resolve_arg(n->data.funcall.args[2]);
+                        gtk_entry_set_placeholder_text(GTK_ENTRY(e), placeholder);
+                    }
+                    gtk_reg_w(name, e);
+                    return make_str("");
+                }
+                if (!strcmp(fn, "add")) {
+                    if (n->data.funcall.argc < 3) fatal("line %d: gtk add expects parent and child", n->line);
+                    char *parent = resolve_arg(n->data.funcall.args[1]);
+                    GtkWidget *p = gtk_find_w(parent);
+                    if (!p) fatal("line %d: widget '%s' not found", n->line, parent);
+                    for (int i = 2; i < n->data.funcall.argc; i++) {
+                        char *cname = resolve_arg(n->data.funcall.args[i]);
+                        GtkWidget *c = gtk_find_w(cname);
+                        if (!c) fatal("line %d: widget '%s' not found", n->line, cname);
+                        if (!GTK_IS_CONTAINER(p)) fatal("line %d: widget '%s' is not a container", n->line, parent);
+                        gtk_container_add(GTK_CONTAINER(p), c);
+                    }
+                    return make_str("");
+                }
+                if (!strcmp(fn, "show")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: gtk show expects a widget name", n->line);
+                    char *name = resolve_arg(n->data.funcall.args[1]);
+                    GtkWidget *w = gtk_find_w(name);
+                    if (!w) fatal("line %d: widget '%s' not found", n->line, name);
+                    gtk_widget_show_all(w);
+                    return make_str("");
+                }
+                if (!strcmp(fn, "set")) {
+                    if (n->data.funcall.argc < 4) fatal("line %d: gtk set expects widget,property,value", n->line);
+                    char *wname = resolve_arg(n->data.funcall.args[1]);
+                    char *prop = resolve_arg(n->data.funcall.args[2]);
+                    char *val = resolve_arg(n->data.funcall.args[3]);
+                    GtkWidget *w = gtk_find_w(wname);
+                    if (!w) fatal("line %d: widget '%s' not found", n->line, wname);
+                    if (!strcmp(prop, "label")) {
+                        if (GTK_IS_BUTTON(w))
+                            gtk_button_set_label(GTK_BUTTON(w), val);
+                        else if (GTK_IS_LABEL(w))
+                            gtk_label_set_label(GTK_LABEL(w), val);
+                        else
+                            fatal("line %d: 'label' not supported for this widget", n->line);
+                    } else if (!strcmp(prop, "text")) {
+                        if (GTK_IS_LABEL(w))
+                            gtk_label_set_text(GTK_LABEL(w), val);
+                        else if (GTK_IS_ENTRY(w))
+                            gtk_entry_set_text(GTK_ENTRY(w), val);
+                        else
+                            fatal("line %d: 'text' not supported for this widget", n->line);
+                    }
+                    else if (!strcmp(prop, "title")) {
+                        if (!GTK_IS_WINDOW(w)) fatal("line %d: 'title' requires a window", n->line);
+                        gtk_window_set_title(GTK_WINDOW(w), val);
+                    }
+                    else if (!strcmp(prop, "sensitive"))
+                        gtk_widget_set_sensitive(w, !strcmp(val,"true")||!strcmp(val,"1"));
+                    else if (!strcmp(prop, "visible"))
+                        gtk_widget_set_visible(w, !strcmp(val,"true")||!strcmp(val,"1"));
+                    else if (!strcmp(prop, "width"))
+                        gtk_widget_set_size_request(w, (int)strtod(val,NULL), -1);
+                    else if (!strcmp(prop, "height"))
+                        gtk_widget_set_size_request(w, -1, (int)strtod(val,NULL));
+                    else if (!strcmp(prop, "placeholder")) {
+                        if (!GTK_IS_ENTRY(w)) fatal("line %d: 'placeholder' requires an entry", n->line);
+                        gtk_entry_set_placeholder_text(GTK_ENTRY(w), val);
+                    }
+                    else fatal("line %d: unknown property '%s'", n->line, prop);
+                    return make_str("");
+                }
+                if (!strcmp(fn, "get")) {
+                    if (n->data.funcall.argc < 3) fatal("line %d: gtk get expects widget and property", n->line);
+                    char *wname = resolve_arg(n->data.funcall.args[1]);
+                    char *prop = resolve_arg(n->data.funcall.args[2]);
+                    GtkWidget *w = gtk_find_w(wname);
+                    if (!w) fatal("line %d: widget '%s' not found", n->line, wname);
+                    if (!strcmp(prop, "text")) {
+                        if (GTK_IS_ENTRY(w))
+                            return make_str(gtk_entry_get_text(GTK_ENTRY(w)));
+                        if (GTK_IS_LABEL(w))
+                            return make_str(gtk_label_get_text(GTK_LABEL(w)));
+                        return make_str("");
+                    }
+                    if (!strcmp(prop, "title")) {
+                        if (!GTK_IS_WINDOW(w)) return make_str("");
+                        return make_str(gtk_window_get_title(GTK_WINDOW(w)));
+                    }
+                    return make_str("");
+                }
+                if (!strcmp(fn, "on")) {
+                    if (n->data.funcall.argc < 4) fatal("line %d: gtk on expects widget,signal,variable", n->line);
+                    char *wname = resolve_arg(n->data.funcall.args[1]);
+                    char *signal = resolve_arg(n->data.funcall.args[2]);
+                    char *vname = resolve_arg(n->data.funcall.args[3]);
+                    GtkWidget *w = gtk_find_w(wname);
+                    if (!w) fatal("line %d: widget '%s' not found", n->line, wname);
+                    var_set(vname, make_str(""));
+                    GtkSigData *sd = malloc(sizeof(GtkSigData));
+                    strncpy(sd->vname, vname, 63); sd->vname[63] = 0;
+                    strncpy(sd->sig, signal, 63); sd->sig[63] = 0;
+                    g_signal_connect(w, signal, G_CALLBACK(gtk_sig_cb), sd);
+                    return make_str("");
+                }
+                if (!strcmp(fn, "wait")) {
+                    if (gtk_window_gone) {
+                        while (gtk_events_pending()) gtk_main_iteration();
+                        return make_str("");
+                    }
+                    gtk_in_main = 1;
+                    gtk_main();
+                    gtk_in_main = 0;
+                    return make_str("");
+                }
+                if (!strcmp(fn, "run")) {
+                    gtk_in_main = 1;
+                    gtk_main();
+                    gtk_in_main = 0;
+                    return make_str("");
+                }
+                if (!strcmp(fn, "timeout")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: gtk timeout expects milliseconds", n->line);
+                    int ms = (int)strtod(resolve_arg(n->data.funcall.args[1]), NULL);
+                    g_timeout_add(ms, (GSourceFunc)gtk_main_quit, NULL);
+                    return make_str("");
+                }
+                if (!strcmp(fn, "quit")) {
+                    if (!gtk_in_main) return make_str("");
+                    gtk_main_quit();
+                    return make_str("");
+                }
+                if (!strcmp(fn, "destroy")) {
+                    if (n->data.funcall.argc < 2) fatal("line %d: gtk destroy expects a widget name", n->line);
+                    char *wname = resolve_arg(n->data.funcall.args[1]);
+                    GtkWidget *w = gtk_find_w(wname);
+                    if (w) gtk_widget_destroy(w);
+                    return make_str("");
+                }
+                fatal("line %d: unknown gtk function '%s'", n->line, fn);
+#else
+                fatal("line %d: gtk not supported (recompile with 'make gtk')", n->line);
+#endif
+            }
+
             fatal("line %d: unknown library '%s'", n->line, n->data.funcall.lib);
             return make_num(0);
         }
@@ -1750,26 +2019,43 @@ static int exec_stmt(ASTNode *n) {
                 return 0;
             }
             size_t len = strlen(buf);
-            while (len > 0 && (buf[len-1] == '\n' || buf[len-1] == '\r' || buf[len-1] == ' ' || buf[len-1] == '\t')) buf[--len] = 0;
-            char *end;
-            double d = strtod(buf, &end);
-            while (*end == ' ' || *end == '\t') end++;
-            if (*end == 0) {
+            while (len > 0 && (buf[len-1] == '\n' || buf[len-1] == '\r')) buf[--len] = 0;
+            if (n->data.input.force_type == 1) {
+                char *end;
+                double d = strtod(buf, &end);
+                while (*end == ' ' || *end == '\t') end++;
+                if (*end != 0) fatal("line %d: input '%s' is not a valid number", n->line, buf);
                 var_set(n->data.input.name, make_num(d));
-            } else {
+                int _fi = var_find(n->data.input.name);
+                if (_fi >= 0) vars[_fi].forced = 1;
+            } else if (n->data.input.force_type == 2) {
                 var_set(n->data.input.name, make_str(buf));
+                int _fi = var_find(n->data.input.name);
+                if (_fi >= 0) vars[_fi].forced = 1;
+            } else {
+                char *end;
+                double d = strtod(buf, &end);
+                while (*end == ' ' || *end == '\t') end++;
+                if (*end == 0) {
+                    var_set(n->data.input.name, make_num(d));
+                } else {
+                    var_set(n->data.input.name, make_str(buf));
+                }
             }
             return 0;
         }
         case NODE_STRIFY: {
             int idx = var_find(n->data.input.name);
             if (idx < 0) { var_set(n->data.input.name, make_str("")); idx = var_count - 1; }
+            if (vars[idx].forced) fatal("line %d: cannot strify a forced variable", n->line);
             char *s = val_tostr(vars[idx].val);
             var_set(n->data.input.name, make_str(s));
             free(s);
             return 0;
         }
         case NODE_INTIFY: {
+            int _fidx = var_find(n->data.input.name);
+            if (_fidx >= 0 && vars[_fidx].forced) fatal("line %d: cannot intify a forced variable", n->line);
             if (n->data.input.prompt) {
                 int idx = var_find(n->data.input.name);
                 if (idx < 0) { var_set(n->data.input.name, make_str("")); idx = var_count - 1; }
@@ -1899,15 +2185,56 @@ static int exec_stmt(ASTNode *n) {
             func_count++;
             return 0;
         }
-        case NODE_RETURN: {
-            func_retval = n->data.assign.value ? eval_expr(n->data.assign.value) : make_num(0);
-            return 4;
+        case NODE_FORCE: {
+            int idx = var_ensure(n->data.assign.name);
+            if (n->data.assign.value) {
+                Value v = eval_expr(n->data.assign.value);
+                var_set(n->data.assign.name, v);
+                idx = var_find(n->data.assign.name);
+            }
+            vars[idx].forced = 1;
+            return 0;
+        }
+        case NODE_UNFORCE: {
+            int idx = var_ensure(n->data.assign.name);
+            vars[idx].forced = 0;
+            if (n->data.assign.value) {
+                Value v = eval_expr(n->data.assign.value);
+                var_set(n->data.assign.name, v);
+            }
+            return 0;
         }
         case NODE_EXIT:
             return 1;
         default:
             eval_expr(n);
             return 0;
+    }
+}
+
+static Value stmt_val(ASTNode *n) {
+    if (!n) return make_num(0);
+    switch (n->type) {
+        case NODE_NUM: case NODE_STR: case NODE_ID:
+        case NODE_BINOP: case NODE_UNARY: case NODE_ASSIGN:
+        case NODE_FUNC_CALL: case NODE_TEMPLATE:
+            return eval_expr(n);
+        case NODE_IF: {
+            Value cv = eval_expr(n->data.if_stmt.cond);
+            int t = (cv.type == VAL_STR) ? (strlen(cv.data.str) != 0) : (cv.data.num != 0);
+            if (t) return stmt_val(n->data.if_stmt.then);
+            if (n->data.if_stmt.els) {
+                if (n->data.if_stmt.els->type == NODE_IF) return stmt_val(n->data.if_stmt.els);
+                return stmt_val(n->data.if_stmt.els);
+            }
+            return make_num(0);
+        }
+        case NODE_BLOCK: {
+            if (n->data.block.count > 0)
+                return stmt_val(n->data.block.stmts[n->data.block.count - 1]);
+            return make_num(0);
+        }
+        default: return make_num(0);
     }
 }
 
@@ -2498,6 +2825,11 @@ static void infer_type_stmt(ASTNode *n) {
             infer_type_stmt(n->data.try_stmt.body);
             infer_type_stmt(n->data.try_stmt.catch_body);
             break;
+        case NODE_FORCE:
+        case NODE_UNFORCE:
+            var_ensure(n->data.assign.name);
+            if (n->data.assign.value) infer_type_stmt(n->data.assign.value);
+            break;
         default: break;
     }
 }
@@ -2535,6 +2867,8 @@ static void cg_collect_vars(ASTNode *n) {
         case NODE_STRIFY:
         case NODE_INTIFY: var_ensure(n->data.input.name); break;
         case NODE_TRY: cg_collect_vars(n->data.try_stmt.body); cg_collect_vars(n->data.try_stmt.catch_body); break;
+        case NODE_FORCE:
+        case NODE_UNFORCE: var_ensure(n->data.assign.name); if (n->data.assign.value) cg_collect_vars(n->data.assign.value); break;
         default: break;
     }
 }
@@ -2609,16 +2943,17 @@ static void cg_expr(FILE *f, ASTNode *n, VarType want) {
                     }
                     if (want != TY_NUM) fprintf(f, "?1:0");
                 } else {
-                    fprintf(f, "make_num(val_cmp(");
+                    if (want == TY_NUM) fprintf(f, "val_cmp(");
+                    else fprintf(f, "make_num(val_cmp(");
                     cg_expr(f, n->data.binop.left, TY_DYN);
                     fprintf(f, ",");
                     cg_expr(f, n->data.binop.right, TY_DYN);
-                    if (op == TOK_EQ) fprintf(f, ",0))");
-                    else if (op == TOK_NE) fprintf(f, ",1))");
-                    else if (op == TOK_LT) fprintf(f, ",2))");
-                    else if (op == TOK_GT) fprintf(f, ",3))");
-                    else if (op == TOK_LE) fprintf(f, ",4))");
-                    else fprintf(f, ",5))");
+                    if (op == TOK_EQ) fprintf(f, ",0)%s", want == TY_NUM ? "" : ")");
+                    else if (op == TOK_NE) fprintf(f, ",1)%s", want == TY_NUM ? "" : ")");
+                    else if (op == TOK_LT) fprintf(f, ",2)%s", want == TY_NUM ? "" : ")");
+                    else if (op == TOK_GT) fprintf(f, ",3)%s", want == TY_NUM ? "" : ")");
+                    else if (op == TOK_LE) fprintf(f, ",4)%s", want == TY_NUM ? "" : ")");
+                    else fprintf(f, ",5)%s", want == TY_NUM ? "" : ")");
                 }
                 break;
             }
@@ -2716,7 +3051,12 @@ static void cg_expr(FILE *f, ASTNode *n, VarType want) {
             break;
         }
         case NODE_FUNC_CALL: {
-            fprintf(f, want == TY_NUM ? "0" : "make_num(0)");
+            fprintf(f, "_lil_fn_%s(", n->data.func_call.name);
+            for (int i = 0; i < n->data.func_call.nargs; i++) {
+                if (i > 0) fprintf(f, ", ");
+                cg_expr(f, n->data.func_call.args[i], TY_DYN);
+            }
+            fprintf(f, ")");
             break;
         }
         default: fprintf(f, want == TY_NUM ? "0" : "make_num(0)"); break;
@@ -2924,7 +3264,66 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
             fprintf(f, "  }\n}\n");
             break;
         }
+        case NODE_FUNC_DEF: break;
+        case NODE_FORCE:
+        case NODE_UNFORCE: {
+            if (n->data.assign.value) {
+                int idx = var_find(n->data.assign.name);
+                VarType vt = idx >= 0 ? var_types[idx] : TY_DYN;
+                if (vt == TY_NUM) {
+                    fprintf(f, "%s = ", n->data.assign.name);
+                    cg_expr(f, n->data.assign.value, TY_NUM);
+                    fprintf(f, ";\n");
+                } else {
+                    fprintf(f, "val_free(%s); %s = ", n->data.assign.name, n->data.assign.name);
+                    cg_expr(f, n->data.assign.value, TY_DYN);
+                    fprintf(f, ";\n");
+                }
+            }
+            break;
+        }
     }
+}
+
+static void cg_emit_func(FILE *f, ASTNode *n) {
+    int np = n->data.func_def.nparams;
+    int sc = var_count;
+    VarType st[MAX_VARS];
+    memcpy(st, var_types, sizeof(VarType) * (var_count < MAX_VARS ? var_count : MAX_VARS));
+    var_count = 0;
+    for (int i = 0; i < np; i++) var_ensure(n->data.func_def.params[i]);
+    cg_collect_vars(n->data.func_def.body);
+    infer_type_stmt(n->data.func_def.body);
+    fprintf(f, "static Value _lil_fn_%s(", n->data.func_def.name);
+    for (int i = 0; i < np; i++) { if (i > 0) fprintf(f, ", "); fprintf(f, "Value p%d", i); }
+    fprintf(f, ") {\n");
+    for (int i = 0; i < var_count; i++) {
+        VarType t = var_types[i];
+        if (t == TY_NUM) fprintf(f, "  double %s = 0;\n", vars[i].name);
+        else if (t == TY_STR) fprintf(f, "  Value %s = {VAL_STR,{.str=NULL}};\n", vars[i].name);
+        else fprintf(f, "  Value %s = {VAL_NUM,{.num=0}};\n", vars[i].name);
+    }
+    for (int i = 0; i < np; i++) fprintf(f, "  %s = p%d;\n", n->data.func_def.params[i], i);
+    fprintf(f, "  Value _ret = make_num(0);\n");
+    cg_stmt(f, n->data.func_def.body, NULL, 0);
+    if (n->data.func_def.body->type == NODE_BLOCK && n->data.func_def.body->data.block.count > 0) {
+        ASTNode *last = n->data.func_def.body->data.block.stmts[n->data.func_def.body->data.block.count - 1];
+        if (last) {
+            if (last->type == NODE_ASSIGN) {
+                int idx = var_find(last->data.assign.name);
+                VarType vt = idx >= 0 ? var_types[idx] : TY_DYN;
+                if (vt == TY_NUM) fprintf(f, "  _ret = make_num(%s);\n", last->data.assign.name);
+                else fprintf(f, "  _ret = copy_val(%s);\n", last->data.assign.name);
+            } else {
+                fprintf(f, "  _ret = ");
+                cg_expr(f, last, TY_DYN);
+                fprintf(f, ";\n");
+            }
+        }
+    }
+    fprintf(f, "  return _ret;\n}\n\n");
+    var_count = sc;
+    memcpy(var_types, st, sizeof(VarType) * (sc < MAX_VARS ? sc : MAX_VARS));
 }
 
 static int generate_c(const char *path, const char *outpath) {
@@ -2948,7 +3347,7 @@ static int generate_c(const char *path, const char *outpath) {
         while (*psrc == '\n' || *psrc == '\r') psrc++;
     }
 
-    if (setjmp(error_jmp)) { free(src); return 1; }
+    if (setjmp(error_jmp)) { free(src); src = NULL; return 1; }
 
     lex_init(psrc);
     lex_next();
@@ -3024,7 +3423,7 @@ static int generate_c(const char *path, const char *outpath) {
     fprintf(f, "}\n\n");
 
     fprintf(f, "#define MAX_VARS 1024\n");
-    fprintf(f, "typedef struct { char *name; Value val; } Var;\n");
+    fprintf(f, "typedef struct { char *name; Value val; int forced; } Var;\n");
     fprintf(f, "static Var vars[MAX_VARS];\n");
     fprintf(f, "static int var_count;\n");
     fprintf(f, "static int var_ensure(const char *name) {\n");
@@ -3032,6 +3431,7 @@ static int generate_c(const char *path, const char *outpath) {
     fprintf(f, "  if (var_count>=MAX_VARS) { fprintf(stderr,\"too many vars\\n\"); longjmp(_try_jmp,1); }\n");
     fprintf(f, "  vars[var_count].name=strdup(name);\n");
     fprintf(f, "  vars[var_count].val=(Value){VAL_NUM,{.num=0}};\n");
+    fprintf(f, "  vars[var_count].forced=0;\n");
     fprintf(f, "  return var_count++;\n");
     fprintf(f, "}\n\n");
 
@@ -3040,6 +3440,10 @@ static int generate_c(const char *path, const char *outpath) {
     for (int i = 0; i < MAX_VARS; i++) var_types[i] = TY_DYN;
     for (int i = 0; i < prog->data.block.count; i++)
         infer_type_stmt(prog->data.block.stmts[i]);
+
+    for (int i = 0; i < prog->data.block.count; i++)
+        if (prog->data.block.stmts[i]->type == NODE_FUNC_DEF)
+            cg_emit_func(f, prog->data.block.stmts[i]);
 
     fprintf(f, "int main() {\n");
     cg_varinit(f, prog);
@@ -3091,18 +3495,18 @@ static void run_file(const char *path) {
         return;
     }
 
-    if (setjmp(error_jmp)) { free(src); return; }
+    if (setjmp(error_jmp)) { free(src); src = NULL; return; }
 
     lex_init(psrc);
     lex_next();
 
     ASTNode *prog = parse_program();
-    free(src);
 
     code_len = 0; const_len = 0; fb_len = 0;
     fixup_len = 0; cur_loop = 0; for_counter = 0;
     compile_prog(prog->data.block.stmts, prog->data.block.count);
     vm_run();
+    free(src);
 }
 
 static void repl(void) {

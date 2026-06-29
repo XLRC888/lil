@@ -1,0 +1,15 @@
+include gtk
+
+function gtk window win "Mini Test" 300 200
+function gtk on win destroy closed
+function gtk show win
+
+print "waiting..."
+function gtk wait
+print "back from wait, closed=" closed
+
+if closed == 1 {
+    print "closed is 1, exiting"
+} else {
+    print "closed is not 1, value: '" closed "'"
+}

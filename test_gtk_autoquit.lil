@@ -1,0 +1,28 @@
+include gtk
+
+function gtk window win "Auto Quit" 400 300
+function gtk vbox box 5
+function gtk button btn "Hello"
+function gtk label lbl "World"
+function gtk add box btn
+function gtk add box lbl
+function gtk add win box
+function gtk on win destroy closed
+function gtk on btn clicked ev
+
+function gtk show win
+function gtk timeout 1500
+
+print "entering main loop"
+function gtk wait
+print "back from main loop, closed=" closed " ev=" ev
+
+if closed == 1 {
+    print "window was closed"
+} else {
+    print "timeout fired, window still open"
+}
+
+function gtk destroy win
+function math sleep 0.3
+print "done"

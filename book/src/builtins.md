@@ -63,11 +63,46 @@ value = function sys env "VARNAME"         # get environment variable, returns "
 ## date library
 
 ```lil
-function date format minimal      # "1.1.24" style date
-function date format standart     # "01.01.2024"
-function date format standartplus # "01.01.2024 Monday"
-function date format full         # "01.01.2024 Monday 12:00:00"
-function date format fullplus     # with milliseconds
-function date set format eu       # switch to EU format (default)
-function date set format us       # switch to US format
+print function date minimal          # "1.6.26" (or "6/1/26" in US mode)
+print function date standart         # "01.06.2026"
+print function date standartplus     # "01.06.2026 Monday"
+print function date full             # "01.06.2026 Monday 12:00:00"
+print function date full noseconds   # without seconds
+print function date full noday       # without day name
+print function date fullplus         # with milliseconds
+function date set format eu          # day.month.year (default)
+function date set format us          # month/day/year
 ```
+
+All `date` functions return the date string, so you `print` the return value.
+
+## force / unforce
+
+Lock a variable to its current type to prevent `strify`/`intify` conversions:
+
+```lil
+x = 42
+force x           # x is now locked to numeric type
+strify x          # ERROR: cannot strify a forced variable
+unforce x         # unlock
+strify x          # works now
+print x           # prints "42"
+```
+
+Combined assignment and force:
+
+```lil
+force x = 42      # assign and lock in one step
+unforce x = 56    # unlock and assign in one step
+```
+
+`force`/`unforce` work in both interpreted and compiled mode.
+
+### Force with input
+
+```lil
+force int input "Enter age: " age   # reads number, forces to numeric type
+force str input "Enter name: " name # reads string, forces to string type
+```
+
+`force int input` validates the input at read time and gives a clear error if it's not a valid number.

@@ -1,0 +1,51 @@
+include gtk
+
+function gtk window win "GTK Test" 500 400
+function gtk vbox box 10
+function gtk hbox hb 5
+
+function gtk button btn "Click me!"
+function gtk button exitbtn "Exit"
+function gtk label lbl "Hello from lil"
+function gtk entry e "Type here"
+
+function gtk add box lbl
+function gtk add box hb
+function gtk add box e
+function gtk add hb btn
+function gtk add hb exitbtn
+function gtk add win box
+
+function gtk on btn clicked ev
+function gtk on exitbtn clicked exitev
+function gtk on e changed etext
+function gtk on win destroy closed
+
+function gtk show win
+
+loop {
+    function gtk wait
+
+    if ev == 1 {
+        function gtk set btn label "Clicked!"
+        function gtk set lbl label "Button was clicked"
+        ev = 0
+    }
+
+    if exitev == 1 {
+        function gtk set lbl label "Goodbye!"
+        function gtk set btn sensitive false
+        exitev = 0
+        function math sleep 0.5
+        stop
+    }
+
+    if etext != "" {
+        function gtk set lbl label $etext
+        etext = ""
+    }
+
+    if closed == 1 {
+        stop
+    }
+}

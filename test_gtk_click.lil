@@ -1,0 +1,13 @@
+include gtk
+
+function gtk window win "Click Test" 300 200
+function gtk vbox box
+function gtk button btn "Click me"
+function gtk add box btn
+function gtk add win box
+function gtk on btn clicked ev
+function gtk show win
+
+function math sleep 0.5
+function gtk quit
+print "ev after quit: " ev

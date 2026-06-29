@@ -31,12 +31,16 @@ Compiled mode is significantly faster than interpreted mode, especially for nume
 
 Compiled code matches C performance on simple numeric loops.
 
+## Functions
+
+User-defined functions (`$name()`) work in compiled mode. Each function becomes a standalone C function with its own local variable scope and type inference. Function calls work inside expressions, control flow, and can be recursive.
+
 ## Limitations
 
 The following features are not available in compiled mode:
 
 - The `has` operator in conditions
 - Templates (template strings)
-- Function calls (`$name()` and `function lib func args`)
+- Library function calls (`function lib func args`)
 
 If your script uses any of these features, compilation will fail.

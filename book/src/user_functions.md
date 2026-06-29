@@ -1,6 +1,6 @@
 # User-defined Functions
 
-Define a function with `$name()` syntax:
+Define a function with `$name(params)` syntax:
 
 ```lil
 $greet() {
@@ -10,9 +10,31 @@ $greet() {
 $greet()
 ```
 
-The function body runs when you call the name with `()`.
+Functions can take parameters and return the last expression's value:
 
-Functions can modify global variables:
+```lil
+$add(a, b) {
+  a + b
+}
+
+result = $add(3, 4)
+print result    # prints 7
+```
+
+Parameters are local to the function call — they don't leak to the caller:
+
+```lil
+x = 10
+
+$set_x(val) {
+  x = val
+}
+
+$set_x(5)
+print x         # still prints 10 outside
+```
+
+Functions can modify non-parameter variables (which are global):
 
 ```lil
 x = 0
@@ -33,4 +55,4 @@ include mylib
 
 This loads and runs the file `mylib.lil`, which can define functions and variables that the including file can use.
 
-Functions currently do not have local scope or parameters. They run in the global scope and can access and modify all variables.
+Functions support recursion and work in both interpreted and compiled (AOT) mode.

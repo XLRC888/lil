@@ -8,7 +8,7 @@ Use `$name(params)` syntax followed by the function body in braces:
 
 ```lil
 $add(a, b) {
-  return a + b
+  a + b
 }
 ```
 
@@ -21,21 +21,37 @@ result = $add(3, 4)
 print result    # prints 7
 ```
 
-Parameters are passed by value. Inside the function, parameters act as local variables that shadow any global variables with the same name.
+Parameters are passed by value. Inside the function, parameters act as local variables that don't leak to the caller's scope.
 
 ## Return values
 
-Use `return` to send a value back to the caller:
+The last expression in the function body is the return value. There is no `return` keyword:
 
 ```lil
 $double(x) {
-  return x * 2
+  x * 2
 }
 
 print $double(21)   # prints 42
 ```
 
-If a function does not have a `return` statement, it returns 0.
+If the function ends with an `if` expression, the taken branch's last expression is returned:
+
+```lil
+$sign(n) {
+  if n > 0 {
+    1
+  } elif n < 0 {
+    -1
+  } else {
+    0
+  }
+}
+
+print $sign(-5)   # prints -1
+```
+
+If a function doesn't end with a value-producing expression, it returns 0:
 
 ```lil
 $noop() {
@@ -46,6 +62,22 @@ x = $noop()
 print x             # prints 0
 ```
 
+## Recursion
+
+Functions can call themselves:
+
+```lil
+$fib(n) {
+  if n <= 2 {
+    1
+  } else {
+    $fib(n - 1) + $fib(n - 2)
+  }
+}
+
+print $fib(10)      # prints 55
+```
+
 ## Notes
 
-Parameters and return values currently only work in interpreted mode. Compiled mode does not yet support function calls with return values.
+Function calls work in both interpreted and compiled (AOT) mode. In compiled mode, each function becomes a standalone C function with its own type inference pass.

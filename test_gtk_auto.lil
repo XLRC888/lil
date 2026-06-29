@@ -1,0 +1,38 @@
+include gtk
+
+function gtk window win "Auto Test" 400 300
+function gtk vbox box 5
+function gtk button btn "Button"
+function gtk label lbl "initial"
+function gtk entry e "type here"
+function gtk add box btn
+function gtk add box lbl
+function gtk add box e
+function gtk add win box
+
+function gtk on btn clicked ev
+function gtk on e changed etext
+function gtk on win destroy closed
+
+function gtk show win
+
+loop {
+    function gtk wait
+
+    if ev == 1 {
+        function gtk set lbl label "clicked"
+        ev = 0
+    }
+
+    if etext != "" {
+        function gtk set lbl label $etext
+        etext = ""
+    }
+
+    if closed == 1 {
+        print "window closed, exiting"
+        stop
+    }
+}
+
+print "test complete"

@@ -1,0 +1,41 @@
+include gtk
+
+function gtk window win "Loop Test" 400 300
+function gtk vbox box 5
+function gtk button btn "Test"
+function gtk label lbl "waiting..."
+function gtk entry e "type here"
+function gtk add box btn
+function gtk add box lbl
+function gtk add box e
+function gtk add win box
+
+function gtk on btn clicked ev
+function gtk on e changed etext
+function gtk on win destroy closed
+
+function gtk show win
+function gtk timeout 500
+
+function gtk wait
+
+if ev == 1 {
+    print "button was clicked!"
+}
+
+if etext != "" {
+    print "entry text: " etext
+    function gtk set lbl label $etext
+}
+
+if closed == 1 {
+    print "window was closed"
+}
+
+if ev == "" && etext == "" && closed == "" {
+    print "timeout - no events"
+}
+
+function gtk destroy win
+function math sleep 0.2
+print "done"
