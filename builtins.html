@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-a62d87f3.js";
+            window.path_to_searchindex_js = "searchindex-3d673b1a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-25e58df7.js"></script>
+        <script src="toc-8dcef778.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -217,14 +217,36 @@ listing = function file list "path"        # list directory contents, newline se
 value = function sys env "VARNAME"         # get environment variable, returns "" if not set
 </code></pre>
 <h2 id="date-library"><a class="header" href="#date-library">date library</a></h2>
-<pre><code class="language-lil">function date format minimal      # "1.1.24" style date
-function date format standart     # "01.01.2024"
-function date format standartplus # "01.01.2024 Monday"
-function date format full         # "01.01.2024 Monday 12:00:00"
-function date format fullplus     # with milliseconds
-function date set format eu       # switch to EU format (default)
-function date set format us       # switch to US format
+<pre><code class="language-lil">print function date minimal          # "1.6.26" (or "6/1/26" in US mode)
+print function date standart         # "01.06.2026"
+print function date standartplus     # "01.06.2026 Monday"
+print function date full             # "01.06.2026 Monday 12:00:00"
+print function date full noseconds   # without seconds
+print function date full noday       # without day name
+print function date fullplus         # with milliseconds
+function date set format eu          # day.month.year (default)
+function date set format us          # month/day/year
 </code></pre>
+<p>All <code>date</code> functions return the date string, so you <code>print</code> the return value.</p>
+<h2 id="force--unforce"><a class="header" href="#force--unforce">force / unforce</a></h2>
+<p>Lock a variable to its current type to prevent <code>strify</code>/<code>intify</code> conversions:</p>
+<pre><code class="language-lil">x = 42
+force x           # x is now locked to numeric type
+strify x          # ERROR: cannot strify a forced variable
+unforce x         # unlock
+strify x          # works now
+print x           # prints "42"
+</code></pre>
+<p>Combined assignment and force:</p>
+<pre><code class="language-lil">force x = 42      # assign and lock in one step
+unforce x = 56    # unlock and assign in one step
+</code></pre>
+<p><code>force</code>/<code>unforce</code> work in both interpreted and compiled mode.</p>
+<h3 id="force-with-input"><a class="header" href="#force-with-input">Force with input</a></h3>
+<pre><code class="language-lil">force int input "Enter age: " age   # reads number, forces to numeric type
+force str input "Enter name: " name # reads string, forces to string type
+</code></pre>
+<p><code>force int input</code> validates the input at read time and gives a clear error if it’s not a valid number.</p>
 
                     </main>
 

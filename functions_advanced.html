@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-a62d87f3.js";
+            window.path_to_searchindex_js = "searchindex-3d673b1a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-25e58df7.js"></script>
+        <script src="toc-8dcef778.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -179,7 +179,7 @@
 <h2 id="defining-a-function"><a class="header" href="#defining-a-function">Defining a function</a></h2>
 <p>Use <code>$name(params)</code> syntax followed by the function body in braces:</p>
 <pre><code class="language-lil">$add(a, b) {
-  return a + b
+  a + b
 }
 </code></pre>
 <h2 id="calling-a-function"><a class="header" href="#calling-a-function">Calling a function</a></h2>
@@ -187,16 +187,29 @@
 <pre><code class="language-lil">result = $add(3, 4)
 print result    # prints 7
 </code></pre>
-<p>Parameters are passed by value. Inside the function, parameters act as local variables that shadow any global variables with the same name.</p>
+<p>Parameters are passed by value. Inside the function, parameters act as local variables that don’t leak to the caller’s scope.</p>
 <h2 id="return-values"><a class="header" href="#return-values">Return values</a></h2>
-<p>Use <code>return</code> to send a value back to the caller:</p>
+<p>The last expression in the function body is the return value. There is no <code>return</code> keyword:</p>
 <pre><code class="language-lil">$double(x) {
-  return x * 2
+  x * 2
 }
 
 print $double(21)   # prints 42
 </code></pre>
-<p>If a function does not have a <code>return</code> statement, it returns 0.</p>
+<p>If the function ends with an <code>if</code> expression, the taken branch’s last expression is returned:</p>
+<pre><code class="language-lil">$sign(n) {
+  if n &gt; 0 {
+    1
+  } elif n &lt; 0 {
+    -1
+  } else {
+    0
+  }
+}
+
+print $sign(-5)   # prints -1
+</code></pre>
+<p>If a function doesn’t end with a value-producing expression, it returns 0:</p>
 <pre><code class="language-lil">$noop() {
   print "no return"
 }
@@ -204,8 +217,20 @@ print $double(21)   # prints 42
 x = $noop()
 print x             # prints 0
 </code></pre>
+<h2 id="recursion"><a class="header" href="#recursion">Recursion</a></h2>
+<p>Functions can call themselves:</p>
+<pre><code class="language-lil">$fib(n) {
+  if n &lt;= 2 {
+    1
+  } else {
+    $fib(n - 1) + $fib(n - 2)
+  }
+}
+
+print $fib(10)      # prints 55
+</code></pre>
 <h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
-<p>Parameters and return values currently only work in interpreted mode. Compiled mode does not yet support function calls with return values.</p>
+<p>Function calls work in both interpreted and compiled (AOT) mode. In compiled mode, each function becomes a standalone C function with its own type inference pass.</p>
 
                     </main>
 

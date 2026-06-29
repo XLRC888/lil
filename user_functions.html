@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-a62d87f3.js";
+            window.path_to_searchindex_js = "searchindex-3d673b1a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-25e58df7.js"></script>
+        <script src="toc-8dcef778.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -175,15 +175,32 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="user-defined-functions"><a class="header" href="#user-defined-functions">User-defined Functions</a></h1>
-<p>Define a function with <code>$name()</code> syntax:</p>
+<p>Define a function with <code>$name(params)</code> syntax:</p>
 <pre><code class="language-lil">$greet() {
   print "hello"
 }
 
 $greet()
 </code></pre>
-<p>The function body runs when you call the name with <code>()</code>.</p>
-<p>Functions can modify global variables:</p>
+<p>Functions can take parameters and return the last expression’s value:</p>
+<pre><code class="language-lil">$add(a, b) {
+  a + b
+}
+
+result = $add(3, 4)
+print result    # prints 7
+</code></pre>
+<p>Parameters are local to the function call — they don’t leak to the caller:</p>
+<pre><code class="language-lil">x = 10
+
+$set_x(val) {
+  x = val
+}
+
+$set_x(5)
+print x         # still prints 10 outside
+</code></pre>
+<p>Functions can modify non-parameter variables (which are global):</p>
 <pre><code class="language-lil">x = 0
 
 $increment() {
@@ -197,7 +214,7 @@ print x    # prints 1
 <pre><code class="language-lil">include mylib
 </code></pre>
 <p>This loads and runs the file <code>mylib.lil</code>, which can define functions and variables that the including file can use.</p>
-<p>Functions currently do not have local scope or parameters. They run in the global scope and can access and modify all variables.</p>
+<p>Functions support recursion and work in both interpreted and compiled (AOT) mode.</p>
 
                     </main>
 

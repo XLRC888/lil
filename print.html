@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-a62d87f3.js";
+            window.path_to_searchindex_js = "searchindex-3d673b1a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-25e58df7.js"></script>
+        <script src="toc-8dcef778.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -570,25 +570,64 @@ listing = function file list "path"        # list directory contents, newline se
 value = function sys env "VARNAME"         # get environment variable, returns "" if not set
 </code></pre>
 <h2 id="date-library"><a class="header" href="#date-library">date library</a></h2>
-<pre><code class="language-lil">function date format minimal      # "1.1.24" style date
-function date format standart     # "01.01.2024"
-function date format standartplus # "01.01.2024 Monday"
-function date format full         # "01.01.2024 Monday 12:00:00"
-function date format fullplus     # with milliseconds
-function date set format eu       # switch to EU format (default)
-function date set format us       # switch to US format
+<pre><code class="language-lil">print function date minimal          # "1.6.26" (or "6/1/26" in US mode)
+print function date standart         # "01.06.2026"
+print function date standartplus     # "01.06.2026 Monday"
+print function date full             # "01.06.2026 Monday 12:00:00"
+print function date full noseconds   # without seconds
+print function date full noday       # without day name
+print function date fullplus         # with milliseconds
+function date set format eu          # day.month.year (default)
+function date set format us          # month/day/year
 </code></pre>
+<p>All <code>date</code> functions return the date string, so you <code>print</code> the return value.</p>
+<h2 id="force--unforce"><a class="header" href="#force--unforce">force / unforce</a></h2>
+<p>Lock a variable to its current type to prevent <code>strify</code>/<code>intify</code> conversions:</p>
+<pre><code class="language-lil">x = 42
+force x           # x is now locked to numeric type
+strify x          # ERROR: cannot strify a forced variable
+unforce x         # unlock
+strify x          # works now
+print x           # prints "42"
+</code></pre>
+<p>Combined assignment and force:</p>
+<pre><code class="language-lil">force x = 42      # assign and lock in one step
+unforce x = 56    # unlock and assign in one step
+</code></pre>
+<p><code>force</code>/<code>unforce</code> work in both interpreted and compiled mode.</p>
+<h3 id="force-with-input"><a class="header" href="#force-with-input">Force with input</a></h3>
+<pre><code class="language-lil">force int input "Enter age: " age   # reads number, forces to numeric type
+force str input "Enter name: " name # reads string, forces to string type
+</code></pre>
+<p><code>force int input</code> validates the input at read time and gives a clear error if it’s not a valid number.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="user-defined-functions"><a class="header" href="#user-defined-functions">User-defined Functions</a></h1>
-<p>Define a function with <code>$name()</code> syntax:</p>
+<p>Define a function with <code>$name(params)</code> syntax:</p>
 <pre><code class="language-lil">$greet() {
   print "hello"
 }
 
 $greet()
 </code></pre>
-<p>The function body runs when you call the name with <code>()</code>.</p>
-<p>Functions can modify global variables:</p>
+<p>Functions can take parameters and return the last expression’s value:</p>
+<pre><code class="language-lil">$add(a, b) {
+  a + b
+}
+
+result = $add(3, 4)
+print result    # prints 7
+</code></pre>
+<p>Parameters are local to the function call — they don’t leak to the caller:</p>
+<pre><code class="language-lil">x = 10
+
+$set_x(val) {
+  x = val
+}
+
+$set_x(5)
+print x         # still prints 10 outside
+</code></pre>
+<p>Functions can modify non-parameter variables (which are global):</p>
 <pre><code class="language-lil">x = 0
 
 $increment() {
@@ -602,7 +641,7 @@ print x    # prints 1
 <pre><code class="language-lil">include mylib
 </code></pre>
 <p>This loads and runs the file <code>mylib.lil</code>, which can define functions and variables that the including file can use.</p>
-<p>Functions currently do not have local scope or parameters. They run in the global scope and can access and modify all variables.</p>
+<p>Functions support recursion and work in both interpreted and compiled (AOT) mode.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="comments"><a class="header" href="#comments">Comments</a></h1>
 <p>lil supports line comments with <code>#</code> and <code>//</code>:</p>
@@ -629,7 +668,7 @@ while i &lt; 10 {
 <h2 id="defining-a-function"><a class="header" href="#defining-a-function">Defining a function</a></h2>
 <p>Use <code>$name(params)</code> syntax followed by the function body in braces:</p>
 <pre><code class="language-lil">$add(a, b) {
-  return a + b
+  a + b
 }
 </code></pre>
 <h2 id="calling-a-function"><a class="header" href="#calling-a-function">Calling a function</a></h2>
@@ -637,16 +676,29 @@ while i &lt; 10 {
 <pre><code class="language-lil">result = $add(3, 4)
 print result    # prints 7
 </code></pre>
-<p>Parameters are passed by value. Inside the function, parameters act as local variables that shadow any global variables with the same name.</p>
+<p>Parameters are passed by value. Inside the function, parameters act as local variables that don’t leak to the caller’s scope.</p>
 <h2 id="return-values"><a class="header" href="#return-values">Return values</a></h2>
-<p>Use <code>return</code> to send a value back to the caller:</p>
+<p>The last expression in the function body is the return value. There is no <code>return</code> keyword:</p>
 <pre><code class="language-lil">$double(x) {
-  return x * 2
+  x * 2
 }
 
 print $double(21)   # prints 42
 </code></pre>
-<p>If a function does not have a <code>return</code> statement, it returns 0.</p>
+<p>If the function ends with an <code>if</code> expression, the taken branch’s last expression is returned:</p>
+<pre><code class="language-lil">$sign(n) {
+  if n &gt; 0 {
+    1
+  } elif n &lt; 0 {
+    -1
+  } else {
+    0
+  }
+}
+
+print $sign(-5)   # prints -1
+</code></pre>
+<p>If a function doesn’t end with a value-producing expression, it returns 0:</p>
 <pre><code class="language-lil">$noop() {
   print "no return"
 }
@@ -654,8 +706,20 @@ print $double(21)   # prints 42
 x = $noop()
 print x             # prints 0
 </code></pre>
+<h2 id="recursion"><a class="header" href="#recursion">Recursion</a></h2>
+<p>Functions can call themselves:</p>
+<pre><code class="language-lil">$fib(n) {
+  if n &lt;= 2 {
+    1
+  } else {
+    $fib(n - 1) + $fib(n - 2)
+  }
+}
+
+print $fib(10)      # prints 55
+</code></pre>
 <h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
-<p>Parameters and return values currently only work in interpreted mode. Compiled mode does not yet support function calls with return values.</p>
+<p>Function calls work in both interpreted and compiled (AOT) mode. In compiled mode, each function becomes a standalone C function with its own type inference pass.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h1>
 <p>lil has a <code>try</code>/<code>catch</code> mechanism for handling runtime errors without crashing.</p>
@@ -788,14 +852,58 @@ if text has word "world" {
 </table>
 </div>
 <p>Compiled code matches C performance on simple numeric loops.</p>
+<h2 id="functions-1"><a class="header" href="#functions-1">Functions</a></h2>
+<p>User-defined functions (<code>$name()</code>) work in compiled mode. Each function becomes a standalone C function with its own local variable scope and type inference. Function calls work inside expressions, control flow, and can be recursive.</p>
 <h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
 <p>The following features are not available in compiled mode:</p>
 <ul>
 <li>The <code>has</code> operator in conditions</li>
 <li>Templates (template strings)</li>
-<li>Function calls (<code>$name()</code> and <code>function lib func args</code>)</li>
+<li>Library function calls (<code>function lib func args</code>)</li>
 </ul>
 <p>If your script uses any of these features, compilation will fail.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="force-and-unforce"><a class="header" href="#force-and-unforce">Force and Unforce</a></h1>
+<p>The <code>force</code> and <code>unforce</code> commands lock a variable to its current type. This prevents accidental type conversion with <code>strify</code> or <code>intify</code>.</p>
+<h2 id="basic-usage"><a class="header" href="#basic-usage">Basic usage</a></h2>
+<pre><code class="language-lil">x = 42
+force x           # x is locked to numeric type
+strify x          # ERROR: cannot strify a forced variable
+</code></pre>
+<p><code>unforce</code> removes the lock:</p>
+<pre><code class="language-lil">unforce x         # unlock
+strify x          # works now
+print x           # prints "42"
+</code></pre>
+<h2 id="combined-assignment"><a class="header" href="#combined-assignment">Combined assignment</a></h2>
+<p>Both <code>force</code> and <code>unforce</code> can assign a value at the same time:</p>
+<pre><code class="language-lil">force x = 100     # assign 100 to x AND lock it
+unforce x = 200   # unlock x AND assign 200
+</code></pre>
+<h2 id="intify-is-also-blocked"><a class="header" href="#intify-is-also-blocked">intify is also blocked</a></h2>
+<p><code>intify</code> fails on forced variables too:</p>
+<pre><code class="language-lil">x = "hello"
+force x
+intify x          # ERROR: cannot intify a forced variable
+</code></pre>
+<h2 id="regular-assignment-still-works"><a class="header" href="#regular-assignment-still-works">Regular assignment still works</a></h2>
+<p>Forcing only blocks <code>strify</code> and <code>intify</code>. Normal assignment works fine:</p>
+<pre><code class="language-lil">x = 42
+force x
+x = 99            # OK, still a number
+print x           # prints 99
+</code></pre>
+<h2 id="force-with-input-1"><a class="header" href="#force-with-input-1">Force with input</a></h2>
+<p>You can force a variable’s type at input time:</p>
+<pre><code class="language-lil">force int input "Enter your age: " age   # reads a number, stores as number, locks it
+force str input "Enter your name: " name # reads a string, stores as string, locks it
+</code></pre>
+<p><code>force int input</code> validates the input is a valid number at read time and gives a clear error if it isn’t. <code>force str input</code> stores the input as a string and prevents accidental conversion to number.</p>
+<p>These are equivalent to:</p>
+<pre><code class="language-lil">input "Enter your age: " age
+force age
+# but with validation at input time instead of at use time
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="c-extensions"><a class="header" href="#c-extensions">C Extensions</a></h1>
 <p>lil provides two operators that give you direct access to memory. These only work when compiling with <code>lil -c</code>. Running them with the interpreter produces an error.</p>

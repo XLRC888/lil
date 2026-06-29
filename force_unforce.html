@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Control Flow - lil Book</title>
+        <title>Force and Unforce - lil Book</title>
 
 
         <!-- Custom HTML head -->
@@ -174,18 +174,57 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="control-flow"><a class="header" href="#control-flow">Control Flow</a></h1>
-<p>This chapter covers if statements and loops.</p>
+                        <h1 id="force-and-unforce"><a class="header" href="#force-and-unforce">Force and Unforce</a></h1>
+<p>The <code>force</code> and <code>unforce</code> commands lock a variable to its current type. This prevents accidental type conversion with <code>strify</code> or <code>intify</code>.</p>
+<h2 id="basic-usage"><a class="header" href="#basic-usage">Basic usage</a></h2>
+<pre><code class="language-lil">x = 42
+force x           # x is locked to numeric type
+strify x          # ERROR: cannot strify a forced variable
+</code></pre>
+<p><code>unforce</code> removes the lock:</p>
+<pre><code class="language-lil">unforce x         # unlock
+strify x          # works now
+print x           # prints "42"
+</code></pre>
+<h2 id="combined-assignment"><a class="header" href="#combined-assignment">Combined assignment</a></h2>
+<p>Both <code>force</code> and <code>unforce</code> can assign a value at the same time:</p>
+<pre><code class="language-lil">force x = 100     # assign 100 to x AND lock it
+unforce x = 200   # unlock x AND assign 200
+</code></pre>
+<h2 id="intify-is-also-blocked"><a class="header" href="#intify-is-also-blocked">intify is also blocked</a></h2>
+<p><code>intify</code> fails on forced variables too:</p>
+<pre><code class="language-lil">x = "hello"
+force x
+intify x          # ERROR: cannot intify a forced variable
+</code></pre>
+<h2 id="regular-assignment-still-works"><a class="header" href="#regular-assignment-still-works">Regular assignment still works</a></h2>
+<p>Forcing only blocks <code>strify</code> and <code>intify</code>. Normal assignment works fine:</p>
+<pre><code class="language-lil">x = 42
+force x
+x = 99            # OK, still a number
+print x           # prints 99
+</code></pre>
+<h2 id="force-with-input"><a class="header" href="#force-with-input">Force with input</a></h2>
+<p>You can force a variable’s type at input time:</p>
+<pre><code class="language-lil">force int input "Enter your age: " age   # reads a number, stores as number, locks it
+force str input "Enter your name: " name # reads a string, stores as string, locks it
+</code></pre>
+<p><code>force int input</code> validates the input is a valid number at read time and gives a clear error if it isn’t. <code>force str input</code> stores the input as a string and prevents accidental conversion to number.</p>
+<p>These are equivalent to:</p>
+<pre><code class="language-lil">input "Enter your age: " age
+force age
+# but with validation at input time instead of at use time
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="comparison_logic.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="compiled.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="if_else.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="c_ext.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -195,11 +234,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="comparison_logic.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="compiled.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="if_else.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="c_ext.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
