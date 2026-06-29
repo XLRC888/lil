@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-21f596d0.js";
+            window.path_to_searchindex_js = "searchindex-b0df0fbb.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-8dcef778.js"></script>
+        <script src="toc-25e58df7.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -252,6 +252,25 @@ x = "now im a string"
 <p>This is fine. lil does not enforce type consistency.</p>
 <p>Assignment always goes <code>variable = expression</code>:</p>
 <pre><code class="language-lil">y = x + 50
+</code></pre>
+<h2 id="forcing-variable-types"><a class="header" href="#forcing-variable-types">Forcing variable types</a></h2>
+<p>You can lock a variable to its current type with <code>force</code>. This prevents <code>strify</code> and <code>intify</code> from converting it:</p>
+<pre><code class="language-lil">x = 42
+force x           # x is now locked to numeric type
+strify x          # ERROR: cannot strify a forced variable
+unforce x         # unlock
+strify x          # works now
+print x           # prints "42"
+</code></pre>
+<p>Combined assignment and force:</p>
+<pre><code class="language-lil">force x = 42      # assign and lock in one step
+unforce x = 56    # unlock and assign in one step
+</code></pre>
+<p><code>force int input</code> reads input, validates it as a number, and forces the variable:</p>
+<pre><code class="language-lil">force int input "Enter your age: " age
+</code></pre>
+<p><code>force str input</code> reads input as a string and forces it:</p>
+<pre><code class="language-lil">force str input "Enter your name: " name
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="numbers-and-strings"><a class="header" href="#numbers-and-strings">Numbers and Strings</a></h1>
@@ -843,48 +862,6 @@ if text has word "world" {
 <li>Library function calls (<code>function lib func args</code>)</li>
 </ul>
 <p>If your script uses any of these features, compilation will fail.</p>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="force-and-unforce"><a class="header" href="#force-and-unforce">Force and Unforce</a></h1>
-<p>The <code>force</code> and <code>unforce</code> commands lock a variable to its current type. This prevents accidental type conversion with <code>strify</code> or <code>intify</code>.</p>
-<h2 id="basic-usage"><a class="header" href="#basic-usage">Basic usage</a></h2>
-<pre><code class="language-lil">x = 42
-force x           # x is locked to numeric type
-strify x          # ERROR: cannot strify a forced variable
-</code></pre>
-<p><code>unforce</code> removes the lock:</p>
-<pre><code class="language-lil">unforce x         # unlock
-strify x          # works now
-print x           # prints "42"
-</code></pre>
-<h2 id="combined-assignment"><a class="header" href="#combined-assignment">Combined assignment</a></h2>
-<p>Both <code>force</code> and <code>unforce</code> can assign a value at the same time:</p>
-<pre><code class="language-lil">force x = 100     # assign 100 to x AND lock it
-unforce x = 200   # unlock x AND assign 200
-</code></pre>
-<h2 id="intify-is-also-blocked"><a class="header" href="#intify-is-also-blocked">intify is also blocked</a></h2>
-<p><code>intify</code> fails on forced variables too:</p>
-<pre><code class="language-lil">x = "hello"
-force x
-intify x          # ERROR: cannot intify a forced variable
-</code></pre>
-<h2 id="regular-assignment-still-works"><a class="header" href="#regular-assignment-still-works">Regular assignment still works</a></h2>
-<p>Forcing only blocks <code>strify</code> and <code>intify</code>. Normal assignment works fine:</p>
-<pre><code class="language-lil">x = 42
-force x
-x = 99            # OK, still a number
-print x           # prints 99
-</code></pre>
-<h2 id="force-with-input"><a class="header" href="#force-with-input">Force with input</a></h2>
-<p>You can force a variable’s type at input time:</p>
-<pre><code class="language-lil">force int input "Enter your age: " age   # reads a number, stores as number, locks it
-force str input "Enter your name: " name # reads a string, stores as string, locks it
-</code></pre>
-<p><code>force int input</code> validates the input is a valid number at read time and gives a clear error if it isn’t. <code>force str input</code> stores the input as a string and prevents accidental conversion to number.</p>
-<p>These are equivalent to:</p>
-<pre><code class="language-lil">input "Enter your age: " age
-force age
-# but with validation at input time instead of at use time
-</code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="c-extensions"><a class="header" href="#c-extensions">C Extensions</a></h1>
 <p>lil provides two operators that give you direct access to memory. These only work when compiling with <code>lil -c</code>. Running them with the interpreter produces an error.</p>

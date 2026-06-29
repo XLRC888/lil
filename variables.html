@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-21f596d0.js";
+            window.path_to_searchindex_js = "searchindex-b0df0fbb.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-8dcef778.js"></script>
+        <script src="toc-25e58df7.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -190,6 +190,25 @@ x = "now im a string"
 <p>This is fine. lil does not enforce type consistency.</p>
 <p>Assignment always goes <code>variable = expression</code>:</p>
 <pre><code class="language-lil">y = x + 50
+</code></pre>
+<h2 id="forcing-variable-types"><a class="header" href="#forcing-variable-types">Forcing variable types</a></h2>
+<p>You can lock a variable to its current type with <code>force</code>. This prevents <code>strify</code> and <code>intify</code> from converting it:</p>
+<pre><code class="language-lil">x = 42
+force x           # x is now locked to numeric type
+strify x          # ERROR: cannot strify a forced variable
+unforce x         # unlock
+strify x          # works now
+print x           # prints "42"
+</code></pre>
+<p>Combined assignment and force:</p>
+<pre><code class="language-lil">force x = 42      # assign and lock in one step
+unforce x = 56    # unlock and assign in one step
+</code></pre>
+<p><code>force int input</code> reads input, validates it as a number, and forces the variable:</p>
+<pre><code class="language-lil">force int input "Enter your age: " age
+</code></pre>
+<p><code>force str input</code> reads input as a string and forces it:</p>
+<pre><code class="language-lil">force str input "Enter your name: " name
 </code></pre>
 
                     </main>
