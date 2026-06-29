@@ -56,12 +56,12 @@ print "area is", area
 
 ## Forcing variable types
 
-You can lock a variable to its current type with `force`. This prevents `strify` and `intify` from converting it:
+You can lock a variable to its current type with `force`. This prevents `strify`, `intify`, and `swify` from converting it:
 
 ```lil
 x = 42
 force x
-strify x
+strify x      # ERROR: cannot strify a forced variable
 unforce x
 strify x
 print x
@@ -74,15 +74,26 @@ force x = 42
 unforce x = 56
 ```
 
-You can also specify the type explicitly:
+### Type-locked force
+
+Specify `int` or `str` to lock the variable to that specific type. Assigning the opposite type will error:
 
 ```lil
 force int x = 42
+x = "hi"      # ERROR: cannot assign a string to int-forced variable
+
 force str y = "hello"
-unforce int z = 99
+y = 42        # ERROR: cannot assign a number to str-forced variable
 ```
 
-This is purely syntactic sugar — the type keyword is consumed and ignored, same as `force x = 42`.
+Plain `force` (without a type keyword) only blocks `strify`/`intify`/`swify` but allows any assignment:
+
+```lil
+x = 42
+force x
+x = "hi"      # allowed (no type restriction)
+strify x      # ERROR: forced
+```
 
 `force int input` reads input, validates it as a number, and forces the variable:
 
