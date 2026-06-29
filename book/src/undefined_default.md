@@ -1,6 +1,6 @@
 # Undefined Default
 
-By default, reading an undefined variable returns `0`. Use `?name = value` to change this:
+By default, reading an undefined variable returns `0`. Use `?undef = value` to change this:
 
 ```lil
 ?undef = "hello"
