@@ -74,6 +74,16 @@ force x = 42
 unforce x = 56
 ```
 
+You can also specify the type explicitly:
+
+```lil
+force int x = 42
+force str y = "hello"
+unforce int z = 99
+```
+
+This is purely syntactic sugar — the type keyword is consumed and ignored, same as `force x = 42`.
+
 `force int input` reads input, validates it as a number, and forces the variable:
 
 ```lil

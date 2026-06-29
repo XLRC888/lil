@@ -902,6 +902,10 @@ static ASTNode *parse_stmt(void) {
             lex_next();
             return n;
         }
+        if (lex_cur.type == TOK_ID && (!strcmp(lex_cur.val.str, "int") || !strcmp(lex_cur.val.str, "str"))
+            && lex_peek_next().type == TOK_ID) {
+            lex_next();
+        }
         if (lex_cur.type != TOK_ID) fatal("line %d: force expects a variable name", lex_cur.line);
         ASTNode *n = ast_alloc(NODE_FORCE);
         n->data.assign.name = sdup(lex_cur.val.str);
@@ -915,6 +919,10 @@ static ASTNode *parse_stmt(void) {
     }
     if (lex_cur.type == TOK_UNFORCE) {
         lex_next();
+        if (lex_cur.type == TOK_ID && (!strcmp(lex_cur.val.str, "int") || !strcmp(lex_cur.val.str, "str"))
+            && lex_peek_next().type == TOK_ID) {
+            lex_next();
+        }
         if (lex_cur.type != TOK_ID) fatal("line %d: unforce expects a variable name", lex_cur.line);
         ASTNode *n = ast_alloc(NODE_UNFORCE);
         n->data.assign.name = sdup(lex_cur.val.str);
