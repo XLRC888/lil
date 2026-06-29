@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3e4109ba.js";
+            window.path_to_searchindex_js = "searchindex-218d1130.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f8620e39.js"></script>
@@ -376,6 +376,12 @@ print x
 <pre><code class="language-lil">force x = 42
 unforce x = 56
 </code></pre>
+<p>You can also specify the type explicitly:</p>
+<pre><code class="language-lil">force int x = 42
+force str y = "hello"
+unforce int z = 99
+</code></pre>
+<p>This is purely syntactic sugar — the type keyword is consumed and ignored, same as <code>force x = 42</code>.</p>
 <p><code>force int input</code> reads input, validates it as a number, and forces the variable:</p>
 <pre><code class="language-lil">force int input "Enter your age: " age
 print "next year you will be", age + 1
