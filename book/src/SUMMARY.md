@@ -25,6 +25,7 @@
   - [Print](printing.md)
   - [Input](input.md)
 - [Error Handling](error_handling.md)
+- [Modifiers](modifiers.md)
 - [Advanced Features](advanced.md)
   - [Compiled Mode](compiled.md)
   - [C Extensions](c_ext.md)
