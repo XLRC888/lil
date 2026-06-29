@@ -688,6 +688,24 @@ static ASTNode *parse_stmt(void) {
         return ast_print(exprs, count);
     }
 
+    if (lex_cur.type == TOK_ID && (!strcmp(lex_cur.val.str, "int") || !strcmp(lex_cur.val.str, "str"))
+        && lex_peek_next().type == TOK_INPUT) {
+        int is_int = !strcmp(lex_cur.val.str, "int");
+        lex_next(); lex_next();
+        char *prompt = NULL;
+        if (lex_cur.type == TOK_STR) {
+            prompt = sdup(lex_cur.val.str);
+            lex_next();
+        }
+        if (lex_cur.type != TOK_ID) fatal("line %d: int/str input expects a variable name", lex_cur.line);
+        ASTNode *n = ast_alloc(NODE_INPUT);
+        n->data.input.name = sdup(lex_cur.val.str);
+        n->data.input.prompt = prompt;
+        n->data.input.force_type = is_int ? 3 : 4;
+        lex_next();
+        return n;
+    }
+
     if (lex_cur.type == TOK_INPUT) {
         lex_next();
         char *prompt = NULL;
@@ -2063,6 +2081,14 @@ static int exec_stmt(ASTNode *n) {
                 var_set(n->data.input.name, make_str(buf));
                 int _fi = var_find(n->data.input.name);
                 if (_fi >= 0) vars[_fi].forced = 1;
+            } else if (n->data.input.force_type == 3) {
+                char *end;
+                double d = strtod(buf, &end);
+                while (*end == ' ' || *end == '\t') end++;
+                if (*end != 0) fatal("line %d: input '%s' is not a valid number", n->line, buf);
+                var_set(n->data.input.name, make_num(d));
+            } else if (n->data.input.force_type == 4) {
+                var_set(n->data.input.name, make_str(buf));
             } else {
                 char *end;
                 double d = strtod(buf, &end);
