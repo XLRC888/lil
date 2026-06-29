@@ -75,34 +75,3 @@ function date set format us          # month/day/year
 ```
 
 All `date` functions return the date string, so you `print` the return value.
-
-## force / unforce
-
-Lock a variable to its current type to prevent `strify`/`intify` conversions:
-
-```lil
-x = 42
-force x           # x is now locked to numeric type
-strify x          # ERROR: cannot strify a forced variable
-unforce x         # unlock
-strify x          # works now
-print x           # prints "42"
-```
-
-Combined assignment and force:
-
-```lil
-force x = 42      # assign and lock in one step
-unforce x = 56    # unlock and assign in one step
-```
-
-`force`/`unforce` work in both interpreted and compiled mode.
-
-### Force with input
-
-```lil
-force int input "Enter age: " age   # reads number, forces to numeric type
-force str input "Enter name: " name # reads string, forces to string type
-```
-
-`force int input` validates the input at read time and gives a clear error if it's not a valid number.
