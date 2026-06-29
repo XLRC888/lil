@@ -3066,6 +3066,48 @@ static void cg_expr(FILE *f, ASTNode *n, VarType want) {
             fprintf(f, ")");
             break;
         }
+        case NODE_FUNCTION: {
+            char *lib = n->data.funcall.lib;
+            char *fn = n->data.funcall.args[0];
+            if (!strcmp(lib, "date")) {
+                if (!strcmp(fn, "minimal"))
+                    fprintf(f, "({time_t t=time(NULL);struct tm*tm=localtime(&t);char b[64];strftime(b,64,\"%%-d.%%-m.%%y\",tm);make_str(strdup(b));})");
+                else if (!strcmp(fn, "standart"))
+                    fprintf(f, "({time_t t=time(NULL);struct tm*tm=localtime(&t);char b[64];strftime(b,64,\"%%d.%%m.%%Y\",tm);make_str(strdup(b));})");
+                else if (!strcmp(fn, "standartplus"))
+                    fprintf(f, "({time_t t=time(NULL);struct tm*tm=localtime(&t);char b[64];strftime(b,64,\"%%d.%%m.%%Y %%A\",tm);make_str(strdup(b));})");
+                else if (!strcmp(fn, "full"))
+                    fprintf(f, "({time_t t=time(NULL);struct tm*tm=localtime(&t);char b[64];strftime(b,64,\"%%d.%%m.%%Y %%A %%H:%%M:%%S\",tm);make_str(strdup(b));})");
+                else if (!strcmp(fn, "fullplus"))
+                    fprintf(f, "({time_t t=time(NULL);struct tm*tm=localtime(&t);struct timeval tv;gettimeofday(&tv,0);char b[64];strftime(b,64,\"%%d.%%m.%%Y %%A %%H:%%M:%%S\",tm);char r[80];snprintf(r,80,\"%%s.%%03ld\",b,(long)tv.tv_usec/1000);make_str(r);})");
+                else if (!strcmp(fn, "set"))
+                    fprintf(f, "make_str(\"\")");
+                else
+                    fprintf(f, want == TY_NUM ? "0" : "make_num(0)");
+            } else if (!strcmp(lib, "math")) {
+                if (!strcmp(fn, "random")) { fprintf(f, "make_num((double)rand()/RAND_MAX)"); }
+                else if (!strcmp(fn, "randint")) { fprintf(f, "({int lo=(int)(%s),hi=(int)(%s);if(lo>hi){int t=lo;lo=hi;hi=t;}make_num((double)(lo+rand()%%(hi-lo+1)));})", n->data.funcall.args[1], n->data.funcall.args[2]); }
+                else if (!strcmp(fn, "choice")) {
+                    fprintf(f, "({int _n=");
+                    fprintf(f, "%d", n->data.funcall.argc - 1);
+                    fprintf(f, ";int _i=rand()%%_n+1;");
+                    fprintf(f, "make_str(strdup((char*[]){");
+                    for (int i = 1; i < n->data.funcall.argc; i++) {
+                        if (i > 1) fprintf(f, ",");
+                        fprintf(f, "\"%s\"", n->data.funcall.args[i]);
+                    }
+                    fprintf(f, "}[_i-1]));})");
+                }
+                else if (!strcmp(fn, "sleep")) { fprintf(f, "({double _s=%s;struct timespec ts;ts.tv_sec=(time_t)_s;ts.tv_nsec=(long)((_s-ts.tv_sec)*1e9);nanosleep(&ts,0);make_num(0);})", n->data.funcall.args[1]); }
+                else if (!strcmp(fn, "hasops")) { fprintf(f, "make_num(0)"); }
+                else if (!strcmp(fn, "eval")) { fprintf(f, "make_num(0)"); }
+                else if (!strcmp(fn, "factors")) { fprintf(f, "make_str(strdup(\"\"))"); }
+                else if (!strcmp(fn, "fib")) { fprintf(f, "make_str(strdup(\"\"))"); }
+                else fprintf(f, want == TY_NUM ? "0" : "make_num(0)");
+            } else
+                fprintf(f, want == TY_NUM ? "0" : "make_num(0)");
+            break;
+        }
         default: fprintf(f, want == TY_NUM ? "0" : "make_num(0)"); break;
     }
 }
@@ -3365,7 +3407,7 @@ static int generate_c(const char *path, const char *outpath) {
     f = fopen(cpath, "w");
     if (!f) { fprintf(stderr, "error: cannot write '%s'\n", cpath); free(src); return 1; }
 
-    fprintf(f, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <stdint.h>\n#include <math.h>\n#include <setjmp.h>\n\n");
+    fprintf(f, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <stdint.h>\n#include <math.h>\n#include <setjmp.h>\n#include <time.h>\n#include <sys/time.h>\n#include <unistd.h>\n\n");
     fprintf(f, "typedef enum { VAL_NUM, VAL_STR } ValType;\n");
     fprintf(f, "typedef struct { ValType type; union { double num; char *str; } data; } Value;\n");
     fprintf(f, "static jmp_buf _try_jmp;\n");
