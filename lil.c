@@ -77,7 +77,6 @@ typedef struct ASTNode {
         struct { char *name; } include;
         struct { char *lib; char **args; int argc; } funcall;
         struct { char *raw; } templ;
-        struct { char *name; struct ASTNode *value; int force_type; } force_rec;
         struct { struct ASTNode *body, *catch_body; } try_stmt;
         struct { struct ASTNode **stmts; int count, cap; } block;
     } data;
@@ -87,7 +86,6 @@ typedef struct {
     char *name;
     Value val;
     int forced;
-    int forced_type;
 } Var;
 
 #define MAX_FUNCS 256
@@ -175,7 +173,6 @@ static int var_ensure(const char *name) {
     vars[var_count].name = sdup(name);
     vars[var_count].val = (Value){VAL_NUM, {.num=0}};
     vars[var_count].forced = 0;
-    vars[var_count].forced_type = 0;
     return var_count++;
 }
 
@@ -905,39 +902,27 @@ static ASTNode *parse_stmt(void) {
             lex_next();
             return n;
         }
-        int force_type = 0;
-        if (lex_cur.type == TOK_ID && (!strcmp(lex_cur.val.str, "int") || !strcmp(lex_cur.val.str, "str"))
-            && lex_peek_next().type == TOK_ID) {
-            force_type = !strcmp(lex_cur.val.str, "int") ? 1 : 2;
-            lex_next();
-        }
         if (lex_cur.type != TOK_ID) fatal("line %d: force expects a variable name", lex_cur.line);
         ASTNode *n = ast_alloc(NODE_FORCE);
-        n->data.force_rec.name = sdup(lex_cur.val.str);
-        n->data.force_rec.force_type = force_type;
+        n->data.assign.name = sdup(lex_cur.val.str);
         lex_next();
-        n->data.force_rec.value = NULL;
+        n->data.assign.value = NULL;
         if (lex_cur.type == TOK_ASSIGN) {
             lex_next();
-            n->data.force_rec.value = parse_expr();
+            n->data.assign.value = parse_expr();
         }
         return n;
     }
     if (lex_cur.type == TOK_UNFORCE) {
         lex_next();
-        if (lex_cur.type == TOK_ID && (!strcmp(lex_cur.val.str, "int") || !strcmp(lex_cur.val.str, "str"))
-            && lex_peek_next().type == TOK_ID) {
-            lex_next();
-        }
         if (lex_cur.type != TOK_ID) fatal("line %d: unforce expects a variable name", lex_cur.line);
         ASTNode *n = ast_alloc(NODE_UNFORCE);
-        n->data.force_rec.name = sdup(lex_cur.val.str);
-        n->data.force_rec.force_type = 0;
+        n->data.assign.name = sdup(lex_cur.val.str);
         lex_next();
-        n->data.force_rec.value = NULL;
+        n->data.assign.value = NULL;
         if (lex_cur.type == TOK_ASSIGN) {
             lex_next();
-            n->data.force_rec.value = parse_expr();
+            n->data.assign.value = parse_expr();
         }
         return n;
     }
@@ -2037,12 +2022,8 @@ static int exec_stmt(ASTNode *n) {
         case NODE_ASSIGN: {
             Value v = eval_expr(n->data.assign.value);
             int idx = var_find(n->data.assign.name);
-            if (idx >= 0 && vars[idx].forced && vars[idx].forced_type) {
-                if (vars[idx].forced_type == 1 && v.type == VAL_STR)
-                    fatal("line %d: cannot assign a string to an int-forced variable", n->line);
-                if (vars[idx].forced_type == 2 && v.type == VAL_NUM)
-                    fatal("line %d: cannot assign a number to a str-forced variable", n->line);
-            }
+            if (idx >= 0 && vars[idx].forced)
+                fatal("line %d: cannot assign to a forced variable", n->line);
             var_set(n->data.assign.name, v);
             return 0;
         }
@@ -2077,11 +2058,11 @@ static int exec_stmt(ASTNode *n) {
                 if (*end != 0) fatal("line %d: input '%s' is not a valid number", n->line, buf);
                 var_set(n->data.input.name, make_num(d));
                 int _fi = var_find(n->data.input.name);
-                if (_fi >= 0) { vars[_fi].forced = 1; vars[_fi].forced_type = 1; }
+                if (_fi >= 0) vars[_fi].forced = 1;
             } else if (n->data.input.force_type == 2) {
                 var_set(n->data.input.name, make_str(buf));
                 int _fi = var_find(n->data.input.name);
-                if (_fi >= 0) { vars[_fi].forced = 1; vars[_fi].forced_type = 2; }
+                if (_fi >= 0) vars[_fi].forced = 1;
             } else {
                 char *end;
                 double d = strtod(buf, &end);
@@ -2250,27 +2231,21 @@ static int exec_stmt(ASTNode *n) {
             return 0;
         }
         case NODE_FORCE: {
-            int idx = var_ensure(n->data.force_rec.name);
-            if (n->data.force_rec.value) {
-                Value v = eval_expr(n->data.force_rec.value);
-                if (n->data.force_rec.force_type == 1 && v.type == VAL_STR)
-                    fatal("line %d: cannot force-int a string value", n->line);
-                if (n->data.force_rec.force_type == 2 && v.type == VAL_NUM)
-                    fatal("line %d: cannot force-str a numeric value", n->line);
-                var_set(n->data.force_rec.name, v);
-                idx = var_find(n->data.force_rec.name);
+            int idx = var_ensure(n->data.assign.name);
+            if (n->data.assign.value) {
+                Value v = eval_expr(n->data.assign.value);
+                var_set(n->data.assign.name, v);
+                idx = var_find(n->data.assign.name);
             }
             vars[idx].forced = 1;
-            vars[idx].forced_type = n->data.force_rec.force_type;
             return 0;
         }
         case NODE_UNFORCE: {
-            int idx = var_ensure(n->data.force_rec.name);
+            int idx = var_ensure(n->data.assign.name);
             vars[idx].forced = 0;
-            vars[idx].forced_type = 0;
-            if (n->data.force_rec.value) {
-                Value v = eval_expr(n->data.force_rec.value);
-                var_set(n->data.force_rec.name, v);
+            if (n->data.assign.value) {
+                Value v = eval_expr(n->data.assign.value);
+                var_set(n->data.assign.name, v);
             }
             return 0;
         }
@@ -2659,10 +2634,7 @@ OP_VAR_SET: {
     char *vname = strtab[code[ip].arg];
     Value sv = vm_stack[--sp];
     int si = var_find(vname);
-    if (si >= 0 && vars[si].forced && vars[si].forced_type) {
-        if (vars[si].forced_type == 1 && sv.type == VAL_STR) fatal("cannot assign a string to int-forced variable");
-        if (vars[si].forced_type == 2 && sv.type == VAL_NUM) fatal("cannot assign a number to str-forced variable");
-    }
+    if (si >= 0 && vars[si].forced) fatal("cannot assign to a forced variable");
     var_set(vname, sv); ip++; goto *dtab[code[ip].op];
 }
 OP_VAR_GET_IDX: {
@@ -2673,10 +2645,7 @@ OP_VAR_GET_IDX: {
 OP_VAR_SET_IDX: {
     int idx = code[ip].arg;
     Value v = vm_stack[--sp];
-    if (vars[idx].forced && vars[idx].forced_type) {
-        if (vars[idx].forced_type == 1 && v.type == VAL_STR) fatal("cannot assign a string to int-forced variable");
-        if (vars[idx].forced_type == 2 && v.type == VAL_NUM) fatal("cannot assign a number to str-forced variable");
-    }
+    if (vars[idx].forced) fatal("cannot assign to a forced variable");
     if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);
     vars[idx].val = v;
     ip++; goto *dtab[code[ip].op];
@@ -2909,8 +2878,8 @@ static void infer_type_stmt(ASTNode *n) {
             break;
         case NODE_FORCE:
         case NODE_UNFORCE:
-            var_ensure(n->data.force_rec.name);
-            if (n->data.force_rec.value) infer_type_stmt(n->data.force_rec.value);
+            var_ensure(n->data.assign.name);
+            if (n->data.assign.value) infer_type_stmt(n->data.assign.value);
             break;
         default: break;
     }
@@ -2951,7 +2920,7 @@ static void cg_collect_vars(ASTNode *n) {
         case NODE_SWIFY: var_ensure(n->data.input.name); break;
         case NODE_TRY: cg_collect_vars(n->data.try_stmt.body); cg_collect_vars(n->data.try_stmt.catch_body); break;
         case NODE_FORCE:
-        case NODE_UNFORCE: var_ensure(n->data.force_rec.name); if (n->data.force_rec.value) cg_collect_vars(n->data.force_rec.value); break;
+        case NODE_UNFORCE: var_ensure(n->data.assign.name); if (n->data.assign.value) cg_collect_vars(n->data.assign.value); break;
         default: break;
     }
 }
@@ -3400,16 +3369,16 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
         case NODE_FUNC_DEF: break;
         case NODE_FORCE:
         case NODE_UNFORCE: {
-            if (n->data.force_rec.value) {
-                int idx = var_find(n->data.force_rec.name);
+            if (n->data.assign.value) {
+                int idx = var_find(n->data.assign.name);
                 VarType vt = idx >= 0 ? var_types[idx] : TY_DYN;
                 if (vt == TY_NUM) {
-                    fprintf(f, "%s = ", n->data.force_rec.name);
-                    cg_expr(f, n->data.force_rec.value, TY_NUM);
+                    fprintf(f, "%s = ", n->data.assign.name);
+                    cg_expr(f, n->data.assign.value, TY_NUM);
                     fprintf(f, ";\n");
                 } else {
-                    fprintf(f, "val_free(%s); %s = ", n->data.force_rec.name, n->data.force_rec.name);
-                    cg_expr(f, n->data.force_rec.value, TY_DYN);
+                    fprintf(f, "val_free(%s); %s = ", n->data.assign.name, n->data.assign.name);
+                    cg_expr(f, n->data.assign.value, TY_DYN);
                     fprintf(f, ";\n");
                 }
             }
@@ -3556,7 +3525,7 @@ static int generate_c(const char *path, const char *outpath) {
     fprintf(f, "}\n\n");
 
     fprintf(f, "#define MAX_VARS 1024\n");
-    fprintf(f, "typedef struct { char *name; Value val; int forced; int forced_type; } Var;\n");
+    fprintf(f, "typedef struct { char *name; Value val; int forced; } Var;\n");
     fprintf(f, "static Var vars[MAX_VARS];\n");
     fprintf(f, "static int var_count;\n");
     fprintf(f, "static int var_ensure(const char *name) {\n");
@@ -3565,7 +3534,6 @@ static int generate_c(const char *path, const char *outpath) {
     fprintf(f, "  vars[var_count].name=strdup(name);\n");
     fprintf(f, "  vars[var_count].val=(Value){VAL_NUM,{.num=0}};\n");
     fprintf(f, "  vars[var_count].forced=0;\n");
-    fprintf(f, "  vars[var_count].forced_type=0;\n");
     fprintf(f, "  return var_count++;\n");
     fprintf(f, "}\n\n");
 
