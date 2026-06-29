@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-37257ff6.js";
+            window.path_to_searchindex_js = "searchindex-606282cf.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-96e95351.js"></script>
+        <script src="toc-f8620e39.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -203,7 +203,8 @@ while 1 {
   if line == "done" { break }
   lines = lines + line + "\n"
 }
-print "you entered:\n$lines"
+print "you entered:"
+print lines
 </code></pre>
 <p>The loop reads lines forever. When the user types “done”, <code>break</code> exits the loop.</p>
 <h2 id="random-loop-condition"><a class="header" href="#random-loop-condition">Random loop condition</a></h2>
@@ -214,7 +215,7 @@ while &amp;math|random 100 &gt; 10 {
   count = count + 1
   total = total + &amp;math|random 100
 }
-print "loop ran $count times, total=$total"
+print "loop ran", count, "times, total=", total
 </code></pre>
 <p>Each iteration has a 90% chance of continuing (random 0..99 &gt; 10). The loop ends when the random value is 10 or less.</p>
 <h2 id="infinite-loop-with-break"><a class="header" href="#infinite-loop-with-break">Infinite loop with break</a></h2>
@@ -242,7 +243,7 @@ while i &lt;= 3 {
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="if_else.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="control_flow.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -256,7 +257,7 @@ while i &lt;= 3 {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="if_else.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="control_flow.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

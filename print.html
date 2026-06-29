@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-37257ff6.js";
+            window.path_to_searchindex_js = "searchindex-606282cf.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-96e95351.js"></script>
+        <script src="toc-f8620e39.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -193,7 +193,7 @@
 <ul>
 <li><a href="#installation">Installation</a> - build and install lil</li>
 <li><a href="#hello-world">Hello, World</a> - your first lil script</li>
-<li><a href="#basics">Basics</a> - syntax overview</li>
+<li><a href="basics.html">Basics</a> - syntax overview</li>
 <li><a href="#what-is-lil">What is lil?</a> - language history and design goals</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -265,37 +265,64 @@ print "hello"
 <pre><code class="language-lil">name = "alice"
 print "hello", name
 </code></pre>
-<p>Print the result of a library function by assigning it first:</p>
-<pre><code class="language-lil">d = &amp;date|minimal
-print "today is", d
-</code></pre>
-<p>Or call the function directly inside print:</p>
-<pre><code class="language-lil">print "today is", &amp;date|full
-</code></pre>
-<p>What you learned: <code>print</code> works without parens, commas separate multiple values, and you can store function results in variables or use them directly in print.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="basics"><a class="header" href="#basics">Basics</a></h1>
-<p>lil is dynamically typed, just like Python. A variable can hold a number, a string, or anything else, and you can change its type whenever you want.</p>
-<p>There is no <code>def</code>, no <code>class</code>, and no <code>return</code> keyword. Functions are defined with <code>$name</code> syntax and the last expression in the body is automatically returned.</p>
-<p>All variables are global by default. There is no local scope (except function parameters, which are saved and restored automatically around calls).</p>
-<p>Newlines separate statements. Semicolons are optional but you don’t need them. Just write one thing per line.</p>
-<p>Here is “hello world” in Python compared to lil:</p>
-<pre><code class="language-python"># Python
-print("hello, world")
+<h1 id="numbers-and-strings"><a class="header" href="#numbers-and-strings">Numbers and Strings</a></h1>
+<h2 id="numbers"><a class="header" href="#numbers">Numbers</a></h2>
+<p>All numbers are floating point internally (C <code>double</code>). You can use them like integers:</p>
+<pre><code class="language-lil">x = 42
+y = 3.14
+z = -7
 </code></pre>
-<pre><code class="language-lil">print "hello, world"
+<h2 id="strings"><a class="header" href="#strings">Strings</a></h2>
+<p>String literals use double quotes:</p>
+<pre><code class="language-lil">greeting = "hello"
 </code></pre>
-<p>Here is a variable, a function call, and a print in lil:</p>
+<p>You can concatenate strings with <code>+</code>:</p>
+<pre><code class="language-lil">a = "hello "
+b = "world"
+c = a + b
+print c
+</code></pre>
+<p>If you add a string to a number, the number is converted to a string first:</p>
+<pre><code class="language-lil">x = "score: " + 42
+print x
+</code></pre>
+<h2 id="string-length"><a class="header" href="#string-length">String length</a></h2>
+<p>Strings have a length you can store as a number:</p>
 <pre><code class="language-lil">name = "alice"
-greeting = "hello, " + name
-print greeting
+len = 5
+print name, "has", len, "characters"
+print "length: 5"
 </code></pre>
-<p>Variables hold values. You assign with <code>=</code> and read by just writing the name:</p>
-<pre><code class="language-lil">x = 10
-y = x + 5
-print y
+<h2 id="math-on-numbers"><a class="header" href="#math-on-numbers">Math on numbers</a></h2>
+<p>You can write math expressions directly:</p>
+<pre><code class="language-lil">result = 3.14 * 2
+print result
+
+r = 0.5
+print r
 </code></pre>
-<p>If a variable is used before being assigned, it defaults to <code>0</code> instead of raising an error. This is different from Python, where <code>NameError</code> would fire.</p>
+<h2 id="type-conversion"><a class="header" href="#type-conversion">Type conversion</a></h2>
+<p>Use <code>strify</code> and <code>intify</code> to convert between types explicitly.</p>
+<p><code>strify</code> converts a variable to its string representation:</p>
+<pre><code class="language-lil">x = 42
+strify x
+</code></pre>
+<p><code>intify</code> converts a variable to a number. If the string is not numeric, it produces an error:</p>
+<pre><code class="language-lil">x = "42"
+intify x
+x = x + 5
+print x
+
+x = "hello"
+intify x
+</code></pre>
+<p><code>intify</code> can also format a string as binary, hex, or octal byte representation:</p>
+<pre><code class="language-lil">x = "hello"
+intify x binary
+intify x hex
+intify x octal
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="variables"><a class="header" href="#variables">Variables</a></h1>
 <p>Variables hold values. You assign them with <code>=</code>:</p>
@@ -321,12 +348,12 @@ x = 99
 <p>Assignment always goes <code>variable = expression</code>:</p>
 <pre><code class="language-lil">y = x + 50
 </code></pre>
-<p>Store a library function result in a variable:</p>
-<pre><code class="language-lil">today = &amp;date|standart
-print "date:", today
+<p>Assign a number to a variable:</p>
+<pre><code class="language-lil">n = 10
+print "number:", n
 </code></pre>
 <p>Store the result of a math expression:</p>
-<pre><code class="language-lil">area = &amp;math|eval "3.14 * 5 * 5"
+<pre><code class="language-lil">area = 3.14 * 5 * 5
 print "area is", area
 </code></pre>
 <h2 id="forcing-variable-types"><a class="header" href="#forcing-variable-types">Forcing variable types</a></h2>
@@ -351,72 +378,13 @@ print "next year you will be", age + 1
 print "hello", name
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="numbers-and-strings"><a class="header" href="#numbers-and-strings">Numbers and Strings</a></h1>
-<h2 id="numbers"><a class="header" href="#numbers">Numbers</a></h2>
-<p>All numbers are floating point internally (C <code>double</code>). You can use them like integers:</p>
-<pre><code class="language-lil">x = 42
-y = 3.14
-z = -7
-</code></pre>
-<h2 id="strings"><a class="header" href="#strings">Strings</a></h2>
-<p>String literals use double quotes:</p>
-<pre><code class="language-lil">greeting = "hello"
-</code></pre>
-<p>You can concatenate strings with <code>+</code>:</p>
-<pre><code class="language-lil">a = "hello "
-b = "world"
-c = a + b
-print c
-</code></pre>
-<p>If you add a string to a number, the number is converted to a string first:</p>
-<pre><code class="language-lil">x = "score: " + 42
+<h1 id="comments"><a class="header" href="#comments">Comments</a></h1>
+<p>lil supports line comments with <code>#</code> and <code>//</code>:</p>
+<pre><code class="language-lil">x = 42  # this is a comment
+// this is also a comment
 print x
 </code></pre>
-<h2 id="using-library-functions-with-strings"><a class="header" href="#using-library-functions-with-strings">Using library functions with strings</a></h2>
-<p>The <code>&amp;string|len</code> function returns the length of a string. In Python you call <code>len(x)</code>, in lil you call <code>&amp;string|len $x</code> (the <code>$</code> prefix tells lil to use the variable’s value):</p>
-<pre><code class="language-lil">name = "alice"
-len = &amp;string|len $name
-print name, "has", len, "characters"
-</code></pre>
-<p>You can pass a literal string too:</p>
-<pre><code class="language-lil">print &amp;string|len "hello"
-</code></pre>
-<p>Other string functions work similarly:</p>
-<pre><code class="language-lil">msg = "hello world"
-print &amp;string|upper $msg
-print &amp;string|lower $msg
-print &amp;string|reverse $msg
-</code></pre>
-<h2 id="using-library-functions-with-numbers"><a class="header" href="#using-library-functions-with-numbers">Using library functions with numbers</a></h2>
-<p>The <code>&amp;math|eval</code> function evaluates a math expression string and returns a number. Store the result in a variable:</p>
-<pre><code class="language-lil">result = &amp;math|eval "3.14 * 2"
-print result
-</code></pre>
-<p><code>&amp;math|random</code> returns a random number between 0 and 1:</p>
-<pre><code class="language-lil">r = &amp;math|random
-print r
-</code></pre>
-<h2 id="type-conversion"><a class="header" href="#type-conversion">Type conversion</a></h2>
-<p>Use <code>strify</code> and <code>intify</code> to convert between types explicitly.</p>
-<p><code>strify</code> converts a variable to its string representation:</p>
-<pre><code class="language-lil">x = 42
-strify x
-</code></pre>
-<p><code>intify</code> converts a variable to a number. If the string is not numeric, it produces an error:</p>
-<pre><code class="language-lil">x = "42"
-intify x
-x = x + 5
-print x
-
-x = "hello"
-intify x
-</code></pre>
-<p><code>intify</code> can also format a string as binary, hex, or octal byte representation:</p>
-<pre><code class="language-lil">x = "hello"
-intify x binary
-intify x hex
-intify x octal
-</code></pre>
+<p>Comments are ignored by the parser. They are useful for documenting your code.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="operators"><a class="header" href="#operators">Operators</a></h1>
 <h2 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h2>
@@ -464,16 +432,9 @@ print x
 y = (10 + 5) * 2
 print y
 </code></pre>
-<h2 id="dynamic-math-with-eval"><a class="header" href="#dynamic-math-with-eval">Dynamic math with eval</a></h2>
-<p>The <code>&amp;math|eval</code> function evaluates a math expression string at runtime:</p>
-<pre><code class="language-lil">result = &amp;math|eval "(10 + 5) * 2"
-print result
-</code></pre>
-<p>This is useful when the expression comes from user input or is built dynamically:</p>
-<pre><code class="language-lil">a = 3
-b = 4
-expr = "(" + a + " + " + b + ") * 2"
-result = &amp;math|eval $expr
+<h2 id="direct-arithmetic"><a class="header" href="#direct-arithmetic">Direct arithmetic</a></h2>
+<p>lil evaluates math expressions directly:</p>
+<pre><code class="language-lil">result = (10 + 5) * 2
 print result
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -509,15 +470,15 @@ if not logged_in {
   print "please log in"
 }
 </code></pre>
-<h2 id="comparison-with-library-function-results"><a class="header" href="#comparison-with-library-function-results">Comparison with library function results</a></h2>
-<p>String functions return values you can compare:</p>
-<pre><code class="language-lil">name = "alexander"
-if &amp;string|len name &gt; 5 {
+<h2 id="comparison-with-variables"><a class="header" href="#comparison-with-variables">Comparison with variables</a></h2>
+<p>Compare a variable to a value:</p>
+<pre><code class="language-lil">len = 10
+if len &gt; 5 {
   print "long name"
 }
 </code></pre>
 <p>Store and use multiple comparisons:</p>
-<pre><code class="language-lil">len = &amp;string|len name
+<pre><code class="language-lil">len = 10
 if len &gt; 2 and len &lt; 10 {
   print "name length is reasonable"
 }
@@ -535,46 +496,6 @@ if 0 { print "no" }          # prints nothing (zero is falsy)
 if "" { print "no" }         # prints nothing (empty string is falsy)
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="control-flow"><a class="header" href="#control-flow">Control Flow</a></h1>
-<p>This chapter covers all the ways to control what your program does next: if/elif/else conditions, while loops, for loops, and the loop/stop/break/continue keywords.</p>
-<h2 id="ifelifelse"><a class="header" href="#ifelifelse">If/elif/else</a></h2>
-<p>lil’s if/elif/else works like Python but without colons or parentheses. In Python you write:</p>
-<pre><code class="language-python">if x &gt; 5:
-    print("big")
-elif x &gt; 0:
-    print("small")
-else:
-    print("zero or negative")
-</code></pre>
-<p>In lil the same logic looks like:</p>
-<pre><code class="language-lil">if x &gt; 5 {
-  print "big"
-} elif x &gt; 0 {
-  print "small"
-} else {
-  print "zero or negative"
-}
-</code></pre>
-<p>Conditions don’t need parentheses around them. Just write the expression directly after <code>if</code> or <code>elif</code>. The braces are required even for single-line bodies.</p>
-<p>You can store condition results in variables:</p>
-<pre><code class="language-lil">is_positive = x &gt; 0
-if is_positive {
-  print "x is positive"
-}
-</code></pre>
-<p>Since conditions return 1 (true) or 0 (false), you can use them in arithmetic:</p>
-<pre><code class="language-lil">count = (x &gt; 10) + (y &gt; 10) + (z &gt; 10)
-print "variables over 10: $count"
-</code></pre>
-<h2 id="loop-types"><a class="header" href="#loop-types">Loop types</a></h2>
-<p>lil has three kinds of loops covered on their own pages:</p>
-<ul>
-<li><a href="#while-loops">While loops</a> - loop while a condition holds</li>
-<li><a href="#for-loops">For loops</a> - iterate over a numeric range</li>
-<li><a href="#loop-stop-and-break">Loop blocks</a> - infinite loop with explicit exit</li>
-</ul>
-<p>All three support <code>break</code>, <code>stop</code>, and <code>continue</code>.</p>
-<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="if-and-else"><a class="header" href="#if-and-else">If and Else</a></h1>
 <h2 id="basic-if"><a class="header" href="#basic-if">Basic if</a></h2>
 <pre><code class="language-lil">x = 10
@@ -590,7 +511,7 @@ if x &gt; 5 {
   print "small"
 }
 </code></pre>
-<h2 id="ifelifelse-1"><a class="header" href="#ifelifelse-1">If/elif/else</a></h2>
+<h2 id="ifelifelse"><a class="header" href="#ifelifelse">If/elif/else</a></h2>
 <pre><code class="language-lil">x = 5
 if x &gt; 10 {
   print "big"
@@ -605,314 +526,78 @@ if x &gt; 10 {
 <p>You can put small blocks on one line:</p>
 <pre><code class="language-lil">if x &gt; 5 { print "big" } else { print "small" }
 </code></pre>
-<h2 id="has-operator-in-conditions"><a class="header" href="#has-operator-in-conditions">Has operator in conditions</a></h2>
-<p>The <code>if</code> statement can also check whether a variable exists or whether a string contains a substring:</p>
-<pre><code class="language-lil">name = "alice"
-if has name {
-  print "name exists"
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="the-has-operator"><a class="header" href="#the-has-operator">The Has Operator</a></h1>
+<p>The <code>has</code> operator checks if a variable exists or if a string contains a substring. It can only be used inside <code>if</code> conditions.</p>
+<h2 id="variable-existence"><a class="header" href="#variable-existence">Variable existence</a></h2>
+<pre><code class="language-lil">if has x {
+  print "x exists"
 }
-
-text = "hello world"
+</code></pre>
+<p>This checks whether the variable <code>x</code> has been assigned. If the variable was never assigned, this is false.</p>
+<p>A practical use: check if a library call returned something useful:</p>
+<pre><code class="language-lil">content = &amp;file|read "data.txt"
+if has content {
+  print "file read successfully, length=&amp;string|len content"
+}
+</code></pre>
+<p>The <code>&amp;file|read</code> function returns nothing (unset variable) if the file doesn’t exist. <code>has content</code> tells you if it succeeded.</p>
+<h2 id="substring-search"><a class="header" href="#substring-search">Substring search</a></h2>
+<pre><code class="language-lil">text = "hello world"
 if text has "world" {
-  print "found world"
-}
-
-# case-insensitive search
-if text has nocase "WORLD" {
-  print "found world (case insensitive)"
-}
-
-# search anywhere in the string (default)
-if text has anywhere "ello" {
   print "found"
 }
+</code></pre>
+<p>Check if a URL contains a protocol:</p>
+<pre><code class="language-lil">url = "https://example.com"
+if url has "https" {
+  print "secure connection"
+}
+</code></pre>
+<h2 id="multiple-has-conditions-combined"><a class="header" href="#multiple-has-conditions-combined">Multiple has conditions combined</a></h2>
+<p>You can chain <code>not</code> with <code>has</code>:</p>
+<pre><code class="language-lil">if has result and result has "error" {
+  print "got an error response"
+}
+</code></pre>
+<p>If <code>result</code> was never set, the first <code>has</code> is false and the substring check is never evaluated. This is a safe way to check both existence and content.</p>
+<h2 id="flags"><a class="header" href="#flags">Flags</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>flag</th><th>meaning</th></tr>
+</thead>
+<tbody>
+<tr><td><code>nocase</code></td><td>case insensitive search</td></tr>
+<tr><td><code>anywhere</code></td><td>search anywhere in the string (default)</td></tr>
+<tr><td><code>word</code></td><td>match whole words only</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-lil">if text has nocase "WORLD" {
+  print "found case insensitive"
+}
 
-# match whole words only
 if text has word "world" {
   print "found as whole word"
 }
 </code></pre>
-<p>Multiple flags can be combined:</p>
+<p>You can combine flags:</p>
 <pre><code class="language-lil">if text has nocase anywhere "WORLD" {
   print "found"
 }
 </code></pre>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="while-loops"><a class="header" href="#while-loops">While Loops</a></h1>
-<h2 id="basic-while"><a class="header" href="#basic-while">Basic while</a></h2>
-<p>A while loop runs as long as its condition is truthy. In Python you’d write <code>while condition:</code>. In lil it’s <code>while condition {</code>:</p>
-<pre><code class="language-lil">i = 0
-while i &lt; 5 {
-  print i
-  i = i + 1
-}
-</code></pre>
-<p>This prints 0 through 4. Same pattern as Python, just braces instead of a colon.</p>
-<h2 id="sum-of-numbers-1-to-100"><a class="header" href="#sum-of-numbers-1-to-100">Sum of numbers 1 to 100</a></h2>
-<p>Accumulate a result across loop iterations:</p>
-<pre><code class="language-lil">total = 0
-i = 1
-while i &lt;= 100 {
-  total = total + i
-  i = i + 1
-}
-print total
-</code></pre>
-<p>This sums 1 + 2 + … + 100 and prints 5050. Notice how <code>total</code> gets updated each iteration.</p>
-<h2 id="reading-input-until-a-sentinel"><a class="header" href="#reading-input-until-a-sentinel">Reading input until a sentinel</a></h2>
-<p>A common pattern: keep reading user input until they enter a special value:</p>
-<pre><code class="language-lil">lines = ""
-while 1 {
-  line = &amp;sys|readln
-  if line == "done" { break }
-  lines = lines + line + "\n"
-}
-print "you entered:\n$lines"
-</code></pre>
-<p>The loop reads lines forever. When the user types “done”, <code>break</code> exits the loop.</p>
-<h2 id="random-loop-condition"><a class="header" href="#random-loop-condition">Random loop condition</a></h2>
-<p>Using <code>&amp;math|random</code> to create randomness in a loop condition:</p>
-<pre><code class="language-lil">count = 0
-total = 0
-while &amp;math|random 100 &gt; 10 {
-  count = count + 1
-  total = total + &amp;math|random 100
-}
-print "loop ran $count times, total=$total"
-</code></pre>
-<p>Each iteration has a 90% chance of continuing (random 0..99 &gt; 10). The loop ends when the random value is 10 or less.</p>
-<h2 id="infinite-loop-with-break"><a class="header" href="#infinite-loop-with-break">Infinite loop with break</a></h2>
-<pre><code class="language-lil">i = 0
-while 1 {
-  if i &gt; 5 { break }
-  print i
-  i = i + 1
-}
-</code></pre>
-<p>The <code>break</code> keyword exits the loop immediately. It works in <code>while</code>, <code>for</code>, and <code>loop</code> blocks.</p>
-<h2 id="nested-loops"><a class="header" href="#nested-loops">Nested loops</a></h2>
-<pre><code class="language-lil">i = 1
-while i &lt;= 3 {
-  j = 1
-  while j &lt;= 3 {
-    print i, j
-    j = j + 1
-  }
-  i = i + 1
-}
-</code></pre>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="for-loops"><a class="header" href="#for-loops">For Loops</a></h1>
-<p>The <code>for</code> loop iterates over a range of numbers. In Python you’d write <code>for i in range(1, 6):</code>. In lil it’s <code>for i = 1 to 5 {</code>:</p>
-<pre><code class="language-lil">for i = 1 to 5 {
-  print i
-}
-</code></pre>
-<p>This prints 1 through 5. The loop variable (<code>i</code>) starts at the first value and increments by 1 each iteration until it exceeds the second value.</p>
-<p>Python’s <code>range(1, 6)</code> includes 1 but excludes 6. lil’s <code>1 to 5</code> includes both ends.</p>
-<h2 id="using-the-loop-variable-in-calculations"><a class="header" href="#using-the-loop-variable-in-calculations">Using the loop variable in calculations</a></h2>
-<pre><code class="language-lil">for i = 1 to 10 {
-  print i * i
-}
-</code></pre>
-<p>Prints 1, 4, 9, 16, 25, 36, 49, 64, 81, 100. The loop variable is just a regular variable you can use in any expression.</p>
-<p>Store results in another variable:</p>
-<pre><code class="language-lil">squares = 0
-for i = 1 to 10 {
-  squares = squares + i * i
-}
-print squares
-</code></pre>
-<p>This sums the squares of 1 through 10.</p>
-<h2 id="expressions-for-range-bounds"><a class="header" href="#expressions-for-range-bounds">Expressions for range bounds</a></h2>
-<p>You can use expressions for the start and end values:</p>
-<pre><code class="language-lil">start = 2
-end = 10
-for i = start to end {
-  print i
-}
-</code></pre>
-<h2 id="no-counting-down"><a class="header" href="#no-counting-down">No counting down</a></h2>
-<p>lil’s <code>for</code> only counts up. To count down, use a while loop:</p>
-<pre><code class="language-lil">i = 10
-while i &gt;= 1 {
-  print i
-  i = i - 1
-}
-</code></pre>
-<h2 id="nested-for-loops-multiplication-table"><a class="header" href="#nested-for-loops-multiplication-table">Nested for loops: multiplication table</a></h2>
-<pre><code class="language-lil">for row = 1 to 5 {
-  line = ""
-  for col = 1 to 5 {
-    line = line + " " + row * col
-  }
-  print line
-}
-</code></pre>
-<p>Prints a 5x5 multiplication table. Each row builds up a string as the inner loop runs.</p>
-<h2 id="break-in-for-loops"><a class="header" href="#break-in-for-loops">Break in for loops</a></h2>
-<pre><code class="language-lil">for i = 1 to 100 {
-  if i &gt; 3 { break }
-  print i
-}
-</code></pre>
-<p>This prints 1, 2, 3.</p>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="loop-stop-and-break"><a class="header" href="#loop-stop-and-break">Loop, Stop, and Break</a></h1>
-<h2 id="the-loop-block"><a class="header" href="#the-loop-block">The loop block</a></h2>
-<p><code>loop</code> creates an infinite block that must be exited with <code>stop</code> or <code>break</code>:</p>
-<pre><code class="language-lil">i = 0
-loop {
-  i = i + 1
-  if i &gt; 3 { stop }
-  print i
-}
-print "done"
-</code></pre>
-<p>This prints 1, 2, 3 and then “done”.</p>
-<h2 id="stop-vs-break"><a class="header" href="#stop-vs-break">Stop vs Break</a></h2>
-<p>In Python, only <code>break</code> exists. In lil, <code>stop</code> and <code>break</code> are interchangeable, they both exit the innermost enclosing loop immediately. You can use them inside <code>loop</code>, <code>while</code>, and <code>for</code> blocks.</p>
-<pre><code class="language-lil">while 1 {
-  break    # exits the while loop
-}
+<h2 id="has-vs-regular-comparison"><a class="header" href="#has-vs-regular-comparison">Has vs regular comparison</a></h2>
+<p><code>has</code> checks existence, not value. Use <code>==</code> to check a value:</p>
+<pre><code class="language-lil">x = 0
+if has x { print "x exists" }   # prints (x was assigned)
+if x == 0 { print "x is zero" } # also prints
 
-loop {
-  stop     # exits the loop block
-}
-
-for i = 1 to 10 {
-  break    # exits the for loop early
-}
+y = ""
+if has y { print "y exists" }   # prints (y was assigned, even empty)
+if y == "" { print "y is empty" } # also prints
 </code></pre>
-<p>Using <code>stop</code> or <code>break</code> outside a loop is an error.</p>
-<h2 id="event-loop-with-a-flag"><a class="header" href="#event-loop-with-a-flag">Event loop with a flag</a></h2>
-<p>A common pattern: run an event loop that stops when a flag is set:</p>
-<pre><code class="language-lil">running = 1
-loop {
-  cmd = &amp;sys|readln
-  if cmd == "quit" { running = 0 }
-  if cmd == "help" { print "commands: quit, help" }
-  if not running { stop }
-}
-</code></pre>
-<p>The flag <code>running</code> starts as 1 (true). When the user types “quit”, the flag goes to 0 and the loop exits on the next iteration.</p>
-<h2 id="repeating-timer-with-sleep"><a class="header" href="#repeating-timer-with-sleep">Repeating timer with sleep</a></h2>
-<p>Using <code>&amp;math|sleep</code> to run something every 2 seconds:</p>
-<pre><code class="language-lil">count = 0
-loop {
-  print "tick $count"
-  count = count + 1
-  &amp;math|sleep 2000
-  if count &gt;= 5 { break }
-}
-</code></pre>
-<p>Sleep takes milliseconds. The loop ticks every 2 seconds for 5 iterations. Store the count and display it through a template.</p>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="input-and-output"><a class="header" href="#input-and-output">Input and Output</a></h1>
-<p>lil keeps I/O simpler than Python. No file objects, no context managers, no close() calls. Just print, input, and a few file library functions.</p>
-<h2 id="print"><a class="header" href="#print">Print</a></h2>
-<p>The <code>print</code> statement outputs text. No parentheses unlike Python’s <code>print()</code>:</p>
-<pre><code class="language-lil">print "hello world"
-</code></pre>
-<p>Print multiple values separated by commas:</p>
-<pre><code class="language-lil">name = "alice"
-print "hello", name
-</code></pre>
-<pre><code class="language-lil">x = 42
-print "the answer is", x
-</code></pre>
-<h2 id="input"><a class="header" href="#input">Input</a></h2>
-<p>The <code>input</code> statement reads a line from stdin and stores it in a variable:</p>
-<pre><code class="language-lil">input name
-print "hello", name
-</code></pre>
-<p>Show a prompt string:</p>
-<pre><code class="language-lil">input "enter your name: " name
-print "hello", name
-</code></pre>
-<p>In Python, you’d write <code>name = input("enter your name: ")</code>. In lil, <code>input</code> is a statement, not a function call. The variable comes after the optional prompt.</p>
-<pre><code class="language-lil">input "type something: " s
-len = &amp;string|len $s
-print "you typed", len, "characters"
-</code></pre>
-<h2 id="file-io"><a class="header" href="#file-io">File I/O</a></h2>
-<p>lil uses the <code>&amp;file|</code> library for file operations. No <code>open()</code> / <code>close()</code> needed:</p>
-<pre><code class="language-lil">data = &amp;file|read "config.txt"
-</code></pre>
-<p>In Python that’s <code>with open("config.txt") as f: data = f.read()</code>. lil does it in one call.</p>
-<pre><code class="language-lil">text = &amp;file|read "notes.txt"
-if text == "" {
-  print "file is empty or missing"
-}
-</code></pre>
-<p>Writing a file:</p>
-<pre><code class="language-lil">&amp;file|write "output.txt" "hello world"
-</code></pre>
-<p>You can write the result of an expression directly:</p>
-<pre><code class="language-lil">today = &amp;date|standart
-&amp;file|write "date.txt" $today
-</code></pre>
-<p>Appending to a file:</p>
-<pre><code class="language-lil">&amp;file|append "log.txt" "new entry"
-</code></pre>
-<p>Check if a file exists:</p>
-<pre><code class="language-lil">if &amp;file|exists "data.txt" == 1 {
-  data = &amp;file|read "data.txt"
-  print data
-}
-</code></pre>
-<p>List directory contents:</p>
-<pre><code class="language-lil">files = &amp;file|list "/home/user"
-print files
-</code></pre>
-<p>See the <a href="#built-in-libraries">Built-in Libraries</a> page for the full file library reference.</p>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="print-1"><a class="header" href="#print-1">Print</a></h1>
-<p>The <code>print</code> statement outputs values to stdout.</p>
-<pre><code class="language-lil">print "hello"
-print 42
-print 3.14
-</code></pre>
-<p>Multiple values separated by commas are printed with spaces between them:</p>
-<pre><code class="language-lil">print "the answer is", 42
-</code></pre>
-<p>Print with no arguments is a syntax error. To print a blank line, print an empty string:</p>
-<pre><code class="language-lil">print ""
-</code></pre>
-<p>Print the result of a library function directly:</p>
-<pre><code class="language-lil">print &amp;date|full
-</code></pre>
-<p>Print multiple results from different functions in one line:</p>
-<pre><code class="language-lil">print &amp;date|minimal, &amp;math|random
-</code></pre>
-<p>Print values alongside variables:</p>
-<pre><code class="language-lil">name = "bob"
-score = 95
-print "player", name, "scored", score
-</code></pre>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="input-1"><a class="header" href="#input-1">Input</a></h1>
-<p>The <code>input</code> statement reads a line from stdin and stores it in a variable as a string.</p>
-<pre><code class="language-lil">input name
-print "hello", name
-</code></pre>
-<p>You can provide a prompt string:</p>
-<pre><code class="language-lil">input "what is your name? " name
-print "nice to meet you,", name
-</code></pre>
-<p>If the user does not enter anything (EOF), the variable is set to an empty string:</p>
-<pre><code class="language-lil">input "press enter to continue" x
-print "ok, continuing"
-</code></pre>
-<p>Force input as a number and do a calculation:</p>
-<pre><code class="language-lil">force int input "age: " age
-print "next year youll be", age + 1
-</code></pre>
-<p>Read a number input and use it in an expression directly after:</p>
-<pre><code class="language-lil">force int input "enter a number: " n
-result = n * 2
-print "doubled:", result
-</code></pre>
+<p>A variable can exist but hold a falsy value. Use <code>has</code> when you care whether it was assigned at all, not what it holds.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="functions"><a class="header" href="#functions">Functions</a></h1>
 <p>lil has two kinds of functions: built-in library functions from the standard libraries, and user-defined functions you write yourself.</p>
@@ -1059,6 +744,294 @@ print short
 </code></pre>
 <p>Most <code>date</code> functions return the date string. <code>&amp;date|format</code> returns the current mode (“EU”/“US”), and setting the format returns empty.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="templates"><a class="header" href="#templates">Templates</a></h1>
+<p>Template strings let you embed variable values inside a string using <code>$varname</code>. In Python this would be an f-string like <code>f"hello {name}"</code>. In lil it’s <code>"hello $name"</code>:</p>
+<pre><code class="language-lil">name = "alice"
+age = 30
+print "my name is $name and i am $age years old"
+</code></pre>
+<p>This prints: <code>my name is alice and i am 30 years old</code></p>
+<h2 id="storing-template-results"><a class="header" href="#storing-template-results">Storing template results</a></h2>
+<p>Templates work anywhere a string is expected, including variable assignment:</p>
+<pre><code class="language-lil">greeting = "hello $name"
+print greeting
+</code></pre>
+<pre><code class="language-lil">username = "bob"
+score = 95
+msg = "player $username scored $score points"
+print msg
+</code></pre>
+<h2 id="templates-with-function-results"><a class="header" href="#templates-with-function-results">Templates with function results</a></h2>
+<p>Variables set from library functions work in templates too:</p>
+<pre><code class="language-lil">now = &amp;date|minimal
+print "the time is $now"
+</code></pre>
+<pre><code class="language-lil">rand = &amp;math|random 100
+print "your lucky number is $rand"
+</code></pre>
+<h2 id="templates-in-conditions"><a class="header" href="#templates-in-conditions">Templates in conditions</a></h2>
+<pre><code class="language-lil">name = &amp;sys|readln
+if &amp;string|len name &gt; 0 {
+  print "welcome, $name"
+}
+</code></pre>
+<h2 id="if-a-variable-doesnt-exist"><a class="header" href="#if-a-variable-doesnt-exist">If a variable doesn’t exist</a></h2>
+<p>If the variable does not exist, its value defaults to <code>0</code>.</p>
+<pre><code class="language-lil">print "value is $undefined_var"   # prints "value is 0"
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="control-flow"><a class="header" href="#control-flow">Control Flow</a></h1>
+<p>This chapter covers all the ways to control what your program does next: if/elif/else conditions, while loops, for loops, and the loop/stop/break/continue keywords.</p>
+<h2 id="ifelifelse-1"><a class="header" href="#ifelifelse-1">If/elif/else</a></h2>
+<p>lil’s if/elif/else works like Python but without colons or parentheses. In Python you write:</p>
+<pre><code class="language-python">if x &gt; 5:
+    print("big")
+elif x &gt; 0:
+    print("small")
+else:
+    print("zero or negative")
+</code></pre>
+<p>In lil the same logic looks like:</p>
+<pre><code class="language-lil">if x &gt; 5 {
+  print "big"
+} elif x &gt; 0 {
+  print "small"
+} else {
+  print "zero or negative"
+}
+</code></pre>
+<p>Conditions don’t need parentheses around them. Just write the expression directly after <code>if</code> or <code>elif</code>. The braces are required even for single-line bodies.</p>
+<p>You can store condition results in variables:</p>
+<pre><code class="language-lil">is_positive = x &gt; 0
+if is_positive {
+  print "x is positive"
+}
+</code></pre>
+<p>Since conditions return 1 (true) or 0 (false), you can use them in arithmetic:</p>
+<pre><code class="language-lil">count = (x &gt; 10) + (y &gt; 10) + (z &gt; 10)
+print "variables over 10:", count
+</code></pre>
+<h2 id="loop-types"><a class="header" href="#loop-types">Loop types</a></h2>
+<p>lil has three kinds of loops covered on their own pages:</p>
+<ul>
+<li><a href="#while-loops">While loops</a> - loop while a condition holds</li>
+<li><a href="#for-loops">For loops</a> - iterate over a numeric range</li>
+<li><a href="#loop-stop-and-break">Loop blocks</a> - infinite loop with explicit exit</li>
+</ul>
+<p>All three support <code>break</code>, <code>stop</code>, and <code>continue</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="while-loops"><a class="header" href="#while-loops">While Loops</a></h1>
+<h2 id="basic-while"><a class="header" href="#basic-while">Basic while</a></h2>
+<p>A while loop runs as long as its condition is truthy. In Python you’d write <code>while condition:</code>. In lil it’s <code>while condition {</code>:</p>
+<pre><code class="language-lil">i = 0
+while i &lt; 5 {
+  print i
+  i = i + 1
+}
+</code></pre>
+<p>This prints 0 through 4. Same pattern as Python, just braces instead of a colon.</p>
+<h2 id="sum-of-numbers-1-to-100"><a class="header" href="#sum-of-numbers-1-to-100">Sum of numbers 1 to 100</a></h2>
+<p>Accumulate a result across loop iterations:</p>
+<pre><code class="language-lil">total = 0
+i = 1
+while i &lt;= 100 {
+  total = total + i
+  i = i + 1
+}
+print total
+</code></pre>
+<p>This sums 1 + 2 + … + 100 and prints 5050. Notice how <code>total</code> gets updated each iteration.</p>
+<h2 id="reading-input-until-a-sentinel"><a class="header" href="#reading-input-until-a-sentinel">Reading input until a sentinel</a></h2>
+<p>A common pattern: keep reading user input until they enter a special value:</p>
+<pre><code class="language-lil">lines = ""
+while 1 {
+  line = &amp;sys|readln
+  if line == "done" { break }
+  lines = lines + line + "\n"
+}
+print "you entered:"
+print lines
+</code></pre>
+<p>The loop reads lines forever. When the user types “done”, <code>break</code> exits the loop.</p>
+<h2 id="random-loop-condition"><a class="header" href="#random-loop-condition">Random loop condition</a></h2>
+<p>Using <code>&amp;math|random</code> to create randomness in a loop condition:</p>
+<pre><code class="language-lil">count = 0
+total = 0
+while &amp;math|random 100 &gt; 10 {
+  count = count + 1
+  total = total + &amp;math|random 100
+}
+print "loop ran", count, "times, total=", total
+</code></pre>
+<p>Each iteration has a 90% chance of continuing (random 0..99 &gt; 10). The loop ends when the random value is 10 or less.</p>
+<h2 id="infinite-loop-with-break"><a class="header" href="#infinite-loop-with-break">Infinite loop with break</a></h2>
+<pre><code class="language-lil">i = 0
+while 1 {
+  if i &gt; 5 { break }
+  print i
+  i = i + 1
+}
+</code></pre>
+<p>The <code>break</code> keyword exits the loop immediately. It works in <code>while</code>, <code>for</code>, and <code>loop</code> blocks.</p>
+<h2 id="nested-loops"><a class="header" href="#nested-loops">Nested loops</a></h2>
+<pre><code class="language-lil">i = 1
+while i &lt;= 3 {
+  j = 1
+  while j &lt;= 3 {
+    print i, j
+    j = j + 1
+  }
+  i = i + 1
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="for-loops"><a class="header" href="#for-loops">For Loops</a></h1>
+<p>The <code>for</code> loop iterates over a range of numbers. In Python you’d write <code>for i in range(1, 6):</code>. In lil it’s <code>for i = 1 to 5 {</code>:</p>
+<pre><code class="language-lil">for i = 1 to 5 {
+  print i
+}
+</code></pre>
+<p>This prints 1 through 5. The loop variable (<code>i</code>) starts at the first value and increments by 1 each iteration until it exceeds the second value.</p>
+<p>Python’s <code>range(1, 6)</code> includes 1 but excludes 6. lil’s <code>1 to 5</code> includes both ends.</p>
+<h2 id="using-the-loop-variable-in-calculations"><a class="header" href="#using-the-loop-variable-in-calculations">Using the loop variable in calculations</a></h2>
+<pre><code class="language-lil">for i = 1 to 10 {
+  print i * i
+}
+</code></pre>
+<p>Prints 1, 4, 9, 16, 25, 36, 49, 64, 81, 100. The loop variable is just a regular variable you can use in any expression.</p>
+<p>Store results in another variable:</p>
+<pre><code class="language-lil">squares = 0
+for i = 1 to 10 {
+  squares = squares + i * i
+}
+print squares
+</code></pre>
+<p>This sums the squares of 1 through 10.</p>
+<h2 id="expressions-for-range-bounds"><a class="header" href="#expressions-for-range-bounds">Expressions for range bounds</a></h2>
+<p>You can use expressions for the start and end values:</p>
+<pre><code class="language-lil">start = 2
+end = 10
+for i = start to end {
+  print i
+}
+</code></pre>
+<h2 id="no-counting-down"><a class="header" href="#no-counting-down">No counting down</a></h2>
+<p>lil’s <code>for</code> only counts up. To count down, use a while loop:</p>
+<pre><code class="language-lil">i = 10
+while i &gt;= 1 {
+  print i
+  i = i - 1
+}
+</code></pre>
+<h2 id="nested-for-loops-multiplication-table"><a class="header" href="#nested-for-loops-multiplication-table">Nested for loops: multiplication table</a></h2>
+<pre><code class="language-lil">for row = 1 to 5 {
+  line = ""
+  for col = 1 to 5 {
+    line = line + " " + row * col
+  }
+  print line
+}
+</code></pre>
+<p>Prints a 5x5 multiplication table. Each row builds up a string as the inner loop runs.</p>
+<h2 id="break-in-for-loops"><a class="header" href="#break-in-for-loops">Break in for loops</a></h2>
+<pre><code class="language-lil">for i = 1 to 100 {
+  if i &gt; 3 { break }
+  print i
+}
+</code></pre>
+<p>This prints 1, 2, 3.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="loop-stop-and-break"><a class="header" href="#loop-stop-and-break">Loop, Stop, and Break</a></h1>
+<h2 id="the-loop-block"><a class="header" href="#the-loop-block">The loop block</a></h2>
+<p><code>loop</code> creates an infinite block that must be exited with <code>stop</code> or <code>break</code>:</p>
+<pre><code class="language-lil">i = 0
+loop {
+  i = i + 1
+  if i &gt; 3 { stop }
+  print i
+}
+print "done"
+</code></pre>
+<p>This prints 1, 2, 3 and then “done”.</p>
+<h2 id="stop-vs-break"><a class="header" href="#stop-vs-break">Stop vs Break</a></h2>
+<p>In Python, only <code>break</code> exists. In lil, <code>stop</code> and <code>break</code> are interchangeable, they both exit the innermost enclosing loop immediately. You can use them inside <code>loop</code>, <code>while</code>, and <code>for</code> blocks.</p>
+<pre><code class="language-lil">while 1 {
+  break    # exits the while loop
+}
+
+loop {
+  stop     # exits the loop block
+}
+
+for i = 1 to 10 {
+  break    # exits the for loop early
+}
+</code></pre>
+<p>Using <code>stop</code> or <code>break</code> outside a loop is an error.</p>
+<h2 id="event-loop-with-a-flag"><a class="header" href="#event-loop-with-a-flag">Event loop with a flag</a></h2>
+<p>A common pattern: run an event loop that stops when a flag is set:</p>
+<pre><code class="language-lil">running = 1
+loop {
+  cmd = &amp;sys|readln
+  if cmd == "quit" { running = 0 }
+  if cmd == "help" { print "commands: quit, help" }
+  if not running { stop }
+}
+</code></pre>
+<p>The flag <code>running</code> starts as 1 (true). When the user types “quit”, the flag goes to 0 and the loop exits on the next iteration.</p>
+<h2 id="repeating-timer-with-sleep"><a class="header" href="#repeating-timer-with-sleep">Repeating timer with sleep</a></h2>
+<p>Using <code>&amp;math|sleep</code> to run something every 2 seconds:</p>
+<pre><code class="language-lil">count = 0
+loop {
+  print "tick", count
+  count = count + 1
+  &amp;math|sleep 2000
+  if count &gt;= 5 { break }
+}
+</code></pre>
+<p>Sleep takes milliseconds. The loop ticks every 2 seconds for 5 iterations. Store the count and display it through a template.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="continue"><a class="header" href="#continue">Continue</a></h1>
+<p>The <code>continue</code> keyword skips the rest of the current loop iteration and jumps to the next one. It works in <code>while</code>, <code>for</code>, and <code>loop</code> blocks.</p>
+<h2 id="skip-even-numbers-print-odds"><a class="header" href="#skip-even-numbers-print-odds">Skip even numbers, print odds</a></h2>
+<pre><code class="language-lil">for i = 1 to 10 {
+  if i % 2 == 0 { continue }
+  print i
+}
+</code></pre>
+<p>Prints 1, 3, 5, 7, 9. When <code>i</code> is even, <code>continue</code> skips the <code>print</code> and goes to the next iteration.</p>
+<p>Accumulate odds into a variable:</p>
+<pre><code class="language-lil">sum_odds = 0
+for i = 1 to 10 {
+  if i % 2 == 0 { continue }
+  sum_odds = sum_odds + i
+}
+print sum_odds
+</code></pre>
+<h2 id="input-validation-loop"><a class="header" href="#input-validation-loop">Input validation loop</a></h2>
+<p>Skip bad input and keep asking until valid:</p>
+<pre><code class="language-lil">while 1 {
+  age = &amp;sys|readln
+  if age == "" { continue }
+  age = &amp;sys|tonum age
+  if age &lt; 1 { continue }
+  print "your age is " + age
+  break
+}
+</code></pre>
+<p>Both empty input and non-positive numbers hit <code>continue</code>, jumping back to the top of the while loop. Only a valid age escapes the loop.</p>
+<h2 id="continue-in-a-while-loop"><a class="header" href="#continue-in-a-while-loop">Continue in a while loop</a></h2>
+<pre><code class="language-lil">i = 0
+count = 0
+while i &lt; 100 {
+  i = i + 1
+  if i % 3 == 0 { continue }
+  count = count + 1
+}
+print count
+</code></pre>
+<p>Counts how many numbers from 1 to 100 are not divisible by 3.</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="user-defined-functions-1"><a class="header" href="#user-defined-functions-1">User-defined Functions</a></h1>
 <p>Define a function with <code>$name(params)</code> syntax followed by a block in braces:</p>
 <pre><code class="language-lil">$greet() {
@@ -1153,55 +1126,6 @@ print roll
 print $fib(10)
 </code></pre>
 <p>lil’s functions work in both interpreted and compiled (AOT) mode.</p>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="comments"><a class="header" href="#comments">Comments</a></h1>
-<p>lil supports line comments with <code>#</code> and <code>//</code>:</p>
-<pre><code class="language-lil">x = 42  # this is a comment
-// this is also a comment
-print x
-</code></pre>
-<p>Comments are ignored by the parser. They are useful for documenting your code.</p>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="continue"><a class="header" href="#continue">Continue</a></h1>
-<p>The <code>continue</code> keyword skips the rest of the current loop iteration and jumps to the next one. It works in <code>while</code>, <code>for</code>, and <code>loop</code> blocks.</p>
-<h2 id="skip-even-numbers-print-odds"><a class="header" href="#skip-even-numbers-print-odds">Skip even numbers, print odds</a></h2>
-<pre><code class="language-lil">for i = 1 to 10 {
-  if i % 2 == 0 { continue }
-  print i
-}
-</code></pre>
-<p>Prints 1, 3, 5, 7, 9. When <code>i</code> is even, <code>continue</code> skips the <code>print</code> and goes to the next iteration.</p>
-<p>Accumulate odds into a variable:</p>
-<pre><code class="language-lil">sum_odds = 0
-for i = 1 to 10 {
-  if i % 2 == 0 { continue }
-  sum_odds = sum_odds + i
-}
-print sum_odds
-</code></pre>
-<h2 id="input-validation-loop"><a class="header" href="#input-validation-loop">Input validation loop</a></h2>
-<p>Skip bad input and keep asking until valid:</p>
-<pre><code class="language-lil">while 1 {
-  age = &amp;sys|readln
-  if age == "" { continue }
-  age = &amp;sys|tonum age
-  if age &lt; 1 { continue }
-  print "your age is $age"
-  break
-}
-</code></pre>
-<p>Both empty input and non-positive numbers hit <code>continue</code>, jumping back to the top of the while loop. Only a valid age escapes the loop.</p>
-<h2 id="continue-in-a-while-loop"><a class="header" href="#continue-in-a-while-loop">Continue in a while loop</a></h2>
-<pre><code class="language-lil">i = 0
-count = 0
-while i &lt; 100 {
-  i = i + 1
-  if i % 3 == 0 { continue }
-  count = count + 1
-}
-print count
-</code></pre>
-<p>Counts how many numbers from 1 to 100 are not divisible by 3.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="functions-with-parameters"><a class="header" href="#functions-with-parameters">Functions with Parameters</a></h1>
 <p>Functions can take parameters and return values. This page covers practical patterns, library integration, and advanced behavior.</p>
@@ -1323,6 +1247,112 @@ print $fib(10)
 <h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
 <p>Function calls work in both interpreted and compiled (AOT) mode. In compiled mode, each function becomes a standalone C function with its own type inference pass.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="input-and-output"><a class="header" href="#input-and-output">Input and Output</a></h1>
+<p>lil keeps I/O simpler than Python. No file objects, no context managers, no close() calls. Just print, input, and a few file library functions.</p>
+<h2 id="print"><a class="header" href="#print">Print</a></h2>
+<p>The <code>print</code> statement outputs text. No parentheses unlike Python’s <code>print()</code>:</p>
+<pre><code class="language-lil">print "hello world"
+</code></pre>
+<p>Print multiple values separated by commas:</p>
+<pre><code class="language-lil">name = "alice"
+print "hello", name
+</code></pre>
+<pre><code class="language-lil">x = 42
+print "the answer is", x
+</code></pre>
+<h2 id="input"><a class="header" href="#input">Input</a></h2>
+<p>The <code>input</code> statement reads a line from stdin and stores it in a variable:</p>
+<pre><code class="language-lil">input name
+print "hello", name
+</code></pre>
+<p>Show a prompt string:</p>
+<pre><code class="language-lil">input "enter your name: " name
+print "hello", name
+</code></pre>
+<p>In Python, you’d write <code>name = input("enter your name: ")</code>. In lil, <code>input</code> is a statement, not a function call. The variable comes after the optional prompt.</p>
+<pre><code class="language-lil">input "type something: " s
+len = &amp;string|len $s
+print "you typed", len, "characters"
+</code></pre>
+<h2 id="file-io"><a class="header" href="#file-io">File I/O</a></h2>
+<p>lil uses the <code>&amp;file|</code> library for file operations. No <code>open()</code> / <code>close()</code> needed:</p>
+<pre><code class="language-lil">data = &amp;file|read "config.txt"
+</code></pre>
+<p>In Python that’s <code>with open("config.txt") as f: data = f.read()</code>. lil does it in one call.</p>
+<pre><code class="language-lil">text = &amp;file|read "notes.txt"
+if text == "" {
+  print "file is empty or missing"
+}
+</code></pre>
+<p>Writing a file:</p>
+<pre><code class="language-lil">&amp;file|write "output.txt" "hello world"
+</code></pre>
+<p>You can write the result of an expression directly:</p>
+<pre><code class="language-lil">today = &amp;date|standart
+&amp;file|write "date.txt" $today
+</code></pre>
+<p>Appending to a file:</p>
+<pre><code class="language-lil">&amp;file|append "log.txt" "new entry"
+</code></pre>
+<p>Check if a file exists:</p>
+<pre><code class="language-lil">if &amp;file|exists "data.txt" == 1 {
+  data = &amp;file|read "data.txt"
+  print data
+}
+</code></pre>
+<p>List directory contents:</p>
+<pre><code class="language-lil">files = &amp;file|list "/home/user"
+print files
+</code></pre>
+<p>See the <a href="#built-in-libraries">Built-in Libraries</a> page for the full file library reference.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="print-1"><a class="header" href="#print-1">Print</a></h1>
+<p>The <code>print</code> statement outputs values to stdout.</p>
+<pre><code class="language-lil">print "hello"
+print 42
+print 3.14
+</code></pre>
+<p>Multiple values separated by commas are printed with spaces between them:</p>
+<pre><code class="language-lil">print "the answer is", 42
+</code></pre>
+<p>Print with no arguments is a syntax error. To print a blank line, print an empty string:</p>
+<pre><code class="language-lil">print ""
+</code></pre>
+<p>Print the result of a library function directly:</p>
+<pre><code class="language-lil">print &amp;date|full
+</code></pre>
+<p>Print multiple results from different functions in one line:</p>
+<pre><code class="language-lil">print &amp;date|minimal, &amp;math|random
+</code></pre>
+<p>Print values alongside variables:</p>
+<pre><code class="language-lil">name = "bob"
+score = 95
+print "player", name, "scored", score
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="input-1"><a class="header" href="#input-1">Input</a></h1>
+<p>The <code>input</code> statement reads a line from stdin and stores it in a variable as a string.</p>
+<pre><code class="language-lil">input name
+print "hello", name
+</code></pre>
+<p>You can provide a prompt string:</p>
+<pre><code class="language-lil">input "what is your name? " name
+print "nice to meet you,", name
+</code></pre>
+<p>If the user does not enter anything (EOF), the variable is set to an empty string:</p>
+<pre><code class="language-lil">input "press enter to continue" x
+print "ok, continuing"
+</code></pre>
+<p>Force input as a number and do a calculation:</p>
+<pre><code class="language-lil">force int input "age: " age
+print "next year youll be", age + 1
+</code></pre>
+<p>Read a number input and use it in an expression directly after:</p>
+<pre><code class="language-lil">force int input "enter a number: " n
+result = n * 2
+print "doubled:", result
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h1>
 <p>lil uses <code>try</code>/<code>catch</code> for handling runtime errors, similar to Python’s <code>try</code>/<code>except</code>.</p>
 <h2 id="basic-trycatch"><a class="header" href="#basic-trycatch">Basic try/catch</a></h2>
@@ -1435,114 +1465,6 @@ print "you entered:", s
 <li>Expose low-level behavior (memory addresses, direct compilation)</li>
 </ul>
 <p>Start with <a href="#templates">templates</a> if you want easier string building, or jump to <a href="#compiled-mode">compiled mode</a> if you need raw speed.</p>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="templates"><a class="header" href="#templates">Templates</a></h1>
-<p>Template strings let you embed variable values inside a string using <code>$varname</code>. In Python this would be an f-string like <code>f"hello {name}"</code>. In lil it’s <code>"hello $name"</code>:</p>
-<pre><code class="language-lil">name = "alice"
-age = 30
-print "my name is $name and i am $age years old"
-</code></pre>
-<p>This prints: <code>my name is alice and i am 30 years old</code></p>
-<h2 id="storing-template-results"><a class="header" href="#storing-template-results">Storing template results</a></h2>
-<p>Templates work anywhere a string is expected, including variable assignment:</p>
-<pre><code class="language-lil">greeting = "hello $name"
-print greeting
-</code></pre>
-<pre><code class="language-lil">username = "bob"
-score = 95
-msg = "player $username scored $score points"
-print msg
-</code></pre>
-<h2 id="templates-with-function-results"><a class="header" href="#templates-with-function-results">Templates with function results</a></h2>
-<p>Variables set from library functions work in templates too:</p>
-<pre><code class="language-lil">now = &amp;date|minimal
-print "the time is $now"
-</code></pre>
-<pre><code class="language-lil">rand = &amp;math|random 100
-print "your lucky number is $rand"
-</code></pre>
-<h2 id="templates-in-conditions"><a class="header" href="#templates-in-conditions">Templates in conditions</a></h2>
-<pre><code class="language-lil">name = &amp;sys|readln
-if &amp;string|len name &gt; 0 {
-  print "welcome, $name"
-}
-</code></pre>
-<h2 id="if-a-variable-doesnt-exist"><a class="header" href="#if-a-variable-doesnt-exist">If a variable doesn’t exist</a></h2>
-<p>If the variable does not exist, its value defaults to <code>0</code>.</p>
-<pre><code class="language-lil">print "value is $undefined_var"   # prints "value is 0"
-</code></pre>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="the-has-operator"><a class="header" href="#the-has-operator">The Has Operator</a></h1>
-<p>The <code>has</code> operator checks if a variable exists or if a string contains a substring. It can only be used inside <code>if</code> conditions.</p>
-<h2 id="variable-existence"><a class="header" href="#variable-existence">Variable existence</a></h2>
-<pre><code class="language-lil">if has x {
-  print "x exists"
-}
-</code></pre>
-<p>This checks whether the variable <code>x</code> has been assigned. If the variable was never assigned, this is false.</p>
-<p>A practical use: check if a library call returned something useful:</p>
-<pre><code class="language-lil">content = &amp;file|read "data.txt"
-if has content {
-  print "file read successfully, length=&amp;string|len content"
-}
-</code></pre>
-<p>The <code>&amp;file|read</code> function returns nothing (unset variable) if the file doesn’t exist. <code>has content</code> tells you if it succeeded.</p>
-<h2 id="substring-search"><a class="header" href="#substring-search">Substring search</a></h2>
-<pre><code class="language-lil">text = "hello world"
-if text has "world" {
-  print "found"
-}
-</code></pre>
-<p>Check if a URL contains a protocol:</p>
-<pre><code class="language-lil">url = "https://example.com"
-if url has "https" {
-  print "secure connection"
-}
-</code></pre>
-<h2 id="multiple-has-conditions-combined"><a class="header" href="#multiple-has-conditions-combined">Multiple has conditions combined</a></h2>
-<p>You can chain <code>not</code> with <code>has</code>:</p>
-<pre><code class="language-lil">if has result and result has "error" {
-  print "got an error response"
-}
-</code></pre>
-<p>If <code>result</code> was never set, the first <code>has</code> is false and the substring check is never evaluated. This is a safe way to check both existence and content.</p>
-<h2 id="flags"><a class="header" href="#flags">Flags</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>flag</th><th>meaning</th></tr>
-</thead>
-<tbody>
-<tr><td><code>nocase</code></td><td>case insensitive search</td></tr>
-<tr><td><code>anywhere</code></td><td>search anywhere in the string (default)</td></tr>
-<tr><td><code>word</code></td><td>match whole words only</td></tr>
-</tbody>
-</table>
-</div>
-<pre><code class="language-lil">if text has nocase "WORLD" {
-  print "found case insensitive"
-}
-
-if text has word "world" {
-  print "found as whole word"
-}
-</code></pre>
-<p>You can combine flags:</p>
-<pre><code class="language-lil">if text has nocase anywhere "WORLD" {
-  print "found"
-}
-</code></pre>
-<h2 id="has-vs-regular-comparison"><a class="header" href="#has-vs-regular-comparison">Has vs regular comparison</a></h2>
-<p><code>has</code> checks existence, not value. Use <code>==</code> to check a value:</p>
-<pre><code class="language-lil">x = 0
-if has x { print "x exists" }   # prints (x was assigned)
-if x == 0 { print "x is zero" } # also prints
-
-y = ""
-if has y { print "y exists" }   # prints (y was assigned, even empty)
-if y == "" { print "y is empty" } # also prints
-</code></pre>
-<p>A variable can exist but hold a falsy value. Use <code>has</code> when you care whether it was assigned at all, not what it holds.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="compiled-mode"><a class="header" href="#compiled-mode">Compiled Mode</a></h1>
 <p>lil can compile scripts into standalone binaries. The resulting executable does not need lil to run. Think of it like Cython for Python: same source, faster execution, no interpreter required.</p>

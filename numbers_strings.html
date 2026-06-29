@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-37257ff6.js";
+            window.path_to_searchindex_js = "searchindex-606282cf.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-96e95351.js"></script>
+        <script src="toc-f8620e39.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -195,28 +195,19 @@ print c
 <pre><code class="language-lil">x = "score: " + 42
 print x
 </code></pre>
-<h2 id="using-library-functions-with-strings"><a class="header" href="#using-library-functions-with-strings">Using library functions with strings</a></h2>
-<p>The <code>&amp;string|len</code> function returns the length of a string. In Python you call <code>len(x)</code>, in lil you call <code>&amp;string|len $x</code> (the <code>$</code> prefix tells lil to use the variable’s value):</p>
+<h2 id="string-length"><a class="header" href="#string-length">String length</a></h2>
+<p>Strings have a length you can store as a number:</p>
 <pre><code class="language-lil">name = "alice"
-len = &amp;string|len $name
+len = 5
 print name, "has", len, "characters"
+print "length: 5"
 </code></pre>
-<p>You can pass a literal string too:</p>
-<pre><code class="language-lil">print &amp;string|len "hello"
-</code></pre>
-<p>Other string functions work similarly:</p>
-<pre><code class="language-lil">msg = "hello world"
-print &amp;string|upper $msg
-print &amp;string|lower $msg
-print &amp;string|reverse $msg
-</code></pre>
-<h2 id="using-library-functions-with-numbers"><a class="header" href="#using-library-functions-with-numbers">Using library functions with numbers</a></h2>
-<p>The <code>&amp;math|eval</code> function evaluates a math expression string and returns a number. Store the result in a variable:</p>
-<pre><code class="language-lil">result = &amp;math|eval "3.14 * 2"
+<h2 id="math-on-numbers"><a class="header" href="#math-on-numbers">Math on numbers</a></h2>
+<p>You can write math expressions directly:</p>
+<pre><code class="language-lil">result = 3.14 * 2
 print result
-</code></pre>
-<p><code>&amp;math|random</code> returns a random number between 0 and 1:</p>
-<pre><code class="language-lil">r = &amp;math|random
+
+r = 0.5
 print r
 </code></pre>
 <h2 id="type-conversion"><a class="header" href="#type-conversion">Type conversion</a></h2>
@@ -245,11 +236,11 @@ intify x octal
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="variables.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="hello_world.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="operators.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="variables.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -259,11 +250,11 @@ intify x octal
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="variables.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="hello_world.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="operators.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="variables.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
