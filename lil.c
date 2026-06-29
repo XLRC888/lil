@@ -1134,6 +1134,13 @@ static void gtk_reg_w(const char *name, GtkWidget *w) {
 }
 static void gtk_destroy_cb(GtkWidget *w, gpointer d) {
     (void)d;
+    for (int i = 0; i < gtk_wc; i++) {
+        if (gtk_ws[i].widget == w) {
+            gtk_ws[i].widget = NULL;
+            gtk_ws[i].name[0] = 0;
+            break;
+        }
+    }
     gtk_window_gone = 1;
     if (gtk_in_main) gtk_main_quit();
 }
