@@ -29,3 +29,35 @@ Assignment always goes `variable = expression`:
 ```lil
 y = x + 50
 ```
+
+## Forcing variable types
+
+You can lock a variable to its current type with `force`. This prevents `strify` and `intify` from converting it:
+
+```lil
+x = 42
+force x           # x is now locked to numeric type
+strify x          # ERROR: cannot strify a forced variable
+unforce x         # unlock
+strify x          # works now
+print x           # prints "42"
+```
+
+Combined assignment and force:
+
+```lil
+force x = 42      # assign and lock in one step
+unforce x = 56    # unlock and assign in one step
+```
+
+`force int input` reads input, validates it as a number, and forces the variable:
+
+```lil
+force int input "Enter your age: " age
+```
+
+`force str input` reads input as a string and forces it:
+
+```lil
+force str input "Enter your name: " name
+```
