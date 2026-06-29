@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -175,7 +175,30 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="functions"><a class="header" href="#functions">Functions</a></h1>
-<p>lil has two kinds of functions: built-in library functions and user-defined functions.</p>
+<p>lil has two kinds of functions: built-in library functions from the standard libraries, and user-defined functions you write yourself.</p>
+<h2 id="built-in-library-functions"><a class="header" href="#built-in-library-functions">Built-in Library Functions</a></h2>
+<p>These are functions that come with lil, organized by library like <code>math</code>, <code>string</code>, <code>file</code>, <code>sys</code>, and <code>date</code>. You call them with <code>&amp;</code> syntax:</p>
+<pre><code class="language-lil">&amp;math|randint 1 6
+</code></pre>
+<p>In Python, you’d write <code>import random</code> then <code>random.randint(1, 6)</code>. In lil, it’s <code>&amp;math|randint 1 6</code> in one step. The library name comes after <code>&amp;</code>, then <code>|</code>, then the function name, then space-separated arguments.</p>
+<pre><code class="language-lil">name = "alice"
+upper = &amp;string|upper $name
+print upper
+</code></pre>
+<p>See the <a href="builtins.html">Built-in Libraries</a> page for the full list of available functions.</p>
+<h2 id="user-defined-functions"><a class="header" href="#user-defined-functions">User-defined Functions</a></h2>
+<p>When you need custom logic, define your own functions with <code>$</code> syntax:</p>
+<pre><code class="language-lil">$add(a, b) {
+  a + b
+}
+</code></pre>
+<p>In Python, you’d write <code>def add(a, b): return a + b</code>. In lil, there’s no <code>def</code>, no colon, and no <code>return</code> keyword. The function body is a block in braces, and the last expression’s value is automatically returned.</p>
+<pre><code class="language-lil">result = $add(3, 4)
+print result
+</code></pre>
+<p>See <a href="user_functions.html">User-defined Functions</a> and <a href="functions_advanced.html">Advanced Functions</a> for details.</p>
+<h2 id="choosing-which-to-use"><a class="header" href="#choosing-which-to-use">Choosing Which to Use</a></h2>
+<p>Library functions handle built-in operations: math, strings, files, dates, system commands. User-defined functions let you organize your own code, avoid repetition, and build reusable abstractions. You’ll typically use both together.</p>
 
                     </main>
 

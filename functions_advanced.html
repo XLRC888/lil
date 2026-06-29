@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -175,28 +175,68 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="functions-with-parameters"><a class="header" href="#functions-with-parameters">Functions with Parameters</a></h1>
-<p>Functions can take parameters and return values.</p>
-<h2 id="defining-a-function"><a class="header" href="#defining-a-function">Defining a function</a></h2>
+<p>Functions can take parameters and return values. This page covers practical patterns, library integration, and advanced behavior.</p>
+<h2 id="defining-a-function"><a class="header" href="#defining-a-function">Defining a Function</a></h2>
 <p>Use <code>$name(params)</code> syntax followed by the function body in braces:</p>
 <pre><code class="language-lil">$add(a, b) {
   a + b
 }
 </code></pre>
-<h2 id="calling-a-function"><a class="header" href="#calling-a-function">Calling a function</a></h2>
-<p>Call a function with <code>$name(args)</code>:</p>
+<h2 id="calling-a-function"><a class="header" href="#calling-a-function">Calling a Function</a></h2>
 <pre><code class="language-lil">result = $add(3, 4)
-print result    # prints 7
+print result
 </code></pre>
-<p>Parameters are passed by value. Inside the function, parameters act as local variables that don’t leak to the caller’s scope.</p>
-<h2 id="return-values"><a class="header" href="#return-values">Return values</a></h2>
-<p>The last expression in the function body is the return value. There is no <code>return</code> keyword:</p>
+<h2 id="practical-predicate-functions"><a class="header" href="#practical-predicate-functions">Practical Predicate Functions</a></h2>
+<p>Functions that return 0 or 1 as boolean results:</p>
+<pre><code class="language-lil">$is_even(n) {
+  n % 2 == 0
+}
+
+$is_odd(n) {
+  not $is_even(n)
+}
+
+print $is_even(42)
+print $is_odd(42)
+</code></pre>
+<h2 id="using-library-functions-inside-user-functions"><a class="header" href="#using-library-functions-inside-user-functions">Using Library Functions Inside User Functions</a></h2>
+<p>Built-in library functions work inside your user-defined functions:</p>
+<pre><code class="language-lil">$random_in_range(min, max) {
+  &amp;math|randint $min $max
+}
+
+r = $random_in_range(5, 10)
+print r
+</code></pre>
+<p>The <code>$min</code> and <code>$max</code> prefix tells lil to use the parameter’s value instead of the literal string “min”.</p>
+<pre><code class="language-lil">$rand_name() {
+  &amp;math|choice "alice" "bob" "charlie"
+}
+
+$greet() {
+  name = $rand_name()
+  print "hello", name
+}
+
+$greet()
+</code></pre>
+<pre><code class="language-lil">$slugify(s) {
+  lower = &amp;string|lower $s
+  &amp;string|replace $lower " " "-"
+}
+
+slug = $slugify("Hello World")
+print slug
+</code></pre>
+<h2 id="return-values"><a class="header" href="#return-values">Return Values</a></h2>
+<p>The last expression in the function body is the return value:</p>
 <pre><code class="language-lil">$double(x) {
   x * 2
 }
 
-print $double(21)   # prints 42
+print $double(21)
 </code></pre>
-<p>If the function ends with an <code>if</code> expression, the taken branch’s last expression is returned:</p>
+<p>If a function ends with an <code>if</code> expression, the taken branch’s last value is returned:</p>
 <pre><code class="language-lil">$sign(n) {
   if n &gt; 0 {
     1
@@ -207,18 +247,40 @@ print $double(21)   # prints 42
   }
 }
 
-print $sign(-5)   # prints -1
+print $sign(-5)
 </code></pre>
-<p>If a function doesn’t end with a value-producing expression, it returns 0:</p>
+<p>If there’s no value-producing expression, it returns 0:</p>
 <pre><code class="language-lil">$noop() {
   print "no return"
 }
 
 x = $noop()
-print x             # prints 0
+print x
+</code></pre>
+<h2 id="variable-saverestore"><a class="header" href="#variable-saverestore">Variable Save/Restore</a></h2>
+<p>When you call a function, lil saves all current variables before running the function body and restores them after. Parameters and any variables changed inside stay contained:</p>
+<pre><code class="language-lil">x = "hello"
+
+$test() {
+  x = "world"
+  print x
+}
+
+$test()
+print x
+</code></pre>
+<p>Parameters are always save/restored independently of global variables:</p>
+<pre><code class="language-lil">x = 100
+
+$f(x) {
+  x = x + 1
+  print x
+}
+
+$f(5)
+print x
 </code></pre>
 <h2 id="recursion"><a class="header" href="#recursion">Recursion</a></h2>
-<p>Functions can call themselves:</p>
 <pre><code class="language-lil">$fib(n) {
   if n &lt;= 2 {
     1
@@ -227,7 +289,7 @@ print x             # prints 0
   }
 }
 
-print $fib(10)      # prints 55
+print $fib(10)
 </code></pre>
 <h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
 <p>Function calls work in both interpreted and compiled (AOT) mode. In compiled mode, each function becomes a standalone C function with its own type inference pass.</p>

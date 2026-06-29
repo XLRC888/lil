@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -182,12 +182,32 @@
 }
 </code></pre>
 <p>This checks whether the variable <code>x</code> has been assigned. If the variable was never assigned, this is false.</p>
+<p>A practical use: check if a library call returned something useful:</p>
+<pre><code class="language-lil">content = &amp;file|read "data.txt"
+if has content {
+  print "file read successfully, length=&amp;string|len content"
+}
+</code></pre>
+<p>The <code>&amp;file|read</code> function returns nothing (unset variable) if the file doesn’t exist. <code>has content</code> tells you if it succeeded.</p>
 <h2 id="substring-search"><a class="header" href="#substring-search">Substring search</a></h2>
 <pre><code class="language-lil">text = "hello world"
 if text has "world" {
   print "found"
 }
 </code></pre>
+<p>Check if a URL contains a protocol:</p>
+<pre><code class="language-lil">url = "https://example.com"
+if url has "https" {
+  print "secure connection"
+}
+</code></pre>
+<h2 id="multiple-has-conditions-combined"><a class="header" href="#multiple-has-conditions-combined">Multiple has conditions combined</a></h2>
+<p>You can chain <code>not</code> with <code>has</code>:</p>
+<pre><code class="language-lil">if has result and result has "error" {
+  print "got an error response"
+}
+</code></pre>
+<p>If <code>result</code> was never set, the first <code>has</code> is false and the substring check is never evaluated. This is a safe way to check both existence and content.</p>
 <h2 id="flags"><a class="header" href="#flags">Flags</a></h2>
 <div class="table-wrapper">
 <table>
@@ -214,6 +234,17 @@ if text has word "world" {
   print "found"
 }
 </code></pre>
+<h2 id="has-vs-regular-comparison"><a class="header" href="#has-vs-regular-comparison">Has vs regular comparison</a></h2>
+<p><code>has</code> checks existence, not value. Use <code>==</code> to check a value:</p>
+<pre><code class="language-lil">x = 0
+if has x { print "x exists" }   # prints (x was assigned)
+if x == 0 { print "x is zero" } # also prints
+
+y = ""
+if has y { print "y exists" }   # prints (y was assigned, even empty)
+if y == "" { print "y is empty" } # also prints
+</code></pre>
+<p>A variable can exist but hold a falsy value. Use <code>has</code> when you care whether it was assigned at all, not what it holds.</p>
 
                     </main>
 

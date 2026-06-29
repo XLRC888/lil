@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -181,7 +181,8 @@
 <p>Run it:</p>
 <pre><code class="language-bash">lil hello.lil
 </code></pre>
-<p>The <code>print</code> statement outputs text to stdout and appends a newline. You can print numbers and strings:</p>
+<p>In Python you write <code>print("hello")</code> with parentheses. In lil, just <code>print "hello"</code>. No parens, no commas between the keyword and its arguments.</p>
+<p>The <code>print</code> statement outputs text to stdout and appends a newline:</p>
 <pre><code class="language-lil">print 42
 print "hello"
 </code></pre>
@@ -189,6 +190,18 @@ print "hello"
 <pre><code class="language-lil">print "the answer is", 42
 </code></pre>
 <p>This prints: <code>the answer is 42</code></p>
+<p>Print with a variable:</p>
+<pre><code class="language-lil">name = "alice"
+print "hello", name
+</code></pre>
+<p>Print the result of a library function by assigning it first:</p>
+<pre><code class="language-lil">d = &amp;date|minimal
+print "today is", d
+</code></pre>
+<p>Or call the function directly inside print:</p>
+<pre><code class="language-lil">print "today is", &amp;date|full
+</code></pre>
+<p>What you learned: <code>print</code> works without parens, commas separate multiple values, and you can store function results in variables or use them directly in print.</p>
 
                     </main>
 

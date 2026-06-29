@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -176,16 +176,48 @@
                     <main>
                         <h1 id="comparison-and-logic"><a class="header" href="#comparison-and-logic">Comparison and Logic</a></h1>
 <h2 id="comparisons"><a class="header" href="#comparisons">Comparisons</a></h2>
-<p>Comparisons return <code>1</code> (true) or <code>0</code> (false):</p>
+<p>Comparisons return <code>1</code> (true) or <code>0</code> (false). The operators are the same as Python:</p>
 <pre><code class="language-lil">x = 5 == 5    # 1 (true)
 y = 5 != 5    # 0 (false)
 z = 5 &lt; 10    # 1
 w = 5 &gt;= 10   # 0
 </code></pre>
 <p>Full list: <code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code></p>
-<p>You can compare strings lexicographically:</p>
+<p>You can compare strings lexicographically, same as Python:</p>
 <pre><code class="language-lil">print "apple" &lt; "banana"   # 1
 print "abc" == "abc"        # 1
+</code></pre>
+<h2 id="complex-conditions"><a class="header" href="#complex-conditions">Complex conditions</a></h2>
+<p>Combine comparisons with <code>and</code>, <code>or</code>, <code>not</code>:</p>
+<pre><code class="language-lil">x = 7
+if x &gt; 0 and x &lt; 10 {
+  print "in range"
+}
+</code></pre>
+<p>Store the result of a complex condition:</p>
+<pre><code class="language-lil">in_range = x &gt; 0 and x &lt; 10
+if in_range {
+  print "x is between 1 and 9"
+}
+</code></pre>
+<h2 id="using-not-for-negation"><a class="header" href="#using-not-for-negation">Using not for negation</a></h2>
+<pre><code class="language-lil">logged_in = 0
+if not logged_in {
+  print "please log in"
+}
+</code></pre>
+<h2 id="comparison-with-library-function-results"><a class="header" href="#comparison-with-library-function-results">Comparison with library function results</a></h2>
+<p>String functions return values you can compare:</p>
+<pre><code class="language-lil">name = "alexander"
+if &amp;string|len name &gt; 5 {
+  print "long name"
+}
+</code></pre>
+<p>Store and use multiple comparisons:</p>
+<pre><code class="language-lil">len = &amp;string|len name
+if len &gt; 2 and len &lt; 10 {
+  print "name length is reasonable"
+}
 </code></pre>
 <h2 id="logical-operators"><a class="header" href="#logical-operators">Logical operators</a></h2>
 <pre><code class="language-lil">a = 1 and 0    # 0 (false)

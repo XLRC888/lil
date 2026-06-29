@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -175,59 +175,123 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="built-in-libraries"><a class="header" href="#built-in-libraries">Built-in Libraries</a></h1>
-<p>Libraries are called with the <code>function</code> keyword:</p>
-<pre><code class="language-lil">function &lt;library&gt; &lt;function&gt; &lt;arguments...&gt;
+<p>Libraries are called with <code>&amp;</code> syntax:</p>
+<pre><code class="language-lil">&amp;&lt;library&gt;|&lt;function&gt; &lt;arguments...&gt;
 </code></pre>
-<p>Arguments are separated by spaces. If an argument is a variable name, prefix it with <code>$</code> to dereference it. Without <code>$</code>, the argument is treated as a literal string.</p>
+<p>Arguments are separated by spaces. Prefix a variable name with <code>$</code> to dereference it. Without <code>$</code>, the argument is treated as a literal string.</p>
 <h2 id="string-library"><a class="header" href="#string-library">string library</a></h2>
-<pre><code class="language-lil">function string lower $s       # convert to lowercase (modifies $s)
-function string upper $s       # convert to uppercase (modifies $s)
-function string reverse $s     # reverse the string (modifies $s)
-function string len $s         # returns the length
-function string repeat $s 3    # repeat the string 3 times
-function string substr $s 1 3  # extract substring (start index, length)
-function string replace $s "old" "new"  # replace all occurrences
+<pre><code class="language-lil">&amp;string|lower $s
+&amp;string|upper $s
+&amp;string|reverse $s
+&amp;string|len $s
+&amp;string|repeat $s 3
+&amp;string|substr $s 1 3
+&amp;string|replace $s "old" "new"
 </code></pre>
 <p>The <code>$</code> prefix tells lil to use the variable’s value:</p>
 <pre><code class="language-lil">name = "alice"
-function string upper $name
-print name    # prints "ALICE"
+&amp;string|upper $name
+print name
+</code></pre>
+<p>Assign the result to a variable:</p>
+<pre><code class="language-lil">name = "alice"
+len = &amp;string|len $name
+print len
+</code></pre>
+<pre><code class="language-lil">msg = "hello world"
+upper = &amp;string|upper $msg
+print upper
+</code></pre>
+<pre><code class="language-lil">greeting = "ha"
+repeated = &amp;string|repeat $greeting 3
+print repeated
 </code></pre>
 <h2 id="math-library"><a class="header" href="#math-library">math library</a></h2>
-<pre><code class="language-lil">function math eval "2 + 3 * 4"  # evaluate math expression, returns number
-function math random            # random number between 0 and 1
-function math randint 1 10      # random integer between 1 and 10
-function math factors 12        # returns string of factors: "1 2 3 4 6 12"
-function math fib 10            # returns the 10th fibonacci number
-function math isprime 7         # returns 1 if prime, 0 otherwise
-function math sleep 0.5         # sleep for N seconds (can be fractional)
-function math hasops "2+3"      # returns 1 if string contains math operators
-function math choice "a" "b" "c"  # returns a random argument
+<pre><code class="language-lil">&amp;math|eval "2 + 3 * 4"
+&amp;math|random
+&amp;math|randint 1 10
+&amp;math|factors 12
+&amp;math|fib 10
+&amp;math|isprime 7
+&amp;math|sleep 0.5
+&amp;math|hasops "2+3"
+&amp;math|choice "a" "b" "c"
+</code></pre>
+<p>Assign results to variables:</p>
+<pre><code class="language-lil">roll = &amp;math|randint 1 6
+print "you rolled", roll
+</code></pre>
+<pre><code class="language-lil">n = &amp;math|random
+print n
+</code></pre>
+<pre><code class="language-lil">prime = &amp;math|isprime 17
+print prime
+</code></pre>
+<pre><code class="language-lil">dice = &amp;math|choice "fire" "ice" "lightning"
+print dice
 </code></pre>
 <h2 id="file-library"><a class="header" href="#file-library">file library</a></h2>
-<pre><code class="language-lil">content = function file read "path"       # read entire file, returns string
-function file write "path" "content"       # write to file (overwrites)
-function file append "path" "content"      # append to file
-function file delete "path"                # delete file, returns 1 on success
-exists = function file exists "path"       # returns 1 if file exists, 0 otherwise
-listing = function file list "path"        # list directory contents, newline separated
+<pre><code class="language-lil">content = &amp;file|read "path"
+&amp;file|write "path" "content"
+&amp;file|append "path" "content"
+&amp;file|delete "path"
+exists = &amp;file|exists "path"
+listing = &amp;file|list "path"
+</code></pre>
+<p>Most file functions return values you’ll want to capture:</p>
+<pre><code class="language-lil">data = &amp;file|read "config.txt"
+print data
+</code></pre>
+<pre><code class="language-lil">ok = &amp;file|delete "temp.tmp"
+if ok == 1 {
+  print "deleted"
+}
+</code></pre>
+<pre><code class="language-lil">files = &amp;file|list "/home/user"
+print files
+</code></pre>
+<pre><code class="language-lil">cfg = &amp;file|read "settings.cfg"
+if cfg == "" {
+  print "no config found"
+}
 </code></pre>
 <h2 id="sys-library"><a class="header" href="#sys-library">sys library</a></h2>
-<pre><code class="language-lil">output = function sys cmd "command"        # run shell command, returns stdout
-value = function sys env "VARNAME"         # get environment variable, returns "" if not set
+<pre><code class="language-lil">output = &amp;sys|cmd "command"
+value = &amp;sys|env "VARNAME"
+</code></pre>
+<p>Assign results to check environment variables or capture command output:</p>
+<pre><code class="language-lil">home = &amp;sys|env "HOME"
+print "home directory:", home
+</code></pre>
+<pre><code class="language-lil">result = &amp;sys|cmd "ls -la"
+print result
+</code></pre>
+<pre><code class="language-lil">shell = &amp;sys|env "SHELL"
+print "your shell is", shell
 </code></pre>
 <h2 id="date-library"><a class="header" href="#date-library">date library</a></h2>
-<pre><code class="language-lil">print function date minimal          # "1.6.26" (or "6/1/26" in US mode)
-print function date standart         # "01.06.2026"
-print function date standartplus     # "01.06.2026 Monday"
-print function date full             # "01.06.2026 Monday 12:00:00"
-print function date full noseconds   # without seconds
-print function date full noday       # without day name
-print function date fullplus         # with milliseconds
-function date set format eu          # day.month.year (default)
-function date set format us          # month/day/year
+<pre><code class="language-lil">print &amp;date|minimal
+print &amp;date|standart
+print &amp;date|standartplus
+print &amp;date|full
+print &amp;date|full noseconds
+print &amp;date|full noday
+print &amp;date|fullplus
+&amp;date|format eu
+&amp;date|format us
+print &amp;date|format
 </code></pre>
-<p>All <code>date</code> functions return the date string, so you <code>print</code> the return value.</p>
+<p>Dates are commonly assigned to variables for later use:</p>
+<pre><code class="language-lil">today = &amp;date|standart
+print "date:", today
+</code></pre>
+<pre><code class="language-lil">now = &amp;date|full
+print now
+</code></pre>
+<pre><code class="language-lil">short = &amp;date|minimal
+print short
+</code></pre>
+<p>Most <code>date</code> functions return the date string. <code>&amp;date|format</code> returns the current mode (“EU”/“US”), and setting the format returns empty.</p>
 
                     </main>
 

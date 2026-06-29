@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -189,32 +189,56 @@ z = -7
 <pre><code class="language-lil">a = "hello "
 b = "world"
 c = a + b
-print c   # prints "hello world"
+print c
 </code></pre>
 <p>If you add a string to a number, the number is converted to a string first:</p>
 <pre><code class="language-lil">x = "score: " + 42
-print x   # prints "score: 42"
+print x
+</code></pre>
+<h2 id="using-library-functions-with-strings"><a class="header" href="#using-library-functions-with-strings">Using library functions with strings</a></h2>
+<p>The <code>&amp;string|len</code> function returns the length of a string. In Python you call <code>len(x)</code>, in lil you call <code>&amp;string|len $x</code> (the <code>$</code> prefix tells lil to use the variable’s value):</p>
+<pre><code class="language-lil">name = "alice"
+len = &amp;string|len $name
+print name, "has", len, "characters"
+</code></pre>
+<p>You can pass a literal string too:</p>
+<pre><code class="language-lil">print &amp;string|len "hello"
+</code></pre>
+<p>Other string functions work similarly:</p>
+<pre><code class="language-lil">msg = "hello world"
+print &amp;string|upper $msg
+print &amp;string|lower $msg
+print &amp;string|reverse $msg
+</code></pre>
+<h2 id="using-library-functions-with-numbers"><a class="header" href="#using-library-functions-with-numbers">Using library functions with numbers</a></h2>
+<p>The <code>&amp;math|eval</code> function evaluates a math expression string and returns a number. Store the result in a variable:</p>
+<pre><code class="language-lil">result = &amp;math|eval "3.14 * 2"
+print result
+</code></pre>
+<p><code>&amp;math|random</code> returns a random number between 0 and 1:</p>
+<pre><code class="language-lil">r = &amp;math|random
+print r
 </code></pre>
 <h2 id="type-conversion"><a class="header" href="#type-conversion">Type conversion</a></h2>
 <p>Use <code>strify</code> and <code>intify</code> to convert between types explicitly.</p>
 <p><code>strify</code> converts a variable to its string representation:</p>
 <pre><code class="language-lil">x = 42
-strify x     # x is now "42"
+strify x
 </code></pre>
 <p><code>intify</code> converts a variable to a number. If the string is not numeric, it produces an error:</p>
 <pre><code class="language-lil">x = "42"
-intify x     # x is now 42
+intify x
 x = x + 5
-print x      # prints 47
+print x
 
 x = "hello"
-intify x     # error: cannot convert to number
+intify x
 </code></pre>
 <p><code>intify</code> can also format a string as binary, hex, or octal byte representation:</p>
 <pre><code class="language-lil">x = "hello"
-intify x binary   # x is now "01101000 01100101 01101100 01101100 01101111"
-intify x hex      # x is now "68 65 6c 6c 6f"
-intify x octal    # x is now "150 145 154 154 157"
+intify x binary
+intify x hex
+intify x octal
 </code></pre>
 
                     </main>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -187,7 +187,7 @@ print "done"
 </code></pre>
 <p>This prints 1, 2, 3 and then “done”.</p>
 <h2 id="stop-vs-break"><a class="header" href="#stop-vs-break">Stop vs Break</a></h2>
-<p><code>stop</code> and <code>break</code> do the same thing: they exit the innermost enclosing loop immediately. You can use them inside <code>loop</code>, <code>while</code>, and <code>for</code> blocks.</p>
+<p>In Python, only <code>break</code> exists. In lil, <code>stop</code> and <code>break</code> are interchangeable, they both exit the innermost enclosing loop immediately. You can use them inside <code>loop</code>, <code>while</code>, and <code>for</code> blocks.</p>
 <pre><code class="language-lil">while 1 {
   break    # exits the while loop
 }
@@ -201,6 +201,28 @@ for i = 1 to 10 {
 }
 </code></pre>
 <p>Using <code>stop</code> or <code>break</code> outside a loop is an error.</p>
+<h2 id="event-loop-with-a-flag"><a class="header" href="#event-loop-with-a-flag">Event loop with a flag</a></h2>
+<p>A common pattern: run an event loop that stops when a flag is set:</p>
+<pre><code class="language-lil">running = 1
+loop {
+  cmd = &amp;sys|readln
+  if cmd == "quit" { running = 0 }
+  if cmd == "help" { print "commands: quit, help" }
+  if not running { stop }
+}
+</code></pre>
+<p>The flag <code>running</code> starts as 1 (true). When the user types “quit”, the flag goes to 0 and the loop exits on the next iteration.</p>
+<h2 id="repeating-timer-with-sleep"><a class="header" href="#repeating-timer-with-sleep">Repeating timer with sleep</a></h2>
+<p>Using <code>&amp;math|sleep</code> to run something every 2 seconds:</p>
+<pre><code class="language-lil">count = 0
+loop {
+  print "tick $count"
+  count = count + 1
+  &amp;math|sleep 2000
+  if count &gt;= 5 { break }
+}
+</code></pre>
+<p>Sleep takes milliseconds. The loop ticks every 2 seconds for 5 iterations. Store the count and display it through a template.</p>
 
                     </main>
 

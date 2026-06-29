@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -176,15 +176,26 @@
                     <main>
                         <h1 id="print"><a class="header" href="#print">Print</a></h1>
 <p>The <code>print</code> statement outputs values to stdout.</p>
-<pre><code class="language-lil">print "hello"       # prints "hello" followed by a newline
-print 42            # prints "42"
-print 3.14          # prints "3.14"
+<pre><code class="language-lil">print "hello"
+print 42
+print 3.14
 </code></pre>
 <p>Multiple values separated by commas are printed with spaces between them:</p>
-<pre><code class="language-lil">print "the answer is", 42    # prints "the answer is 42"
+<pre><code class="language-lil">print "the answer is", 42
 </code></pre>
 <p>Print with no arguments is a syntax error. To print a blank line, print an empty string:</p>
 <pre><code class="language-lil">print ""
+</code></pre>
+<p>Print the result of a library function directly:</p>
+<pre><code class="language-lil">print &amp;date|full
+</code></pre>
+<p>Print multiple results from different functions in one line:</p>
+<pre><code class="language-lil">print &amp;date|minimal, &amp;math|random
+</code></pre>
+<p>Print values alongside variables:</p>
+<pre><code class="language-lil">name = "bob"
+score = 95
+print "player", name, "scored", score
 </code></pre>
 
                     </main>

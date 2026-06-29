@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -183,7 +183,19 @@ print "hello", name
 <pre><code class="language-lil">input "what is your name? " name
 print "nice to meet you,", name
 </code></pre>
-<p>If the user does not enter anything (EOF), the variable is set to an empty string.</p>
+<p>If the user does not enter anything (EOF), the variable is set to an empty string:</p>
+<pre><code class="language-lil">input "press enter to continue" x
+print "ok, continuing"
+</code></pre>
+<p>Force input as a number and do a calculation:</p>
+<pre><code class="language-lil">force int input "age: " age
+print "next year youll be", age + 1
+</code></pre>
+<p>Read a number input and use it in an expression directly after:</p>
+<pre><code class="language-lil">force int input "enter a number: " n
+result = n * 2
+print "doubled:", result
+</code></pre>
 
                     </main>
 

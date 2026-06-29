@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -182,14 +182,26 @@
 <li>make (optional)</li>
 </ul>
 <h2 id="building-from-source"><a class="header" href="#building-from-source">Building from source</a></h2>
+<p>Python devs are used to <code>pip install</code>. lil works differently: you clone the repo and compile it yourself:</p>
 <pre><code class="language-bash">git clone https://github.com/XLRC888/lil.git
 cd lil
 ./install.sh
 </code></pre>
 <p>This compiles lil.c and copies the binary to <code>~/.local/bin/lil</code>. Make sure that directory is on your PATH.</p>
+<p>Check your PATH to confirm <code>~/.local/bin</code> is listed:</p>
+<pre><code class="language-bash">echo $PATH    # look for /home/yourname/.local/bin
+</code></pre>
 <p>If you prefer to build in place:</p>
 <pre><code class="language-bash">make
 ./lil
+</code></pre>
+<p>After rebuilding with <code>make</code>, always run <code>make install</code> to keep the system binary up to date:</p>
+<pre><code class="language-bash">make
+make install
+</code></pre>
+<p>For GTK support:</p>
+<pre><code class="language-bash">make gtk
+make install-gtk
 </code></pre>
 <h2 id="verifying"><a class="header" href="#verifying">Verifying</a></h2>
 <p>Run <code>lil --help</code> to confirm everything works:</p>

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -175,22 +175,54 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="user-defined-functions"><a class="header" href="#user-defined-functions">User-defined Functions</a></h1>
-<p>Define a function with <code>$name(params)</code> syntax:</p>
+<p>Define a function with <code>$name(params)</code> syntax followed by a block in braces:</p>
 <pre><code class="language-lil">$greet() {
   print "hello"
 }
 
 $greet()
 </code></pre>
-<p>Functions can take parameters and return the last expression’s value:</p>
+<h2 id="parameters-and-return-values"><a class="header" href="#parameters-and-return-values">Parameters and Return Values</a></h2>
+<p>Functions take parameters and return the last expression’s value. There’s no <code>return</code> keyword.</p>
+<p>Python:</p>
+<pre><code class="language-python">def add(a, b):
+    return a + b
+</code></pre>
+<p>lil:</p>
 <pre><code class="language-lil">$add(a, b) {
   a + b
 }
 
 result = $add(3, 4)
-print result    # prints 7
+print result
 </code></pre>
-<p>Parameters are local to the function call — they don’t leak to the caller:</p>
+<h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
+<p>Convert Fahrenheit to Celsius:</p>
+<pre><code class="language-lil">$fahr_to_celsius(f) {
+  (f - 32) * 5 / 9
+}
+
+temp = $fahr_to_celsius(100)
+print temp
+</code></pre>
+<p>Roll a die using a library function inside a user function:</p>
+<pre><code class="language-lil">$roll_dice() {
+  &amp;math|randint 1 6
+}
+
+roll = $roll_dice()
+print "you rolled", roll
+</code></pre>
+<p>Check if a number is even:</p>
+<pre><code class="language-lil">$is_even(n) {
+  n % 2 == 0
+}
+
+x = $is_even(10)
+print x
+</code></pre>
+<h2 id="scope"><a class="header" href="#scope">Scope</a></h2>
+<p>Parameters are local to the function call and don’t leak to the caller:</p>
 <pre><code class="language-lil">x = 10
 
 $set_x(val) {
@@ -198,9 +230,9 @@ $set_x(val) {
 }
 
 $set_x(5)
-print x         # still prints 10 outside
+print x
 </code></pre>
-<p>Functions can modify non-parameter variables (which are global):</p>
+<p>Non-parameter variables inside a function refer to global variables:</p>
 <pre><code class="language-lil">x = 0
 
 $increment() {
@@ -208,13 +240,34 @@ $increment() {
 }
 
 $increment()
-print x    # prints 1
+print x
 </code></pre>
-<p>Functions defined in included libraries can be called from other files using the <code>include</code> statement:</p>
-<pre><code class="language-lil">include mylib
+<h2 id="include"><a class="header" href="#include">Include</a></h2>
+<p>Functions defined in other files can be loaded with <code>include</code>:</p>
+<pre><code class="language-lil">include dice
+
+roll = $roll_dice()
+print roll
 </code></pre>
-<p>This loads and runs the file <code>mylib.lil</code>, which can define functions and variables that the including file can use.</p>
-<p>Functions support recursion and work in both interpreted and compiled (AOT) mode.</p>
+<p>This loads and runs <code>dice.lil</code>, making its functions available. For example, <code>dice.lil</code> might contain:</p>
+<pre><code class="language-lil">$roll_dice() {
+  &amp;math|randint 1 6
+}
+</code></pre>
+<p>Then your main script includes it and uses <code>$roll_dice</code> like any local function.</p>
+<h2 id="recursion"><a class="header" href="#recursion">Recursion</a></h2>
+<p>Functions can call themselves:</p>
+<pre><code class="language-lil">$fib(n) {
+  if n &lt;= 2 {
+    1
+  } else {
+    $fib(n - 1) + $fib(n - 2)
+  }
+}
+
+print $fib(10)
+</code></pre>
+<p>lil’s functions work in both interpreted and compiled (AOT) mode.</p>
 
                     </main>
 

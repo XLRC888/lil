@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -181,34 +181,51 @@ name = "alice"
 </code></pre>
 <p>Variable names must start with a letter and can contain letters, digits, and underscores.</p>
 <p>Variables do not need to be declared before use. The first time you assign to a name, the variable is created. If you use a variable that has not been assigned yet, its value defaults to <code>0</code>:</p>
-<pre><code class="language-lil">print z   # prints 0 (z was never assigned)
+<pre><code class="language-lil">print z
+</code></pre>
+<p>In Python, an undefined variable raises <code>NameError</code>. In lil, you get <code>0</code>. This is useful for counters and accumulators that start at zero implicitly.</p>
+<p>Counting up works naturally:</p>
+<pre><code class="language-lil">count = 0
+count = count + 1
+count = count + 1
+print count
 </code></pre>
 <p>You can reassign variables to values of any type:</p>
 <pre><code class="language-lil">x = 42
 x = "now im a string"
+x = 99
 </code></pre>
-<p>This is fine. lil does not enforce type consistency.</p>
 <p>Assignment always goes <code>variable = expression</code>:</p>
 <pre><code class="language-lil">y = x + 50
+</code></pre>
+<p>Store a library function result in a variable:</p>
+<pre><code class="language-lil">today = &amp;date|standart
+print "date:", today
+</code></pre>
+<p>Store the result of a math expression:</p>
+<pre><code class="language-lil">area = &amp;math|eval "3.14 * 5 * 5"
+print "area is", area
 </code></pre>
 <h2 id="forcing-variable-types"><a class="header" href="#forcing-variable-types">Forcing variable types</a></h2>
 <p>You can lock a variable to its current type with <code>force</code>. This prevents <code>strify</code> and <code>intify</code> from converting it:</p>
 <pre><code class="language-lil">x = 42
-force x           # x is now locked to numeric type
-strify x          # ERROR: cannot strify a forced variable
-unforce x         # unlock
-strify x          # works now
-print x           # prints "42"
+force x
+strify x
+unforce x
+strify x
+print x
 </code></pre>
 <p>Combined assignment and force:</p>
-<pre><code class="language-lil">force x = 42      # assign and lock in one step
-unforce x = 56    # unlock and assign in one step
+<pre><code class="language-lil">force x = 42
+unforce x = 56
 </code></pre>
 <p><code>force int input</code> reads input, validates it as a number, and forces the variable:</p>
 <pre><code class="language-lil">force int input "Enter your age: " age
+print "next year you will be", age + 1
 </code></pre>
 <p><code>force str input</code> reads input as a string and forces it:</p>
 <pre><code class="language-lil">force str input "Enter your name: " name
+print "hello", name
 </code></pre>
 
                     </main>

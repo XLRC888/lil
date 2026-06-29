@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-ac8949e9.js";
+            window.path_to_searchindex_js = "searchindex-37257ff6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-96e95351.js"></script>
@@ -176,15 +176,28 @@
                     <main>
                         <h1 id="operators"><a class="header" href="#operators">Operators</a></h1>
 <h2 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h2>
-<pre><code class="language-lil">a = 10 + 3    # addition, result 13
-b = 10 - 3    # subtraction, result 7
-c = 10 * 3    # multiplication, result 30
-d = 10 / 3    # division, result 3
-e = 10 % 3    # modulo, result 1
+<pre><code class="language-lil">a = 10 + 3
+b = 10 - 3
+c = 10 * 3
+d = 10 / 3
+e = 10 % 3
+</code></pre>
+<p>Modulo with negative numbers follows the sign of the dividend:</p>
+<pre><code class="language-lil">print -10 % 3
+print 10 % -3
 </code></pre>
 <h2 id="unary-minus"><a class="header" href="#unary-minus">Unary minus</a></h2>
 <pre><code class="language-lil">x = -5
 y = -(x + 3)
+</code></pre>
+<h2 id="logical-operators"><a class="header" href="#logical-operators">Logical operators</a></h2>
+<p>lil uses <code>and</code>, <code>or</code>, <code>not</code> like Python, but also supports <code>&amp;&amp;</code>, <code>||</code>, <code>!</code> as aliases:</p>
+<pre><code class="language-lil">if a &gt; 0 and b &gt; 0 {
+    print "both positive"
+}
+if a &gt; 0 || b &gt; 0 {
+    print "at least one is positive"
+}
 </code></pre>
 <h2 id="operator-precedence"><a class="header" href="#operator-precedence">Operator precedence</a></h2>
 <p>From lowest to highest:</p>
@@ -200,6 +213,24 @@ y = -(x + 3)
 </ol>
 <p>Use parentheses for clarity:</p>
 <pre><code class="language-lil">result = (1 + 2) * (3 + 4)
+</code></pre>
+<p>Precedence matters in real calculations:</p>
+<pre><code class="language-lil">x = 10 + 5 * 2
+print x
+y = (10 + 5) * 2
+print y
+</code></pre>
+<h2 id="dynamic-math-with-eval"><a class="header" href="#dynamic-math-with-eval">Dynamic math with eval</a></h2>
+<p>The <code>&amp;math|eval</code> function evaluates a math expression string at runtime:</p>
+<pre><code class="language-lil">result = &amp;math|eval "(10 + 5) * 2"
+print result
+</code></pre>
+<p>This is useful when the expression comes from user input or is built dynamically:</p>
+<pre><code class="language-lil">a = 3
+b = 4
+expr = "(" + a + " + " + b + ") * 2"
+result = &amp;math|eval $expr
+print result
 </code></pre>
 
                     </main>
