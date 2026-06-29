@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f4e87cb2.js";
+            window.path_to_searchindex_js = "searchindex-127e40fa.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-f8620e39.js"></script>
+        <script src="toc-45155dee.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1459,6 +1459,31 @@ print "you entered:", s
 }
 </code></pre>
 <p>Errors inside a <code>catch</code> block are not caught by the same <code>try</code>. They propagate to the enclosing <code>try</code> or stop the program if there is none.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="modifiers"><a class="header" href="#modifiers">Modifiers</a></h1>
+<p>Modifiers are keywords that change how variables or operations behave.</p>
+<h2 id="force"><a class="header" href="#force">Force</a></h2>
+<p><code>force</code> locks a variable so it cannot be changed:</p>
+<pre><code class="language-lil">x = 42
+force x
+x = 30        # ERROR: cannot assign to a forced variable
+strify x      # ERROR: cannot strify a forced variable
+unforce x
+x = 30        # works again
+</code></pre>
+<p>Combined assignment and force:</p>
+<pre><code class="language-lil">force x = 42
+unforce x = 56
+</code></pre>
+<h2 id="undefined-default"><a class="header" href="#undefined-default">Undefined Default</a></h2>
+<p>By default, reading an undefined variable returns <code>0</code>. Use <code>?name = value</code> to change this:</p>
+<pre><code class="language-lil">?undef = "hello"
+print x       # prints "hello"
+
+?undef = 99
+print y       # prints 99
+</code></pre>
+<p>The name after <code>?</code> is descriptive and ignored. Only one global default exists.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="advanced-features"><a class="header" href="#advanced-features">Advanced Features</a></h1>
 <p>This chapter covers the advanced features of lil: templates, the has operator, compiled mode, and C extensions. If you know Python, many of these concepts will feel familiar under a different syntax.</p>
