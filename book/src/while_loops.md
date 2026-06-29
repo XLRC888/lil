@@ -41,7 +41,8 @@ while 1 {
   if line == "done" { break }
   lines = lines + line + "\n"
 }
-print "you entered:\n$lines"
+print "you entered:"
+print lines
 ```
 
 The loop reads lines forever. When the user types "done", `break` exits the loop.
@@ -57,7 +58,7 @@ while &math|random 100 > 10 {
   count = count + 1
   total = total + &math|random 100
 }
-print "loop ran $count times, total=$total"
+print "loop ran", count, "times, total=", total
 ```
 
 Each iteration has a 90% chance of continuing (random 0..99 > 10). The loop ends when the random value is 10 or less.

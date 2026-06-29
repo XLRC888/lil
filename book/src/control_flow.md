@@ -42,7 +42,7 @@ Since conditions return 1 (true) or 0 (false), you can use them in arithmetic:
 
 ```lil
 count = (x > 10) + (y > 10) + (z > 10)
-print "variables over 10: $count"
+print "variables over 10:", count
 ```
 
 ## Loop types

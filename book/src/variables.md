@@ -40,17 +40,17 @@ Assignment always goes `variable = expression`:
 y = x + 50
 ```
 
-Store a library function result in a variable:
+Assign a number to a variable:
 
 ```lil
-today = &date|standart
-print "date:", today
+n = 10
+print "number:", n
 ```
 
 Store the result of a math expression:
 
 ```lil
-area = &math|eval "3.14 * 5 * 5"
+area = 3.14 * 5 * 5
 print "area is", area
 ```
 

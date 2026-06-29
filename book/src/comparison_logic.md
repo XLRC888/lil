@@ -49,13 +49,13 @@ if not logged_in {
 }
 ```
 
-## Comparison with library function results
+## Comparison with variables
 
-String functions return values you can compare:
+Compare a variable to a value:
 
 ```lil
-name = "alexander"
-if &string|len name > 5 {
+len = 10
+if len > 5 {
   print "long name"
 }
 ```
@@ -63,7 +63,7 @@ if &string|len name > 5 {
 Store and use multiple comparisons:
 
 ```lil
-len = &string|len name
+len = 10
 if len > 2 and len < 10 {
   print "name length is reasonable"
 }

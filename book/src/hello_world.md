@@ -36,17 +36,3 @@ name = "alice"
 print "hello", name
 ```
 
-Print the result of a library function by assigning it first:
-
-```lil
-d = &date|minimal
-print "today is", d
-```
-
-Or call the function directly inside print:
-
-```lil
-print "today is", &date|full
-```
-
-What you learned: `print` works without parens, commas separate multiple values, and you can store function results in variables or use them directly in print.

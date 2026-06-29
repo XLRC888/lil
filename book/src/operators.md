@@ -65,21 +65,11 @@ y = (10 + 5) * 2
 print y
 ```
 
-## Dynamic math with eval
+## Direct arithmetic
 
-The `&math|eval` function evaluates a math expression string at runtime:
-
-```lil
-result = &math|eval "(10 + 5) * 2"
-print result
-```
-
-This is useful when the expression comes from user input or is built dynamically:
+lil evaluates math expressions directly:
 
 ```lil
-a = 3
-b = 4
-expr = "(" + a + " + " + b + ") * 2"
-result = &math|eval $expr
+result = (10 + 5) * 2
 print result
 ```

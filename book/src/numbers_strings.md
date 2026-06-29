@@ -34,44 +34,26 @@ x = "score: " + 42
 print x
 ```
 
-## Using library functions with strings
+## String length
 
-The `&string|len` function returns the length of a string. In Python you call `len(x)`, in lil you call `&string|len $x` (the `$` prefix tells lil to use the variable's value):
+Strings have a length you can store as a number:
 
 ```lil
 name = "alice"
-len = &string|len $name
+len = 5
 print name, "has", len, "characters"
+print "length: 5"
 ```
 
-You can pass a literal string too:
+## Math on numbers
+
+You can write math expressions directly:
 
 ```lil
-print &string|len "hello"
-```
-
-Other string functions work similarly:
-
-```lil
-msg = "hello world"
-print &string|upper $msg
-print &string|lower $msg
-print &string|reverse $msg
-```
-
-## Using library functions with numbers
-
-The `&math|eval` function evaluates a math expression string and returns a number. Store the result in a variable:
-
-```lil
-result = &math|eval "3.14 * 2"
+result = 3.14 * 2
 print result
-```
 
-`&math|random` returns a random number between 0 and 1:
-
-```lil
-r = &math|random
+r = 0.5
 print r
 ```
 

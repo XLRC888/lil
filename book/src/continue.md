@@ -34,7 +34,7 @@ while 1 {
   if age == "" { continue }
   age = &sys|tonum age
   if age < 1 { continue }
-  print "your age is $age"
+  print "your age is " + age
   break
 }
 ```

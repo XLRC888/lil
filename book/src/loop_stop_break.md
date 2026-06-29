@@ -59,7 +59,7 @@ Using `&math|sleep` to run something every 2 seconds:
 ```lil
 count = 0
 loop {
-  print "tick $count"
+  print "tick", count
   count = count + 1
   &math|sleep 2000
   if count >= 5 { break }
