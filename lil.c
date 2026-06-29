@@ -30,7 +30,7 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_SLASH, TOK_MOD, TOK_EQ, TOK_NE, TOK_LT, TOK_GT, TOK_LE, TOK_GE, TOK_ASSIGN,
     TOK_LPAREN, TOK_RPAREN, TOK_LBRACE, TOK_RBRACE, TOK_COMMA,
     TOK_SEMI, TOK_NEWLINE, TOK_EOF, TOK_AND, TOK_OR, TOK_NOT,
-    TOK_LOOP, TOK_STOP, TOK_BREAK, TOK_CONTINUE, TOK_INCLUDE, TOK_STRIFY, TOK_INTIFY,
+    TOK_LOOP, TOK_STOP, TOK_BREAK, TOK_CONTINUE, TOK_INCLUDE, TOK_STRIFY, TOK_INTIFY, TOK_SWIFY,
     TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
     TOK_LBRACKET, TOK_RBRACKET,
     TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET, TOK_AMPERSAND, TOK_PIPE,
@@ -53,7 +53,7 @@ typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_ASSIGN, NODE_PRINT, NODE_INPUT, NODE_IF, NODE_WHILE,
     NODE_FORTO, NODE_BLOCK, NODE_EXIT, NODE_EMPTY,
     NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_FUNCTION,
-    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE, NODE_STRIFY, NODE_INTIFY, NODE_TRY, NODE_FORCE, NODE_UNFORCE } NodeType;
+    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE, NODE_STRIFY, NODE_INTIFY, NODE_SWIFY, NODE_TRY, NODE_FORCE, NODE_UNFORCE } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -320,6 +320,7 @@ static Token lex_scan(void) {
             if (!strcmp(word, "not"))     { free(word); t.type = TOK_NOT; return t; }
             if (!strcmp(word, "strify"))  { free(word); t.type = TOK_STRIFY; return t; }
             if (!strcmp(word, "intify"))  { free(word); t.type = TOK_INTIFY; return t; }
+            if (!strcmp(word, "swify"))   { free(word); t.type = TOK_SWIFY; return t; }
             if (!strcmp(word, "try"))     { free(word); t.type = TOK_TRY; return t; }
             if (!strcmp(word, "catch"))   { free(word); t.type = TOK_CATCH; return t; }
             if (!strcmp(word, "loop"))    { free(word); t.type = TOK_LOOP; return t; }
@@ -854,6 +855,16 @@ static ASTNode *parse_stmt(void) {
         ASTNode *n = ast_alloc(NODE_INTIFY);
         n->data.input.name = name;
         n->data.input.prompt = fmt;
+        return n;
+    }
+
+    if (lex_cur.type == TOK_SWIFY) {
+        lex_next();
+        if (lex_cur.type != TOK_ID) fatal("line %d: swify expects a variable name", lex_cur.line);
+        char *name = sdup(lex_cur.val.str);
+        lex_next();
+        ASTNode *n = ast_alloc(NODE_SWIFY);
+        n->data.input.name = name;
         return n;
     }
 
@@ -2103,6 +2114,20 @@ static int exec_stmt(ASTNode *n) {
             }
             return 0;
         }
+        case NODE_SWIFY: {
+            int idx = var_find(n->data.input.name);
+            if (idx < 0) { var_set(n->data.input.name, make_str("")); idx = var_count - 1; }
+            if (vars[idx].forced) fatal("line %d: cannot swify a forced variable", n->line);
+            if (vars[idx].val.type == VAL_STR) {
+                double d = val_tonum(vars[idx].val);
+                var_set(n->data.input.name, make_num(d));
+            } else {
+                char *s = val_tostr(vars[idx].val);
+                var_set(n->data.input.name, make_str(s));
+                free(s);
+            }
+            return 0;
+        }
         case NODE_TRY: {
             jmp_buf old;
             memcpy(old, error_jmp, sizeof(jmp_buf));
@@ -2833,7 +2858,8 @@ static void infer_type_stmt(ASTNode *n) {
             break;
         }
         case NODE_STRIFY:
-        case NODE_INTIFY: {
+        case NODE_INTIFY:
+        case NODE_SWIFY: {
             int i = var_ensure(n->data.input.name);
             var_types[i] = TY_DYN;
             break;
@@ -2882,7 +2908,8 @@ static void cg_collect_vars(ASTNode *n) {
         case NODE_PRINT: for (int i = 0; i < n->data.print.count; i++) cg_collect_vars(n->data.print.exprs[i]); break;
         case NODE_INPUT:
         case NODE_STRIFY:
-        case NODE_INTIFY: var_ensure(n->data.input.name); break;
+        case NODE_INTIFY:
+        case NODE_SWIFY: var_ensure(n->data.input.name); break;
         case NODE_TRY: cg_collect_vars(n->data.try_stmt.body); cg_collect_vars(n->data.try_stmt.catch_body); break;
         case NODE_FORCE:
         case NODE_UNFORCE: var_ensure(n->data.assign.name); if (n->data.assign.value) cg_collect_vars(n->data.assign.value); break;
@@ -3310,6 +3337,14 @@ static void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
                 fprintf(f, "%s.data.num = val_tonum(%s);\n", n->data.input.name, n->data.input.name);
                 fprintf(f, "%s.type = VAL_NUM;\n", n->data.input.name);
             }
+            break;
+        }
+        case NODE_SWIFY: {
+            fprintf(f, "{\n  if (%s.type == VAL_STR) {\n", n->data.input.name);
+            fprintf(f, "    { char *_e = %s.data.str; char *_end; double _d = strtod(_e,&_end); if (*_end) { fprintf(stderr,\"convert error\\n\"); longjmp(_try_jmp,1); } val_free(%s); %s = make_num(_d); }\n", n->data.input.name, n->data.input.name, n->data.input.name);
+            fprintf(f, "  } else {\n");
+            fprintf(f, "    char _b[128];\n    snprintf(_b,sizeof(_b),\"%%g\",%s.data.num);\n", n->data.input.name);
+            fprintf(f, "    val_free(%s); %s = make_str(_b);\n  }\n}\n", n->data.input.name, n->data.input.name);
             break;
         }
         case NODE_TRY: {

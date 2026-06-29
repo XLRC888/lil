@@ -88,3 +88,13 @@ intify x binary
 intify x hex
 intify x octal
 ```
+
+`swify` toggles a variable between number and string. If its a number, it becomes a string. If its a string, it becomes a number:
+
+```lil
+x = 42
+strify x       # now "42"
+swify x        # back to 42
+swify x        # back to "42"
+swify x        # back to 42
+```
