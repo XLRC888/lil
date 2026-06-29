@@ -34,7 +34,7 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
     TOK_LBRACKET, TOK_RBRACKET,
     TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET, TOK_AMPERSAND, TOK_PIPE,
-    TOK_TRY, TOK_CATCH, TOK_FORCE, TOK_UNFORCE } TokenType;
+    TOK_TRY, TOK_CATCH, TOK_FORCE, TOK_UNFORCE, TOK_QMARK } TokenType;
 
 typedef struct {
     TokenType type;
@@ -53,7 +53,7 @@ typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_ASSIGN, NODE_PRINT, NODE_INPUT, NODE_IF, NODE_WHILE,
     NODE_FORTO, NODE_BLOCK, NODE_EXIT, NODE_EMPTY,
     NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_FUNCTION,
-    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE, NODE_STRIFY, NODE_INTIFY, NODE_SWIFY, NODE_TRY, NODE_FORCE, NODE_UNFORCE } NodeType;
+    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE, NODE_STRIFY, NODE_INTIFY, NODE_SWIFY, NODE_TRY, NODE_FORCE, NODE_UNFORCE, NODE_SET_UNDEF } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -102,6 +102,7 @@ static int func_count;
 static jmp_buf error_jmp;
 static int error_occurred;
 static int compiled_header;
+static Value undef_val = {VAL_NUM, {.num=0}};
 static int compile_mode;
 
 static Token lex_scan(void);
@@ -162,7 +163,7 @@ static int var_find(const char *name) {
 
 static Value var_get(const char *name) {
     int i = var_find(name);
-    if (i < 0) { Value v = {VAL_NUM, {.num=0}}; return v; }
+    if (i < 0) return undef_val;
     return vars[i].val;
 }
 
@@ -171,7 +172,8 @@ static int var_ensure(const char *name) {
     if (i >= 0) return i;
     if (var_count >= MAX_VARS) fatal("too many variables");
     vars[var_count].name = sdup(name);
-    vars[var_count].val = (Value){VAL_NUM, {.num=0}};
+    vars[var_count].val = undef_val;
+    if (undef_val.type == VAL_STR) vars[var_count].val.data.str = sdup(undef_val.data.str);
     vars[var_count].forced = 0;
     return var_count++;
 }
@@ -384,6 +386,7 @@ static Token lex_scan(void) {
                 return lex_scan();
             case '@': t.type = TOK_AT; return t;
             case '^': t.type = TOK_CARET; return t;
+            case '?': t.type = TOK_QMARK; return t;
             case '$': {
                 if (lex_pos < lex_len && (isalpha(lex_src[lex_pos]) || lex_src[lex_pos] == '_')) {
                     int start = lex_pos;
@@ -667,6 +670,19 @@ static ASTNode *parse_stmt(void) {
     if (lex_cur.type == TOK_NEWLINE || lex_cur.type == TOK_EOF) return ast_alloc(NODE_EMPTY);
 
     if (lex_cur.type == TOK_LBRACE) return parse_block();
+
+    if (lex_cur.type == TOK_QMARK) {
+        lex_next();
+        if (lex_cur.type == TOK_ID && lex_peek_next().type == TOK_ASSIGN) {
+            lex_next(); lex_next();
+            ASTNode *val = parse_expr();
+            ASTNode *n = ast_alloc(NODE_SET_UNDEF);
+            n->data.assign.value = val;
+            return n;
+        }
+        fatal("line %d: expected 'name = value' after '?'", lex_cur.line);
+        return ast_alloc(NODE_EMPTY);
+    }
 
     if (lex_cur.type == TOK_PRINT) {
         lex_next();
@@ -2277,6 +2293,12 @@ static int exec_stmt(ASTNode *n) {
         }
         case NODE_EXIT:
             return 1;
+        case NODE_SET_UNDEF: {
+            Value v = eval_expr(n->data.assign.value);
+            if (undef_val.type == VAL_STR) free(undef_val.data.str);
+            undef_val = v;
+            return 0;
+        }
         default:
             eval_expr(n);
             return 0;
@@ -2612,6 +2634,12 @@ static void ce_stmt(ASTNode *n) {
         case NODE_EXIT:
             emit(OP_EXIT, 0);
             break;
+        case NODE_SET_UNDEF: {
+            Value v = eval_expr(n->data.assign.value);
+            if (undef_val.type == VAL_STR) free(undef_val.data.str);
+            undef_val = v;
+            break;
+        }
         case NODE_BLOCK:
             for (int i = 0; i < n->data.block.count; i++)
                 ce_stmt(n->data.block.stmts[i]);
@@ -2619,8 +2647,8 @@ static void ce_stmt(ASTNode *n) {
         default:
             emit(OP_FALLBACK, add_fallback(n));
             break;
+        }
     }
-}
 
 static void compile_prog(ASTNode **stmts, int nstmts) {
     for (int i = 0; i < nstmts; i++)
@@ -2924,7 +2952,10 @@ static void cg_varinit(FILE *f, ASTNode *prog) {
             fprintf(f, "  Value %s = {VAL_STR,{.str=NULL}};\n", vars[i].name);
             fprintf(f, "  var_ensure(\"%s\");\n", vars[i].name);
         } else {
-            fprintf(f, "  Value %s = {VAL_NUM,{.num=0}};\n", vars[i].name);
+            if (undef_val.type == VAL_STR)
+                fprintf(f, "  Value %s = make_str(\"%s\");\n", vars[i].name, undef_val.data.str);
+            else
+                fprintf(f, "  Value %s = {VAL_NUM,{.num=%.17g}};\n", vars[i].name, undef_val.data.num);
             fprintf(f, "  var_ensure(\"%s\");\n", vars[i].name);
         }
     }
@@ -2947,6 +2978,12 @@ static void cg_collect_vars(ASTNode *n) {
         case NODE_TRY: cg_collect_vars(n->data.try_stmt.body); cg_collect_vars(n->data.try_stmt.catch_body); break;
         case NODE_FORCE:
         case NODE_UNFORCE: var_ensure(n->data.assign.name); if (n->data.assign.value) cg_collect_vars(n->data.assign.value); break;
+        case NODE_SET_UNDEF: cg_collect_vars(n->data.assign.value); break;
+        case NODE_ID: var_ensure(n->data.id); break;
+        case NODE_BINOP: cg_collect_vars(n->data.binop.left); cg_collect_vars(n->data.binop.right); break;
+        case NODE_UNARY: cg_collect_vars(n->data.unary.operand); break;
+        case NODE_FUNC_CALL: for (int i = 0; i < n->data.func_call.nargs; i++) cg_collect_vars(n->data.func_call.args[i]); break;
+        case NODE_TEMPLATE: break;
         default: break;
     }
 }
@@ -3554,11 +3591,13 @@ static int generate_c(const char *path, const char *outpath) {
     fprintf(f, "typedef struct { char *name; Value val; int forced; } Var;\n");
     fprintf(f, "static Var vars[MAX_VARS];\n");
     fprintf(f, "static int var_count;\n");
+    fprintf(f, "static Value undef_val = {VAL_NUM,{.num=0}};\n");
     fprintf(f, "static int var_ensure(const char *name) {\n");
     fprintf(f, "  for (int i=0;i<var_count;i++) if(!strcmp(vars[i].name,name)) return i;\n");
     fprintf(f, "  if (var_count>=MAX_VARS) { fprintf(stderr,\"too many vars\\n\"); longjmp(_try_jmp,1); }\n");
     fprintf(f, "  vars[var_count].name=strdup(name);\n");
-    fprintf(f, "  vars[var_count].val=(Value){VAL_NUM,{.num=0}};\n");
+    fprintf(f, "  vars[var_count].val=undef_val;\n");
+    fprintf(f, "  if (undef_val.type==VAL_STR) vars[var_count].val.data.str=strdup(undef_val.data.str);\n");
     fprintf(f, "  vars[var_count].forced=0;\n");
     fprintf(f, "  return var_count++;\n");
     fprintf(f, "}\n\n");
@@ -3566,6 +3605,12 @@ static int generate_c(const char *path, const char *outpath) {
     var_count = 0;
     cg_loop_id = 0;
     for (int i = 0; i < MAX_VARS; i++) var_types[i] = TY_DYN;
+    for (int i = 0; i < prog->data.block.count; i++)
+        if (prog->data.block.stmts[i]->type == NODE_SET_UNDEF) {
+            Value _uv = eval_expr(prog->data.block.stmts[i]->data.assign.value);
+            if (undef_val.type == VAL_STR) free(undef_val.data.str);
+            undef_val = _uv;
+        }
     for (int i = 0; i < prog->data.block.count; i++)
         infer_type_stmt(prog->data.block.stmts[i]);
 

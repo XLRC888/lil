@@ -102,3 +102,17 @@ y = 42                     # allowed (not forced)
 ```
 
 `int input` errors if the input is not a valid number. `str input` accepts anything as a string.
+
+## Changing the undefined default
+
+By default, reading an undefined variable returns `0`. Use `?name = value` to change this:
+
+```lil
+?undefinedVariableBecomes = "Undefined"
+print someVar     # prints "Undefined"
+
+?x = 0
+print anotherVar  # prints 0
+```
+
+The name after `?` is descriptive and ignored. Only one value is stored globally. Once set, all undefined variables will return that value until changed.
