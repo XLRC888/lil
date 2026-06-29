@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-da51dd9f.js";
+            window.path_to_searchindex_js = "searchindex-7e1b3e65.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f8620e39.js"></script>
@@ -385,6 +385,14 @@ print "next year you will be", age + 1
 <pre><code class="language-lil">force str input "Enter your name: " name
 print "hello", name
 </code></pre>
+<h3 id="input-validation-without-force"><a class="header" href="#input-validation-without-force">Input validation without force</a></h3>
+<p>Use <code>int input</code> or <code>str input</code> to validate the input type without forcing the variable:</p>
+<pre><code class="language-lil">int input "Enter a number: " x
+x = "now im a string"     # allowed (not forced)
+str input "Enter text: " y
+y = 42                     # allowed (not forced)
+</code></pre>
+<p><code>int input</code> errors if the input is not a valid number. <code>str input</code> accepts anything as a string.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="comments"><a class="header" href="#comments">Comments</a></h1>
 <p>lil supports line comments with <code>#</code> and <code>//</code>:</p>
