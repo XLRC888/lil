@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3d673b1a.js";
+            window.path_to_searchindex_js = "searchindex-21f596d0.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-8dcef778.js"></script>
@@ -228,25 +228,6 @@ function date set format eu          # day.month.year (default)
 function date set format us          # month/day/year
 </code></pre>
 <p>All <code>date</code> functions return the date string, so you <code>print</code> the return value.</p>
-<h2 id="force--unforce"><a class="header" href="#force--unforce">force / unforce</a></h2>
-<p>Lock a variable to its current type to prevent <code>strify</code>/<code>intify</code> conversions:</p>
-<pre><code class="language-lil">x = 42
-force x           # x is now locked to numeric type
-strify x          # ERROR: cannot strify a forced variable
-unforce x         # unlock
-strify x          # works now
-print x           # prints "42"
-</code></pre>
-<p>Combined assignment and force:</p>
-<pre><code class="language-lil">force x = 42      # assign and lock in one step
-unforce x = 56    # unlock and assign in one step
-</code></pre>
-<p><code>force</code>/<code>unforce</code> work in both interpreted and compiled mode.</p>
-<h3 id="force-with-input"><a class="header" href="#force-with-input">Force with input</a></h3>
-<pre><code class="language-lil">force int input "Enter age: " age   # reads number, forces to numeric type
-force str input "Enter name: " name # reads string, forces to string type
-</code></pre>
-<p><code>force int input</code> validates the input at read time and gives a clear error if it’s not a valid number.</p>
 
                     </main>
 
