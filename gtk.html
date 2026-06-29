@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Installation - lil Book</title>
+        <title>GTK GUI Library - lil Book</title>
 
 
         <!-- Custom HTML head -->
@@ -174,44 +174,168 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
-<h2 id="requirements"><a class="header" href="#requirements">Requirements</a></h2>
+                        <h1 id="gtk-gui-library"><a class="header" href="#gtk-gui-library">GTK GUI Library</a></h1>
+<p>lil has a built-in GTK+3 library for graphical user interfaces. Widgets are referenced by string names, and events set lil variables that you poll in a loop. No callback functions needed.</p>
+<h2 id="building-with-gtk"><a class="header" href="#building-with-gtk">Building with GTK</a></h2>
+<p>The default <code>make</code> builds lil without GTK support. Use <code>make gtk</code> to include it:</p>
+<pre><code class="language-sh">make gtk
+</code></pre>
+<p>This requires <code>libgtk-3-dev</code> (or your distro’s GTK+3 development package).</p>
+<h2 id="widgets"><a class="header" href="#widgets">Widgets</a></h2>
+<p>Create widgets with <code>function gtk</code> commands. Every widget gets a string name you choose:</p>
+<pre><code class="language-lil">function gtk window "main" "hello" 400 300    # name, title, width, height
+function gtk vbox "box" 10                     # vertical box with 10px spacing
+function gtk hbox "row" 5                      # horizontal box with 5px spacing
+function gtk button "btn" "click me"           # button with label
+function gtk label "lbl" "hello world"         # static text label
+function gtk entry "input" "type here..."      # text entry with placeholder
+</code></pre>
+<h2 id="layout"><a class="header" href="#layout">Layout</a></h2>
+<p>Build a hierarchy by adding children to containers:</p>
+<pre><code class="language-lil">function gtk add "box" "btn" "lbl" "input"    # add multiple children at once
+function gtk show "box"                        # show the container and all children
+</code></pre>
+<h2 id="properties"><a class="header" href="#properties">Properties</a></h2>
+<p>Set and get widget properties at runtime:</p>
+<pre><code class="language-lil">function gtk set "lbl" "label" "new text"      # change button/label text
+function gtk set "input" "text" "hello"        # change entry text
+function gtk set "main" "title" "my app"       # change window title
+function gtk set "btn" "sensitive" "false"     # disable a widget
+function gtk set "btn" "visible" "true"        # show/hide
+function gtk set "btn" "width" 100             # set size
+function gtk set "input" "placeholder" "name"  # change placeholder text
+</code></pre>
+<p>Get values back:</p>
+<pre><code class="language-lil">function gtk get "input" "text"                # returns entry text
+function gtk get "lbl" "text"                  # returns label text
+function gtk get "main" "title"                # returns window title
+</code></pre>
+<h2 id="events"><a class="header" href="#events">Events</a></h2>
+<p>Connect signals to lil variables. When the signal fires, the variable is set:</p>
+<pre><code class="language-lil">function gtk on "btn" "clicked" "clicked_var"
+function gtk on "input" "changed" "input_text"
+</code></pre>
+<p>The variable starts as <code>""</code> and gets set to <code>"1"</code> for most signals. For entry <code>changed</code> signals, the variable gets the current text of the entry.</p>
+<h2 id="event-loop"><a class="header" href="#event-loop">Event Loop</a></h2>
+<p>Poll for events in a loop using <code>function gtk wait</code>:</p>
+<pre><code class="language-lil">loop {
+    function gtk wait
+    if clicked_var != "" {
+        print "button was clicked"
+        clicked_var = ""
+    }
+    if input_text != "" {
+        print "input changed to: " input_text
+        input_text = ""
+    }
+    if __gtk_quit != "" {
+        print "window was closed"
+        stop
+    }
+}
+</code></pre>
+<p><code>function gtk wait</code> blocks until a signal fires (or the window is closed). Each signal callback sets its variable then returns control to your script.</p>
+<p>The special variable <code>__gtk_quit</code> is set to <code>"1"</code> when the window is destroyed. Check it to exit your loop cleanly.</p>
+<p>After a signal fires, reset the variable back to <code>""</code> so you can detect the next event.</p>
+<h2 id="delaying-between-checks"><a class="header" href="#delaying-between-checks">Delaying Between Checks</a></h2>
+<p>If you need a small delay between event loop iterations (e.g. for smooth animations or to reduce CPU usage):</p>
+<pre><code class="language-lil">loop {
+    function gtk wait
+    if clicked_var == "1" {
+        print "clicked"
+        clicked_var = ""
+    }
+    function math sleep 0.05
+}
+</code></pre>
+<p><code>function math sleep</code> takes seconds (including fractional), so <code>0.05</code> is 50ms. It works in both interpreted and compiled mode.</p>
+<h2 id="complete-example"><a class="header" href="#complete-example">Complete Example</a></h2>
+<p>A window with a button and a counter:</p>
+<pre><code class="language-lil">function gtk window "win" "counter" 300 150
+function gtk vbox "box" 10
+function gtk label "lbl" "0"
+function gtk button "btn" "increment"
+function gtk add "box" "lbl" "btn"
+function gtk show "win"
+
+function gtk on "btn" "clicked" "click"
+
+n = 0
+
+loop {
+    function gtk wait
+    if click != "" {
+        n = n + 1
+        function gtk set "lbl" "label" n
+        click = ""
+    }
+    if __gtk_quit != "" {
+        stop
+    }
+}
+</code></pre>
+<h2 id="all-functions"><a class="header" href="#all-functions">All Functions</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Arguments</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>window</code></td><td>name, title, w, h</td><td>Create a window</td></tr>
+<tr><td><code>vbox</code></td><td>name [, spacing]</td><td>Vertical box layout</td></tr>
+<tr><td><code>hbox</code></td><td>name [, spacing]</td><td>Horizontal box layout</td></tr>
+<tr><td><code>button</code></td><td>name, label</td><td>Clickable button</td></tr>
+<tr><td><code>label</code></td><td>name, text</td><td>Static text label</td></tr>
+<tr><td><code>entry</code></td><td>name [, placeholder]</td><td>Text input field</td></tr>
+<tr><td><code>add</code></td><td>parent, child1 [, child2, …]</td><td>Add children to container</td></tr>
+<tr><td><code>show</code></td><td>name</td><td>Show a widget (calls show_all)</td></tr>
+<tr><td><code>set</code></td><td>name, property, value</td><td>Set a widget property</td></tr>
+<tr><td><code>get</code></td><td>name, property</td><td>Get a widget property (returns string)</td></tr>
+<tr><td><code>on</code></td><td>name, signal, variable</td><td>Connect signal to variable</td></tr>
+<tr><td><code>wait</code></td><td></td><td>Wait for a signal to fire</td></tr>
+<tr><td><code>run</code></td><td></td><td>Start the GTK main loop (blocks until quit)</td></tr>
+<tr><td><code>timeout</code></td><td>ms, signal, variable</td><td>Fire a signal after N milliseconds</td></tr>
+<tr><td><code>quit</code></td><td></td><td>Quit the GTK main loop</td></tr>
+<tr><td><code>destroy</code></td><td>name</td><td>Destroy a widget</td></tr>
+<tr><td><code>init</code></td><td></td><td>Explicitly initialize GTK (auto-called on first window)</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="signal-reference"><a class="header" href="#signal-reference">Signal Reference</a></h2>
+<p>Common signals you can connect with <code>function gtk on</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Signal</th><th>Fires When</th><th>Variable Value</th></tr>
+</thead>
+<tbody>
+<tr><td><code>clicked</code></td><td>Button is clicked</td><td><code>"1"</code></td></tr>
+<tr><td><code>changed</code></td><td>Entry text changes</td><td>The current entry text</td></tr>
+<tr><td><code>activate</code></td><td>Enter pressed in entry</td><td><code>"1"</code></td></tr>
+<tr><td><code>enter-notify-event</code></td><td>Mouse enters widget</td><td><code>"1"</code></td></tr>
+<tr><td><code>leave-notify-event</code></td><td>Mouse leaves widget</td><td><code>"1"</code></td></tr>
+<tr><td><code>focus-in-event</code></td><td>Widget gains focus</td><td><code>"1"</code></td></tr>
+<tr><td><code>focus-out-event</code></td><td>Widget loses focus</td><td><code>"1"</code></td></tr>
+<tr><td><code>destroy</code></td><td>Widget is being destroyed</td><td><code>"1"</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
 <ul>
-<li>A C99 compiler (gcc, clang, or compatible)</li>
-<li>git</li>
-<li>make (optional)</li>
+<li>GTK functions only work in interpreted (VM) mode. Compiled mode silently returns 0.</li>
+<li>Widgets are automatically removed from the internal registry when destroyed.</li>
+<li>All event variables are initialized to <code>""</code> when connected, so you can check <code>if varname != ""</code> before any signal fires.</li>
+<li>Use <code>function gtk run</code> instead of a polling loop if you only need to handle a single event (it blocks until the window is closed).</li>
 </ul>
-<h2 id="building-from-source"><a class="header" href="#building-from-source">Building from source</a></h2>
-<pre><code class="language-bash">git clone https://github.com/XLRC888/lil.git
-cd lil
-./install.sh
-</code></pre>
-<p>This compiles lil.c and copies the binary to <code>~/.local/bin/lil</code>. Make sure that directory is on your PATH.</p>
-<p>If you prefer to build in place:</p>
-<pre><code class="language-bash">make
-./lil
-</code></pre>
-<h2 id="verifying"><a class="header" href="#verifying">Verifying</a></h2>
-<p>Run <code>lil --help</code> to confirm everything works:</p>
-<pre><code>$ lil --help
-usage: lil [options] [file.lil]
-  no args      start REPL
-  file.lil     execute file
-  -c file.lil  compile to standalone binary
-  -o output    output filename (default: a.out)
-</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="what_is_lil.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="c_ext.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="hello_world.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -219,13 +343,10 @@ usage: lil [options] [file.lil]
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="what_is_lil.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="c_ext.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="hello_world.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
-                    </a>
             </nav>
 
         </div>
