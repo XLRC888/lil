@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7e1b3e65.js";
+            window.path_to_searchindex_js = "searchindex-f4e87cb2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f8620e39.js"></script>
@@ -393,6 +393,15 @@ str input "Enter text: " y
 y = 42                     # allowed (not forced)
 </code></pre>
 <p><code>int input</code> errors if the input is not a valid number. <code>str input</code> accepts anything as a string.</p>
+<h2 id="changing-the-undefined-default"><a class="header" href="#changing-the-undefined-default">Changing the undefined default</a></h2>
+<p>By default, reading an undefined variable returns <code>0</code>. Use <code>?name = value</code> to change this:</p>
+<pre><code class="language-lil">?undefinedVariableBecomes = "Undefined"
+print someVar     # prints "Undefined"
+
+?x = 0
+print anotherVar  # prints 0
+</code></pre>
+<p>The name after <code>?</code> is descriptive and ignored. Only one value is stored globally. Once set, all undefined variables will return that value until changed.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="comments"><a class="header" href="#comments">Comments</a></h1>
 <p>lil supports line comments with <code>#</code> and <code>//</code>:</p>
