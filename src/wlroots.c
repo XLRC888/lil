@@ -66,7 +66,6 @@ static void wl_new_output(struct wl_listener *listener, void *data) {
     wlr_output_state_set_enabled(&state, 1);
     wlr_output_commit_state(output, &state);
     wlr_output_state_finish(&state);
-    wlr_cursor_attach_output_layout(wcursor, woutput_layout);
     woutput = output;
 }
 
@@ -151,6 +150,7 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         wcursor_mgr = wlr_xcursor_manager_create("default", 24);
         wlr_xcursor_manager_load(wcursor_mgr, 1);
         wseat = wlr_seat_create(wdisplay, "seat0");
+        wlr_cursor_attach_output_layout(wcursor, woutput_layout);
         new_output_listener.notify = wl_new_output;
         wl_signal_add(&wbackend->events.new_output, &new_output_listener);
         new_toplevel_listener.notify = wl_new_toplevel_cb;
@@ -268,7 +268,6 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
     }
     if (!strcmp(fn, "cursor_show")) {
         wlr_cursor_set_xcursor(wcursor, wcursor_mgr, "default");
-        wlr_cursor_warp_closest(wcursor, NULL, 0, 0);
         return make_str("");
     }
     if (!strcmp(fn, "cursor_hide")) {
