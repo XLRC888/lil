@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-acd962cd.js";
+            window.path_to_searchindex_js = "searchindex-6459778d.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-d2c478dc.js"></script>
+        <script src="toc-fb6a48ea.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -175,6 +175,15 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="built-in-libraries"><a class="header" href="#built-in-libraries">Built-in Libraries</a></h1>
+<p>Libraries must be imported with <code>include</code> before use:</p>
+<pre><code class="language-lil">include math
+include date
+include string
+include file
+include sys
+include gtk
+include wlroots
+</code></pre>
 <p>Libraries are called with <code>&amp;</code> syntax:</p>
 <pre><code class="language-lil">&amp;&lt;library&gt;|&lt;function&gt; &lt;arguments...&gt;
 </code></pre>
@@ -292,6 +301,22 @@ print now
 print short
 </code></pre>
 <p>Most <code>date</code> functions return the date string. <code>&amp;date|format</code> returns the current mode (“EU”/“US”), and setting the format returns empty.</p>
+<h2 id="variable-extraction-get"><a class="header" href="#variable-extraction-get">Variable extraction (get)</a></h2>
+<p>Extract variable values from other <code>.lil</code> files at runtime:</p>
+<pre><code class="language-lil">get "TOKEN" from /path/to/file.lil
+get "TOKEN" from file.lil              # relative path
+get "TOKEN" from /path/to/file         # .lil added automatically
+</code></pre>
+<p><strong>Selective extraction</strong> with assignment index:</p>
+<pre><code class="language-lil">get "x"(2) from /tmp/data.lil          # 2nd-to-last assignment of x
+</code></pre>
+<p><strong>Renaming</strong> on import:</p>
+<pre><code class="language-lil">get "TOKEN"="api_key" from auth.lil     # saves as api_key instead of TOKEN
+</code></pre>
+<p><strong>Multiple variables</strong> in one call:</p>
+<pre><code class="language-lil">get "x", "y", "name" from data.lil
+</code></pre>
+<p>The target file is run in a sandboxed interpreter. Its variable state is isolated from the current script.</p>
 
                     </main>
 

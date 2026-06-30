@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Functions with Parameters - lil Book</title>
+        <title>WLROOTS Compositor - lil Book</title>
 
 
         <!-- Custom HTML head -->
@@ -174,137 +174,53 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="functions-with-parameters"><a class="header" href="#functions-with-parameters">Functions with Parameters</a></h1>
-<p>Functions can take parameters and return values. This page covers practical patterns, library integration, and advanced behavior.</p>
-<h2 id="defining-a-function"><a class="header" href="#defining-a-function">Defining a Function</a></h2>
-<p>Use <code>$name(params)</code> syntax followed by the function body in braces:</p>
-<pre><code class="language-lil">$add(a, b) {
-  a + b
+                        <h1 id="wlroots-compositor-library"><a class="header" href="#wlroots-compositor-library">WLROOTS Compositor Library</a></h1>
+<p>Build a Wayland compositor using wlroots. Requires <code>make wlroots</code> (depends on <code>wlroots</code>, <code>wayland-server</code>, <code>xkbcommon</code>).</p>
+<h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Arguments</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>init</code></td><td></td><td>Create display, backend, renderer, allocator</td></tr>
+<tr><td><code>set_mode</code></td><td>width, height, refresh</td><td>Set output mode</td></tr>
+<tr><td><code>on</code></td><td>signal, variable</td><td>Connect event to variable</td></tr>
+<tr><td><code>frame</code></td><td></td><td>Dispatch events, check for frame signal</td></tr>
+<tr><td><code>run</code></td><td></td><td>Start the compositor event loop</td></tr>
+<tr><td><code>begin_frame</code></td><td></td><td>Begin rendering a frame</td></tr>
+<tr><td><code>clear</code></td><td>r, g, b</td><td>Clear the framebuffer to a color</td></tr>
+<tr><td><code>end_frame</code></td><td></td><td>Commit the rendered frame</td></tr>
+<tr><td><code>quit</code></td><td></td><td>Quit the event loop</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<pre><code class="language-lil">include wlroots
+
+&amp;wlroots|init
+&amp;wlroots|set_mode 1920 1080 60
+&amp;wlroots|on "frame" frame
+
+loop {
+    &amp;wlroots|frame
+    if frame != "" {
+        &amp;wlroots|begin_frame
+        &amp;wlroots|clear 0.1 0.1 0.2
+        &amp;wlroots|end_frame
+        frame = ""
+    }
 }
 </code></pre>
-<h2 id="calling-a-function"><a class="header" href="#calling-a-function">Calling a Function</a></h2>
-<pre><code class="language-lil">result = $add(3, 4)
-print result
-</code></pre>
-<h2 id="practical-predicate-functions"><a class="header" href="#practical-predicate-functions">Practical Predicate Functions</a></h2>
-<p>Functions that return 0 or 1 as boolean results:</p>
-<pre><code class="language-lil">$is_even(n) {
-  n % 2 == 0
-}
-
-$is_odd(n) {
-  not $is_even(n)
-}
-
-print $is_even(42)
-print $is_odd(42)
-</code></pre>
-<h2 id="using-library-functions-inside-user-functions"><a class="header" href="#using-library-functions-inside-user-functions">Using Library Functions Inside User Functions</a></h2>
-<p>Built-in library functions work inside your user-defined functions:</p>
-<pre><code class="language-lil">$random_in_range(min, max) {
-  &amp;math|randint $min $max
-}
-
-r = $random_in_range(5, 10)
-print r
-</code></pre>
-<p>The <code>$min</code> and <code>$max</code> prefix tells lil to use the parameter’s value instead of the literal string “min”.</p>
-<pre><code class="language-lil">$rand_name() {
-  &amp;math|choice "alice" "bob" "charlie"
-}
-
-$greet() {
-  name = $rand_name()
-  print "hello", name
-}
-
-$greet()
-</code></pre>
-<pre><code class="language-lil">$slugify(s) {
-  lower = &amp;string|lower $s
-  &amp;string|replace $lower " " "-"
-}
-
-slug = $slugify("Hello World")
-print slug
-</code></pre>
-<h2 id="return-values"><a class="header" href="#return-values">Return Values</a></h2>
-<p>The last expression in the function body is the return value:</p>
-<pre><code class="language-lil">$double(x) {
-  x * 2
-}
-
-print $double(21)
-</code></pre>
-<p>If a function ends with an <code>if</code> expression, the taken branch’s last value is returned:</p>
-<pre><code class="language-lil">$sign(n) {
-  if n &gt; 0 {
-    1
-  } elif n &lt; 0 {
-    -1
-  } else {
-    0
-  }
-}
-
-print $sign(-5)
-</code></pre>
-<p>If there’s no value-producing expression, it returns 0:</p>
-<pre><code class="language-lil">$noop() {
-  print "no return"
-}
-
-x = $noop()
-print x
-</code></pre>
-<h2 id="variable-saverestore"><a class="header" href="#variable-saverestore">Variable Save/Restore</a></h2>
-<p>When you call a function, lil saves all current variables before running the function body and restores them after. Parameters and any variables changed inside stay contained:</p>
-<pre><code class="language-lil">x = "hello"
-
-$test() {
-  x = "world"
-  print x
-}
-
-$test()
-print x
-</code></pre>
-<p>Parameters are always save/restored independently of global variables:</p>
-<pre><code class="language-lil">x = 100
-
-$f(x) {
-  x = x + 1
-  print x
-}
-
-$f(5)
-print x
-</code></pre>
-<h2 id="recursion"><a class="header" href="#recursion">Recursion</a></h2>
-<pre><code class="language-lil">$fib(n) {
-  if n &lt;= 2 {
-    1
-  } else {
-    $fib(n - 1) + $fib(n - 2)
-  }
-}
-
-print $fib(10)
-</code></pre>
-<h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
-<p>Function calls work in both interpreted and compiled (AOT) mode. In compiled mode, each function becomes a standalone C function with its own type inference pass.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="user_functions.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="gtk.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="io.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -312,13 +228,10 @@ print $fib(10)
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="user_functions.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="gtk.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="io.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
-                    </a>
             </nav>
 
         </div>

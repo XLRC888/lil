@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-acd962cd.js";
+            window.path_to_searchindex_js = "searchindex-6459778d.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-d2c478dc.js"></script>
+        <script src="toc-fb6a48ea.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -651,6 +651,15 @@ print result
 <p>Library functions handle built-in operations: math, strings, files, dates, system commands. User-defined functions let you organize your own code, avoid repetition, and build reusable abstractions. You’ll typically use both together.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="built-in-libraries"><a class="header" href="#built-in-libraries">Built-in Libraries</a></h1>
+<p>Libraries must be imported with <code>include</code> before use:</p>
+<pre><code class="language-lil">include math
+include date
+include string
+include file
+include sys
+include gtk
+include wlroots
+</code></pre>
 <p>Libraries are called with <code>&amp;</code> syntax:</p>
 <pre><code class="language-lil">&amp;&lt;library&gt;|&lt;function&gt; &lt;arguments...&gt;
 </code></pre>
@@ -768,6 +777,22 @@ print now
 print short
 </code></pre>
 <p>Most <code>date</code> functions return the date string. <code>&amp;date|format</code> returns the current mode (“EU”/“US”), and setting the format returns empty.</p>
+<h2 id="variable-extraction-get"><a class="header" href="#variable-extraction-get">Variable extraction (get)</a></h2>
+<p>Extract variable values from other <code>.lil</code> files at runtime:</p>
+<pre><code class="language-lil">get "TOKEN" from /path/to/file.lil
+get "TOKEN" from file.lil              # relative path
+get "TOKEN" from /path/to/file         # .lil added automatically
+</code></pre>
+<p><strong>Selective extraction</strong> with assignment index:</p>
+<pre><code class="language-lil">get "x"(2) from /tmp/data.lil          # 2nd-to-last assignment of x
+</code></pre>
+<p><strong>Renaming</strong> on import:</p>
+<pre><code class="language-lil">get "TOKEN"="api_key" from auth.lil     # saves as api_key instead of TOKEN
+</code></pre>
+<p><strong>Multiple variables</strong> in one call:</p>
+<pre><code class="language-lil">get "x", "y", "name" from data.lil
+</code></pre>
+<p>The target file is run in a sandboxed interpreter. Its variable state is isolated from the current script.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="templates"><a class="header" href="#templates">Templates</a></h1>
 <p>Template strings let you embed variable values inside a string using <code>$varname</code>. In Python this would be an f-string like <code>f"hello {name}"</code>. In lil it’s <code>"hello $name"</code>:</p>
@@ -1804,6 +1829,45 @@ loop {
 <li>All event variables are initialized to <code>""</code> when connected, so you can check <code>if varname != ""</code> before any signal fires.</li>
 <li>Use <code>&amp;gtk|run</code> instead of a polling loop if you only need to handle a single event (it blocks until the window is closed).</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="wlroots-compositor-library"><a class="header" href="#wlroots-compositor-library">WLROOTS Compositor Library</a></h1>
+<p>Build a Wayland compositor using wlroots. Requires <code>make wlroots</code> (depends on <code>wlroots</code>, <code>wayland-server</code>, <code>xkbcommon</code>).</p>
+<h2 id="functions-2"><a class="header" href="#functions-2">Functions</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Arguments</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>init</code></td><td></td><td>Create display, backend, renderer, allocator</td></tr>
+<tr><td><code>set_mode</code></td><td>width, height, refresh</td><td>Set output mode</td></tr>
+<tr><td><code>on</code></td><td>signal, variable</td><td>Connect event to variable</td></tr>
+<tr><td><code>frame</code></td><td></td><td>Dispatch events, check for frame signal</td></tr>
+<tr><td><code>run</code></td><td></td><td>Start the compositor event loop</td></tr>
+<tr><td><code>begin_frame</code></td><td></td><td>Begin rendering a frame</td></tr>
+<tr><td><code>clear</code></td><td>r, g, b</td><td>Clear the framebuffer to a color</td></tr>
+<tr><td><code>end_frame</code></td><td></td><td>Commit the rendered frame</td></tr>
+<tr><td><code>quit</code></td><td></td><td>Quit the event loop</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<pre><code class="language-lil">include wlroots
+
+&amp;wlroots|init
+&amp;wlroots|set_mode 1920 1080 60
+&amp;wlroots|on "frame" frame
+
+loop {
+    &amp;wlroots|frame
+    if frame != "" {
+        &amp;wlroots|begin_frame
+        &amp;wlroots|clear 0.1 0.1 0.2
+        &amp;wlroots|end_frame
+        frame = ""
+    }
+}
+</code></pre>
 
                     </main>
 
