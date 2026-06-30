@@ -5,3 +5,4 @@ book/book/
 __pycache__/
 *.pyc
 tst/
+lil-style.md
