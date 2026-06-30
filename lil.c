@@ -104,6 +104,17 @@ static int error_occurred;
 static int compiled_header;
 static Value undef_val = {VAL_NUM, {.num=0}};
 static int compile_mode;
+static int lib_imported[6];
+
+static int lib_idx(const char *name) {
+    if (!strcmp(name, "math")) return 0;
+    if (!strcmp(name, "date")) return 1;
+    if (!strcmp(name, "string")) return 2;
+    if (!strcmp(name, "file")) return 3;
+    if (!strcmp(name, "sys")) return 4;
+    if (!strcmp(name, "gtk")) return 5;
+    return -1;
+}
 
 static Token lex_scan(void);
 static Token lex_peek_next(void);
@@ -862,10 +873,16 @@ static ASTNode *parse_stmt(void) {
     }
     if (lex_cur.type == TOK_INCLUDE) {
         lex_next();
-        if (lex_cur.type != TOK_ID) fatal("line %d: include expects a library name", lex_cur.line);
-        char *name = sdup(lex_cur.val.str);
-        lex_next();
-        return ast_include(name);
+        if (lex_cur.type == TOK_ID) {
+            int li = lib_idx(lex_cur.val.str);
+            if (li >= 0) {
+                lib_imported[li] = 1;
+                lex_next();
+                return ast_alloc(NODE_EMPTY);
+            }
+        }
+        fatal("line %d: unknown library or file include", lex_cur.line);
+        return ast_alloc(NODE_EMPTY);
     }
     if (lex_cur.type == TOK_STRIFY) {
         lex_next();
@@ -1378,6 +1395,9 @@ static Value eval_expr(ASTNode *n) {
                 fatal("line %d: function expects a name", n->line);
             }
             char *fn = n->data.funcall.args[0];
+            int li = lib_idx(n->data.funcall.lib);
+            if (li >= 0 && !lib_imported[li])
+                fatal("line %d: library '%s' not imported (use 'include %s')", n->line, n->data.funcall.lib, n->data.funcall.lib);
 
             if (!strcmp(n->data.funcall.lib, "date")) {
                 time_t t = time(NULL);
@@ -3177,6 +3197,9 @@ static void cg_expr(FILE *f, ASTNode *n, VarType want) {
         case NODE_FUNCTION: {
             char *lib = n->data.funcall.lib;
             char *fn = n->data.funcall.args[0];
+            int li = lib_idx(lib);
+            if (li >= 0 && !lib_imported[li])
+                fatal("line %d: library '%s' not imported (use 'include %s')", n->line, lib, lib);
             if (!strcmp(lib, "date")) {
                 if (!strcmp(fn, "minimal"))
                     fprintf(f, "({time_t t=time(NULL);struct tm*tm=localtime(&t);char b[64];strftime(b,64,\"%%-d.%%-m.%%y\",tm);make_str(strdup(b));})");
@@ -3494,6 +3517,7 @@ static void cg_emit_func(FILE *f, ASTNode *n) {
 static int generate_c(const char *path, const char *outpath) {
     FILE *f = fopen(path, "rb");
     if (!f) { fprintf(stderr, "error: cannot open '%s': %s\n", path, strerror(errno)); return 1; }
+    memset(lib_imported, 0, sizeof(lib_imported));
     fseek(f, 0, SEEK_END);
     long sz = ftell(f);
     rewind(f);
@@ -3643,6 +3667,7 @@ static int generate_c(const char *path, const char *outpath) {
 static void run_file(const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) { fprintf(stderr, "error: cannot open '%s': %s\n", path, strerror(errno)); return; }
+    memset(lib_imported, 0, sizeof(lib_imported));
     fseek(f, 0, SEEK_END);
     long sz = ftell(f);
     rewind(f);
@@ -3683,6 +3708,7 @@ static void run_file(const char *path) {
 }
 
 static void repl(void) {
+    memset(lib_imported, 0, sizeof(lib_imported));
     printf("lil v%s - type 'exit' to quit\n", VERSION);
     char buf[BUF_SIZE];
 
