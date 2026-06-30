@@ -4,3 +4,4 @@ lil
 book/book/
 __pycache__/
 *.pyc
+tst/
