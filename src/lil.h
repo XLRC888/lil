@@ -167,6 +167,10 @@ extern int for_counter;
 int lib_idx(const char *name);
 Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int line);
 
+char *cescape(const char *s);
+extern int cg_loop_id;
+extern VarType var_types[MAX_VARS];
+
 int generate_c(const char *path, const char *outpath);
 
 void run_file(const char *path);

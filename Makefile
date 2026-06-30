@@ -5,7 +5,7 @@ PREFIX ?= $(HOME)/.local
 BINDIR = $(PREFIX)/bin
 GTK_CFLAGS = $(shell pkg-config --cflags gtk+-3.0 2>/dev/null)
 GTK_LIBS = $(shell pkg-config --libs gtk+-3.0 2>/dev/null)
-SRC = lil.c src/lexer.c src/parser.c src/libs.c src/vm.c
+SRC = src/main.c src/lexer.c src/parser.c src/libs.c src/vm.c src/transpiler.c
 
 $(TARGET): $(SRC)
 	$(CC) $(CFLAGS) -Isrc -o $@ $^ -lm
