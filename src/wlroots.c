@@ -1,24 +1,42 @@
 #ifdef HAVE_WLROOTS
+#define _POSIX_C_SOURCE 199309L
 #include "lil.h"
+#include <time.h>
 #include <wlr/backend.h>
 #include <wlr/render/allocator.h>
 #include <wlr/render/wlr_renderer.h>
+#include <wlr/render/pass.h>
+#include <wlr/render/color.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/util/log.h>
+#include <wlr/util/box.h>
 #include <wayland-server-core.h>
+#include <wayland-server.h>
 
 static struct wl_display *wdisplay;
 static struct wlr_backend *wbackend;
 static struct wlr_renderer *wrenderer;
 static struct wlr_allocator *wallocator;
 static struct wlr_output *woutput;
+static struct wl_event_loop *wevent_loop;
 static int wl_running;
 static int wl_frame;
 static char wl_frame_var[64];
+static struct wl_listener new_output_listener;
 
 static void wl_output_frame(struct wl_listener *listener, void *data) {
     (void)listener; (void)data;
     wl_frame = 1;
+}
+
+static void wl_new_output(struct wl_listener *listener, void *data) {
+    (void)listener;
+    struct wlr_output *output = data;
+    wlr_output_init_render(output, wallocator, wrenderer);
+    static struct wl_listener frame_listener;
+    frame_listener.notify = wl_output_frame;
+    wl_signal_add(&output->events.frame, &frame_listener);
+    woutput = output;
 }
 
 Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
@@ -26,35 +44,27 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         wlr_log_init(WLR_DEBUG, NULL);
         wdisplay = wl_display_create();
         if (!wdisplay) fatal("line %d: failed to create display", line);
-        wbackend = wlr_backend_autocreate(wdisplay, NULL);
+        wevent_loop = wl_display_get_event_loop(wdisplay);
+        wbackend = wlr_backend_autocreate(wevent_loop, NULL);
         if (!wbackend) fatal("line %d: failed to create backend", line);
         wrenderer = wlr_renderer_autocreate(wbackend);
         if (!wrenderer) fatal("line %d: failed to create renderer", line);
         wallocator = wlr_allocator_autocreate(wbackend, wrenderer);
         if (!wallocator) fatal("line %d: failed to create allocator", line);
-        return make_str("");
-    }
-    if (!strcmp(fn, "create_output")) {
-        if (argc < 2) fatal("line %d: expected output name", line);
-        char *name = resolve_arg(args[1]);
-        (void)name;
-        struct wlr_output *output = wlr_output_create(wdisplay);
-        if (!output) fatal("line %d: failed to create output", line);
-        static struct wl_listener frame_listener;
-        frame_listener.notify = wl_output_frame;
-        wl_signal_add(&output->events.frame, &frame_listener);
-        woutput = output;
+        new_output_listener.notify = wl_new_output;
+        wl_signal_add(&wbackend->events.new_output, &new_output_listener);
+        wevent_loop = wl_display_get_event_loop(wdisplay);
         return make_str("");
     }
     if (!strcmp(fn, "set_mode")) {
         if (argc < 4) fatal("line %d: set_mode expects width, height, refresh", line);
-        if (!woutput) fatal("line %d: no output created", line);
+        if (!woutput) fatal("line %d: no output", line);
         int w = (int)strtod(resolve_arg(args[1]), NULL);
         int h = (int)strtod(resolve_arg(args[2]), NULL);
         int rr = (int)strtod(resolve_arg(args[3]), NULL);
         struct wlr_output_state state;
         wlr_output_state_init(&state);
-        wlr_output_state_set_mode(&state, WLR_OUTPUT_STATE_MODE_CUSTOM);
+        wlr_output_state_set_mode(&state, WLR_OUTPUT_STATE_MODE_FIXED);
         wlr_output_state_set_custom_mode(&state, w, h, rr * 1000);
         wlr_output_state_set_enabled(&state, 1);
         wlr_output_commit_state(woutput, &state);
@@ -78,11 +88,15 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
             if (wl_frame_var[0]) var_set(wl_frame_var, make_str("1"));
         }
         wl_display_flush_clients(wdisplay);
-        wl_display_dispatch(wdisplay);
+        if (!wl_running) wl_event_loop_dispatch(wevent_loop, 0);
+        else wl_event_loop_dispatch(wevent_loop, 0);
         return make_str("");
     }
     if (!strcmp(fn, "run")) {
         wl_running = 1;
+        if (!wlr_backend_start(wbackend))
+            fatal("line %d: failed to start backend", line);
+        wl_display_init_shm(wdisplay);
         while (wl_running) {
             wl_display_flush_clients(wdisplay);
             if (wl_frame) {
@@ -90,15 +104,13 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
                 if (wl_frame_var[0]) var_set(wl_frame_var, make_str("1"));
                 return make_str("frame");
             }
-            int r = wl_display_dispatch(wdisplay);
-            if (r == -1) break;
+            wl_event_loop_dispatch(wevent_loop, -1);
         }
         return make_str("");
     }
     if (!strcmp(fn, "begin_frame")) {
         if (!woutput) fatal("line %d: no output", line);
-        int ok = wlr_renderer_begin(wrenderer, woutput->width, woutput->height);
-        if (!ok) return make_str("");
+        wlr_output_lock_attach_render(woutput, true);
         return make_str("");
     }
     if (!strcmp(fn, "clear")) {
@@ -106,15 +118,26 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         float r = (float)strtod(resolve_arg(args[1]), NULL);
         float g = (float)strtod(resolve_arg(args[2]), NULL);
         float b = (float)strtod(resolve_arg(args[3]), NULL);
-        wlr_renderer_clear(wrenderer, (float[]){r, g, b, 1.0f});
+        struct wlr_buffer *buf = wlr_allocator_create_buffer(wallocator, woutput->width, woutput->height, NULL);
+        if (buf) {
+            struct wlr_render_pass *pass = wlr_renderer_begin_buffer_pass(wrenderer, buf, NULL);
+            if (pass) {
+                struct wlr_render_rect_options opts = {
+                    .box = {0, 0, woutput->width, woutput->height},
+                    .color = {r, g, b, 1.0f},
+                    .blend_mode = WLR_RENDER_BLEND_MODE_NONE,
+                };
+                wlr_render_pass_add_rect(pass, &opts);
+                wlr_render_pass_submit(pass);
+            }
+            wlr_buffer_drop(buf);
+        }
         return make_str("");
     }
     if (!strcmp(fn, "end_frame")) {
-        wlr_output_set_commit_data(woutput, NULL, NULL, 0);
-        wlr_renderer_end(wrenderer);
         struct wlr_output_state state;
         wlr_output_state_init(&state);
-        wlr_output_state_set_damage_whole(&state);
+        wlr_output_state_set_damage(&state, NULL);
         wlr_output_commit_state(woutput, &state);
         wlr_output_state_finish(&state);
         return make_str("");

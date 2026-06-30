@@ -623,7 +623,7 @@ int exec_stmt(ASTNode *n) {
             FuncDef sfs[MAX_FUNCS];
             memcpy(sfs, funcs, sizeof(FuncDef) * func_count);
             int shc = assign_hist_count;
-            int sli[6];
+            int sli[7];
             memcpy(sli, lib_imported, sizeof(lib_imported));
             jmp_buf serr;
             memcpy(serr, error_jmp, sizeof(jmp_buf));
@@ -667,7 +667,7 @@ int exec_stmt(ASTNode *n) {
                 Var svs[MAX_VARS];
                 memcpy(svs, vars, sizeof(Var) * var_count);
                 int shc = assign_hist_count;
-                int sli[6];
+                int sli[7];
                 memcpy(sli, lib_imported, sizeof(lib_imported));
                 jmp_buf serr;
                 memcpy(serr, error_jmp, sizeof(jmp_buf));
