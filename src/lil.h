@@ -31,6 +31,7 @@
 #define MAX_FIXUPS 256
 #define MAX_LOOP_STACK 64
 #define VM_STACK 2048
+#define MAX_ASSIGN_HISTORY 65536
 
 typedef enum { VAL_NUM, VAL_STR } ValType;
 
@@ -42,14 +43,14 @@ typedef struct {
 typedef enum { TY_NUM, TY_STR, TY_DYN } VarType;
 
 typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE, TOK_ELIF,
-    TOK_WHILE, TOK_FOR, TOK_TO, TOK_EXIT, TOK_PLUS, TOK_MINUS, TOK_STAR,
+    TOK_WHILE, TOK_FOR, TOK_TO, TOK_GET, TOK_FROM, TOK_EXIT, TOK_PLUS, TOK_MINUS, TOK_STAR,
     TOK_SLASH, TOK_MOD, TOK_EQ, TOK_NE, TOK_LT, TOK_GT, TOK_LE, TOK_GE, TOK_ASSIGN,
     TOK_LPAREN, TOK_RPAREN, TOK_LBRACE, TOK_RBRACE, TOK_COMMA,
     TOK_SEMI, TOK_NEWLINE, TOK_EOF, TOK_AND, TOK_OR, TOK_NOT,
     TOK_LOOP, TOK_STOP, TOK_BREAK, TOK_CONTINUE, TOK_INCLUDE, TOK_STRIFY, TOK_INTIFY, TOK_SWIFY,
     TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
     TOK_LBRACKET, TOK_RBRACKET,
-    TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET, TOK_AMPERSAND, TOK_PIPE,
+    TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET,     TOK_AMPERSAND, TOK_PIPE, TOK_DOT,
     TOK_TRY, TOK_CATCH, TOK_FORCE, TOK_UNFORCE, TOK_QMARK } TokenType;
 
 typedef struct {
@@ -61,7 +62,7 @@ typedef struct {
 typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_ASSIGN, NODE_PRINT, NODE_INPUT, NODE_IF, NODE_WHILE,
     NODE_FORTO, NODE_BLOCK, NODE_EXIT, NODE_EMPTY,
-    NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_FUNCTION,
+    NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_GET, NODE_FUNCTION,
     NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE,
     NODE_STRIFY, NODE_INTIFY, NODE_SWIFY, NODE_TRY, NODE_FORCE, NODE_UNFORCE, NODE_SET_UNDEF } NodeType;
 
@@ -84,7 +85,8 @@ typedef struct ASTNode {
         struct { struct ASTNode *body; } loop;
         struct { char *name; char **params; int nparams; struct ASTNode *body; } func_def;
         struct { char *name; struct ASTNode **args; int nargs; } func_call;
-        struct { char *name; } include;
+        struct { char *path; char **funcs; int nfuncs; } include;
+        struct { char **varnames; char **newnames; int nvars; char *path; int *indices; } get_stmt;
         struct { char *lib; char **args; int argc; } funcall;
         struct { char *raw; } templ;
         struct { struct ASTNode *body, *catch_body; } try_stmt;
@@ -120,6 +122,9 @@ extern int func_count;
 extern jmp_buf error_jmp;
 extern Value undef_val;
 extern int lib_imported[6];
+extern Value assign_history[MAX_ASSIGN_HISTORY];
+extern int assign_hist_count;
+extern int assign_var_idx[MAX_ASSIGN_HISTORY];
 extern int compile_mode;
 extern int compiled_header;
 extern Token lex_cur;
@@ -133,6 +138,7 @@ int var_find(const char *name);
 Value var_get(const char *name);
 int var_ensure(const char *name);
 void var_set(const char *name, Value v);
+Value var_get_history(int var_idx, int nth);
 
 Value make_num(double n);
 Value make_str(const char *s);

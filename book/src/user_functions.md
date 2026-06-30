@@ -116,6 +116,14 @@ $roll_dice() {
 
 Then your main script includes it and uses `$roll_dice` like any local function.
 
+**Selective import**: specify which functions to import by appending `/` and function names:
+
+```lil
+include dice.lil/roll_dice flip_coin
+```
+
+Only `$roll_dice` and `$flip_coin` are registered from `dice.lil`. Other functions are discarded. The file runs in an isolated variable scope.
+
 ## Recursion
 
 Functions can call themselves:

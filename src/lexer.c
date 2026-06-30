@@ -98,6 +98,8 @@ static Token lex_scan(void) {
             if (!strcmp(word, "word"))    { free(word); t.type = TOK_WORD; return t; }
             if (!strcmp(word, "force"))   { free(word); t.type = TOK_FORCE; return t; }
             if (!strcmp(word, "unforce")) { free(word); t.type = TOK_UNFORCE; return t; }
+            if (!strcmp(word, "get"))     { free(word); t.type = TOK_GET; return t; }
+            if (!strcmp(word, "from"))    { free(word); t.type = TOK_FROM; return t; }
 
             t.type = TOK_ID;
             t.val.str = word;
@@ -149,6 +151,7 @@ static Token lex_scan(void) {
             case '@': t.type = TOK_AT; return t;
             case '^': t.type = TOK_CARET; return t;
             case '?': t.type = TOK_QMARK; return t;
+            case '.': t.type = TOK_DOT; return t;
             case '$': {
                 if (lex_pos < lex_len && (isalpha(lex_src[lex_pos]) || lex_src[lex_pos] == '_')) {
                     int start = lex_pos;

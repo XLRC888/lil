@@ -106,9 +106,11 @@ ASTNode *ast_stop(void) {
     return ast_alloc(NODE_STOP);
 }
 
-ASTNode *ast_include(const char *name) {
+ASTNode *ast_include(const char *path, char **funcs, int nfuncs) {
     ASTNode *n = ast_alloc(NODE_INCLUDE);
-    n->data.include.name = sdup(name);
+    n->data.include.path = sdup(path);
+    n->data.include.funcs = funcs;
+    n->data.include.nfuncs = nfuncs;
     return n;
 }
 
@@ -448,16 +450,185 @@ ASTNode *parse_stmt(void) {
     }
     if (lex_cur.type == TOK_INCLUDE) {
         lex_next();
-        if (lex_cur.type == TOK_ID) {
+        if (lex_cur.type == TOK_ID && lib_idx(lex_cur.val.str) >= 0) {
             int li = lib_idx(lex_cur.val.str);
-            if (li >= 0) {
-                lib_imported[li] = 1;
+            lib_imported[li] = 1;
+            lex_next();
+            return ast_alloc(NODE_EMPTY);
+        }
+
+        char *path = NULL;
+        if (lex_cur.type == TOK_SLASH) {
+            path = malloc(2);
+            if (!path) fatal("out of memory");
+            strcpy(path, "/");
+            lex_next();
+            while (lex_cur.type == TOK_ID || lex_cur.type == TOK_SLASH) {
+                size_t olen = strlen(path);
+                size_t tlen = lex_cur.type == TOK_SLASH ? 1 : strlen(lex_cur.val.str);
+                path = realloc(path, olen + tlen + 2);
+                if (!path) fatal("out of memory");
+                if (lex_cur.type == TOK_SLASH) strcat(path, "/");
+                else strcat(path, lex_cur.val.str);
                 lex_next();
-                return ast_alloc(NODE_EMPTY);
+            }
+            if (lex_cur.type == TOK_DOT) {
+                lex_next();
+                if (lex_cur.type != TOK_ID) fatal("line %d: expected extension after '.'", lex_cur.line);
+                size_t olen = strlen(path);
+                size_t tlen = lex_cur.type == TOK_SLASH ? 1 : strlen(lex_cur.val.str);
+                path = realloc(path, olen + tlen + 2);
+                if (!path) fatal("out of memory");
+                strcat(path, ".");
+                strcat(path, lex_cur.val.str);
+                lex_next();
+            }
+        } else if (lex_cur.type == TOK_ID) {
+            size_t plen = strlen(lex_cur.val.str);
+            path = malloc(plen + 1);
+            if (!path) fatal("out of memory");
+            strcpy(path, lex_cur.val.str);
+            lex_next();
+            if (lex_cur.type == TOK_DOT) {
+                lex_next();
+                if (lex_cur.type != TOK_ID) fatal("line %d: expected extension after '.'", lex_cur.line);
+                plen += 1 + strlen(lex_cur.val.str);
+                path = realloc(path, plen + 1);
+                if (!path) fatal("out of memory");
+                strcat(path, ".");
+                strcat(path, lex_cur.val.str);
+                lex_next();
+            }
+        } else {
+            fatal("line %d: expected file path after include", lex_cur.line);
+            return ast_alloc(NODE_EMPTY);
+        }
+
+        char **funcs = NULL;
+        int nfuncs = 0, fcap = 0;
+        if (lex_cur.type == TOK_SLASH) {
+            lex_next();
+            while (lex_cur.type == TOK_ID) {
+                if (nfuncs >= fcap) {
+                    fcap = fcap ? fcap * 2 : 4;
+                    funcs = realloc(funcs, sizeof(char*) * fcap);
+                    if (!funcs) fatal("out of memory");
+                }
+                funcs[nfuncs++] = sdup(lex_cur.val.str);
+                lex_next();
+            }
+            if (nfuncs == 0) fatal("line %d: expected function names after '/'", lex_cur.line);
+        }
+
+        ASTNode *n = ast_alloc(NODE_INCLUDE);
+        n->data.include.path = path;
+        n->data.include.funcs = funcs;
+        n->data.include.nfuncs = nfuncs;
+        return n;
+    }
+
+    if (lex_cur.type == TOK_GET) {
+        lex_next();
+        char **varnames = NULL, **newnames = NULL;
+        int *indices = NULL;
+        int nvars = 0, vcap = 0;
+
+        while (lex_cur.type == TOK_STR) {
+            if (nvars >= vcap) {
+                vcap = vcap ? vcap * 2 : 4;
+                varnames = realloc(varnames, sizeof(char*) * vcap);
+                newnames = realloc(newnames, sizeof(char*) * vcap);
+                indices = realloc(indices, sizeof(int) * vcap);
+                if (!varnames || !newnames || !indices) fatal("out of memory");
+            }
+            varnames[nvars] = sdup(lex_cur.val.str);
+            newnames[nvars] = NULL;
+            indices[nvars] = 0;
+            lex_next();
+
+            if (lex_cur.type == TOK_LPAREN) {
+                lex_next();
+                if (lex_cur.type != TOK_NUM) fatal("line %d: expected number after '('", lex_cur.line);
+                indices[nvars] = (int)lex_cur.val.num;
+                lex_next();
+                if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
+                lex_next();
+            }
+
+            if (lex_cur.type == TOK_ASSIGN) {
+                lex_next();
+                if (lex_cur.type != TOK_STR) fatal("line %d: expected string after '='", lex_cur.line);
+                newnames[nvars] = sdup(lex_cur.val.str);
+                lex_next();
+            }
+
+            nvars++;
+
+            if (lex_cur.type == TOK_COMMA) {
+                lex_next();
+                continue;
+            }
+            break;
+        }
+
+        if (nvars == 0) fatal("line %d: expected variable name(s) after 'get'", lex_cur.line);
+
+        if (lex_cur.type != TOK_FROM) fatal("line %d: expected 'from' after variable name(s)", lex_cur.line);
+        lex_next();
+
+        char *path = NULL;
+        if (lex_cur.type == TOK_SLASH) {
+            path = malloc(2);
+            if (!path) fatal("out of memory");
+            strcpy(path, "/");
+            lex_next();
+            while (lex_cur.type == TOK_ID || lex_cur.type == TOK_SLASH) {
+                size_t olen = strlen(path);
+                size_t tlen = lex_cur.type == TOK_SLASH ? 1 : strlen(lex_cur.val.str);
+                path = realloc(path, olen + tlen + 2);
+                if (!path) fatal("out of memory");
+                if (lex_cur.type == TOK_SLASH) strcat(path, "/");
+                else strcat(path, lex_cur.val.str);
+                lex_next();
+            }
+            if (lex_cur.type == TOK_DOT) {
+                lex_next();
+                if (lex_cur.type != TOK_ID) fatal("line %d: expected file extension after '.'", lex_cur.line);
+                size_t olen = strlen(path);
+                size_t tlen = lex_cur.type == TOK_SLASH ? 1 : strlen(lex_cur.val.str);
+                path = realloc(path, olen + tlen + 2);
+                if (!path) fatal("out of memory");
+                strcat(path, ".");
+                strcat(path, lex_cur.val.str);
+                lex_next();
+            }
+        } else {
+            if (lex_cur.type != TOK_ID) fatal("line %d: expected file path after 'from'", lex_cur.line);
+            size_t plen = strlen(lex_cur.val.str);
+            path = malloc(plen + 1);
+            if (!path) fatal("out of memory");
+            strcpy(path, lex_cur.val.str);
+            lex_next();
+
+            if (lex_cur.type == TOK_DOT) {
+                lex_next();
+                if (lex_cur.type != TOK_ID) fatal("line %d: expected file extension after '.'", lex_cur.line);
+                plen += 1 + strlen(lex_cur.val.str);
+                path = realloc(path, plen + 1);
+                if (!path) fatal("out of memory");
+                strcat(path, ".");
+                strcat(path, lex_cur.val.str);
+                lex_next();
             }
         }
-        fatal("line %d: unknown library or file include", lex_cur.line);
-        return ast_alloc(NODE_EMPTY);
+
+        ASTNode *n = ast_alloc(NODE_GET);
+        n->data.get_stmt.varnames = varnames;
+        n->data.get_stmt.newnames = newnames;
+        n->data.get_stmt.nvars = nvars;
+        n->data.get_stmt.path = path;
+        n->data.get_stmt.indices = indices;
+        return n;
     }
     if (lex_cur.type == TOK_STRIFY) {
         lex_next();

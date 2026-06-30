@@ -8,6 +8,11 @@ Var vars[MAX_VARS];
 int var_count;
 jmp_buf error_jmp;
 
+#define MAX_ASSIGN_HISTORY 65536
+Value assign_history[MAX_ASSIGN_HISTORY];
+int assign_hist_count;
+int assign_var_idx[MAX_ASSIGN_HISTORY];
+
 void fatal(const char *fmt, ...) {
     error_occurred = 1;
     fprintf(stderr, "\033[1;31merror:\033[0m ");
@@ -46,6 +51,11 @@ int var_ensure(const char *name) {
 void var_set(const char *name, Value v) {
     int i = var_find(name);
     if (i >= 0) {
+        if (assign_hist_count < MAX_ASSIGN_HISTORY) {
+            assign_history[assign_hist_count] = copy_val(vars[i].val);
+            assign_var_idx[assign_hist_count] = i;
+            assign_hist_count++;
+        }
         if (vars[i].val.type == VAL_STR) free(vars[i].val.data.str);
         vars[i].val = v;
     } else {
@@ -54,6 +64,42 @@ void var_set(const char *name, Value v) {
         vars[var_count].val = v;
         var_count++;
     }
+}
+
+void run_file_interpreted(const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (!f) { fprintf(stderr, "error: cannot open '%s': %s\n", path, strerror(errno)); return; }
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    rewind(f);
+    char *src = malloc(sz + 1);
+    if (!src) { fclose(f); fprintf(stderr, "out of memory\n"); return; }
+    long got = fread(src, 1, sz, f);
+    fclose(f);
+    src[got] = 0;
+    if (setjmp(error_jmp)) { free(src); return; }
+    lex_init(src);
+    lex_next();
+    while (lex_cur.type != TOK_EOF) {
+        ASTNode *s = parse_stmt();
+        if (s->type != NODE_EMPTY) {
+            int r = exec_stmt(s);
+            if (r == 1) break;
+        }
+        if (lex_cur.type == TOK_NEWLINE) lex_next();
+    }
+    free(src);
+}
+
+Value var_get_history(int var_idx, int nth) {
+    int cnt = 0;
+    for (int i = assign_hist_count - 1; i >= 0; i--) {
+        if (assign_var_idx[i] == var_idx) {
+            if (cnt == nth) return assign_history[i];
+            cnt++;
+        }
+    }
+    return undef_val;
 }
 
 Value make_num(double n) {
@@ -563,8 +609,95 @@ int exec_stmt(ASTNode *n) {
             return 2;
         case NODE_CONTINUE:
             return 3;
-        case NODE_INCLUDE:
+        case NODE_GET: {
+            int svc = var_count;
+            Var svs[MAX_VARS];
+            memcpy(svs, vars, sizeof(Var) * var_count);
+            int sfc = func_count;
+            FuncDef sfs[MAX_FUNCS];
+            memcpy(sfs, funcs, sizeof(FuncDef) * func_count);
+            int shc = assign_hist_count;
+            int sli[6];
+            memcpy(sli, lib_imported, sizeof(lib_imported));
+            jmp_buf serr;
+            memcpy(serr, error_jmp, sizeof(jmp_buf));
+
+            var_count = 0;
+            func_count = 0;
+            assign_hist_count = 0;
+            run_file_interpreted(n->data.get_stmt.path);
+
+            memcpy(error_jmp, serr, sizeof(jmp_buf));
+            Value *ex = malloc(sizeof(Value) * n->data.get_stmt.nvars);
+            for (int i = 0; i < n->data.get_stmt.nvars; i++) {
+                char *vn = n->data.get_stmt.varnames[i];
+                int ix = n->data.get_stmt.indices[i];
+                if (ix > 0) {
+                    int vi = var_find(vn);
+                    if (vi < 0) ex[i] = copy_val(undef_val);
+                    else ex[i] = copy_val(var_get_history(vi, ix));
+                } else {
+                    ex[i] = copy_val(var_get(vn));
+                }
+            }
+
+            memcpy(vars, svs, sizeof(Var) * svc);
+            var_count = svc;
+            func_count = sfc;
+            memcpy(funcs, sfs, sizeof(FuncDef) * sfc);
+            assign_hist_count = shc;
+            memcpy(lib_imported, sli, sizeof(lib_imported));
+
+            for (int i = 0; i < n->data.get_stmt.nvars; i++) {
+                char *nn = n->data.get_stmt.newnames[i] ? n->data.get_stmt.newnames[i] : n->data.get_stmt.varnames[i];
+                var_set(nn, ex[i]);
+            }
+            free(ex);
             return 0;
+        }
+        case NODE_INCLUDE: {
+            if (n->data.include.funcs && n->data.include.nfuncs > 0) {
+                int svc = var_count;
+                Var svs[MAX_VARS];
+                memcpy(svs, vars, sizeof(Var) * var_count);
+                int shc = assign_hist_count;
+                int sli[6];
+                memcpy(sli, lib_imported, sizeof(lib_imported));
+                jmp_buf serr;
+                memcpy(serr, error_jmp, sizeof(jmp_buf));
+                int outer_fc = func_count;
+
+                var_count = 0;
+                assign_hist_count = 0;
+                run_file_interpreted(n->data.include.path);
+
+                memcpy(error_jmp, serr, sizeof(jmp_buf));
+                int nfc = func_count;
+                int wi = outer_fc;
+                for (int i = outer_fc; i < nfc; i++) {
+                    int match = 0;
+                    for (int j = 0; j < n->data.include.nfuncs; j++) {
+                        if (!strcmp(funcs[i].name, n->data.include.funcs[j])) {
+                            match = 1;
+                            break;
+                        }
+                    }
+                    if (match) {
+                        if (wi != i) funcs[wi] = funcs[i];
+                        wi++;
+                    } else {
+                        free(funcs[i].name);
+                    }
+                }
+                func_count = wi;
+
+                memcpy(vars, svs, sizeof(Var) * svc);
+                var_count = svc;
+                assign_hist_count = shc;
+                memcpy(lib_imported, sli, sizeof(lib_imported));
+            }
+            return 0;
+        }
         case NODE_FUNC_DEF: {
             for (int i = 0; i < func_count; i++) {
                 if (!strcmp(funcs[i].name, n->data.func_def.name)) {
