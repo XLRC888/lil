@@ -1,0 +1,196 @@
+#ifndef LIL_H
+#define LIL_H
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdarg.h>
+#include <errno.h>
+#include <setjmp.h>
+#include <time.h>
+#include <sys/time.h>
+#include <stdint.h>
+#include <math.h>
+#include <unistd.h>
+
+#ifdef HAVE_GTK
+#include <gtk/gtk.h>
+#endif
+
+#define VERSION "0.1.0"
+#define MAX_VARS 1024
+#define MAX_FUNCS 256
+#define MAX_GTK_WIDGETS 256
+#define MAX_STACK 256
+#define MAX_CODE 65536
+#define MAX_STR 256
+#define MAX_CONST 256
+#define MAX_FALLBACKS 256
+#define BUF_SIZE 4096
+#define MAX_FIXUPS 256
+#define MAX_LOOP_STACK 64
+#define VM_STACK 2048
+
+typedef enum { VAL_NUM, VAL_STR } ValType;
+
+typedef struct {
+    ValType type;
+    union { double num; char *str; } data;
+} Value;
+
+typedef enum { TY_NUM, TY_STR, TY_DYN } VarType;
+
+typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE, TOK_ELIF,
+    TOK_WHILE, TOK_FOR, TOK_TO, TOK_EXIT, TOK_PLUS, TOK_MINUS, TOK_STAR,
+    TOK_SLASH, TOK_MOD, TOK_EQ, TOK_NE, TOK_LT, TOK_GT, TOK_LE, TOK_GE, TOK_ASSIGN,
+    TOK_LPAREN, TOK_RPAREN, TOK_LBRACE, TOK_RBRACE, TOK_COMMA,
+    TOK_SEMI, TOK_NEWLINE, TOK_EOF, TOK_AND, TOK_OR, TOK_NOT,
+    TOK_LOOP, TOK_STOP, TOK_BREAK, TOK_CONTINUE, TOK_INCLUDE, TOK_STRIFY, TOK_INTIFY, TOK_SWIFY,
+    TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
+    TOK_LBRACKET, TOK_RBRACKET,
+    TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET, TOK_AMPERSAND, TOK_PIPE,
+    TOK_TRY, TOK_CATCH, TOK_FORCE, TOK_UNFORCE, TOK_QMARK } TokenType;
+
+typedef struct {
+    TokenType type;
+    int line;
+    union { double num; char *str; } val;
+} Token;
+
+typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
+    NODE_ASSIGN, NODE_PRINT, NODE_INPUT, NODE_IF, NODE_WHILE,
+    NODE_FORTO, NODE_BLOCK, NODE_EXIT, NODE_EMPTY,
+    NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_FUNCTION,
+    NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE,
+    NODE_STRIFY, NODE_INTIFY, NODE_SWIFY, NODE_TRY, NODE_FORCE, NODE_UNFORCE, NODE_SET_UNDEF } NodeType;
+
+typedef struct ASTNode {
+    NodeType type;
+    int line;
+    union {
+        double num;
+        char *str;
+        char *id;
+        struct { int op; struct ASTNode *left, *right; } binop;
+        struct { int op; struct ASTNode *operand; } unary;
+        struct { char *name; struct ASTNode *value; } assign;
+        struct { struct ASTNode **exprs; int count; int cap; } print;
+        struct { char *name; char *prompt; int force_type; } input;
+        struct { struct ASTNode *cond, *then, *els; int flags; int has_mode;
+            struct ASTNode *has_item; struct ASTNode **has_items; int has_nitems; } if_stmt;
+        struct { struct ASTNode *cond, *body; } while_stmt;
+        struct { char *var; struct ASTNode *start, *end, *body; } forto;
+        struct { struct ASTNode *body; } loop;
+        struct { char *name; char **params; int nparams; struct ASTNode *body; } func_def;
+        struct { char *name; struct ASTNode **args; int nargs; } func_call;
+        struct { char *name; } include;
+        struct { char *lib; char **args; int argc; } funcall;
+        struct { char *raw; } templ;
+        struct { struct ASTNode *body, *catch_body; } try_stmt;
+        struct { struct ASTNode **stmts; int count, cap; } block;
+    } data;
+} ASTNode;
+
+typedef struct {
+    char *name;
+    char **params;
+    int nparams;
+    struct ASTNode *body;
+} FuncDef;
+
+typedef struct {
+    char *name;
+    Value val;
+    int forced;
+} Var;
+
+#ifdef HAVE_GTK
+typedef struct { char name[64]; GtkWidget *widget; } GtkW;
+typedef struct { char vname[64]; char sig[64]; } GtkSigData;
+#endif
+
+typedef struct { uint16_t op; int arg; } Instr;
+
+extern Var vars[MAX_VARS];
+extern int var_count;
+extern int error_occurred;
+extern FuncDef funcs[MAX_FUNCS];
+extern int func_count;
+extern jmp_buf error_jmp;
+extern Value undef_val;
+extern int lib_imported[6];
+extern int compile_mode;
+extern int compiled_header;
+extern Token lex_cur;
+
+void fatal(const char *fmt, ...);
+char *sdup(const char *s);
+char *sdupn(const char *s, size_t n);
+void *safe_alloc(size_t sz);
+
+int var_find(const char *name);
+Value var_get(const char *name);
+int var_ensure(const char *name);
+void var_set(const char *name, Value v);
+
+Value make_num(double n);
+Value make_str(const char *s);
+char *val_tostr(Value v);
+double val_tonum(Value v);
+void val_free(Value v);
+Value copy_val(Value v);
+int truthy(Value v);
+Value val_add(Value a, Value b);
+Value val_arith(Value a, Value b, int op);
+Value val_neg(Value a);
+int val_cmp(Value a, Value b, int op);
+
+void lex_init(const char *src);
+Token lex_next(void);
+Token lex_peek_next(void);
+
+ASTNode *parse_program(void);
+ASTNode *parse_stmt(void);
+
+Value eval_expr(ASTNode *n);
+int exec_stmt(ASTNode *n);
+void vm_run(void);
+void compile_prog(ASTNode **stmts, int nstmts);
+extern int code_len;
+extern int const_len;
+extern int fb_len;
+extern int fixup_len;
+extern int cur_loop;
+extern int for_counter;
+
+int lib_idx(const char *name);
+Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int line);
+
+int generate_c(const char *path, const char *outpath);
+
+void run_file(const char *path);
+void repl(void);
+
+char *str_lower(const char *s);
+char *resolve_arg(char *arg);
+void cg_expr(FILE *f, ASTNode *n, VarType want);
+void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth);
+void cg_collect_vars(ASTNode *n);
+void cg_varinit(FILE *f, ASTNode *prog);
+VarType infer_expr_type(ASTNode *n);
+void infer_type_stmt(ASTNode *n);
+void cg_emit_func(FILE *f, ASTNode *n);
+int is_cstmt(ASTNode *n);
+
+#ifdef HAVE_GTK
+GtkWidget *gtk_find_w(const char *name);
+void gtk_reg_w(const char *name, GtkWidget *w);
+Value gtk_dispatch(const char *fn, int argc, char **args, int line);
+#endif
+
+int check_has(ASTNode *lhs_expr, ASTNode *item, ASTNode **items, int nitems, int nocase);
+int check_cond_flags(ASTNode *cond, int flags);
+int is_word_bound(char c);
+
+#endif
