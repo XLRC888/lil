@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5cdb715b.js";
+            window.path_to_searchindex_js = "searchindex-acd962cd.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d2c478dc.js"></script>
@@ -175,11 +175,30 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="modifiers"><a class="header" href="#modifiers">Modifiers</a></h1>
-<p>Modifiers use the <code>?</code> prefix to change global behavior. Currently there is one modifier.</p>
+<p>Modifiers use the <code>?</code> prefix to change global behavior. Other features like <code>get</code> and <code>include</code> with function selection are covered here.</p>
 <h2 id="modifiers-1"><a class="header" href="#modifiers-1">Modifiers</a></h2>
 <ul>
 <li><a href="undefined_default.html">Undefined Default</a> — change what undefined variables return</li>
 </ul>
+<h2 id="get-statement"><a class="header" href="#get-statement">Get Statement</a></h2>
+<p>The <code>get</code> statement extracts variable values from an external file without leaking its variables into your scope:</p>
+<pre><code class="language-lil">get "x", "y" from data.lil
+</code></pre>
+<p>This runs <code>data.lil</code> in a sandbox, snapshots the values of <code>x</code> and <code>y</code>, then copies them into your script. The file’s own variables are discarded.</p>
+<p><strong>Indexed access</strong>: retrieve historical (previous) assignment values:</p>
+<pre><code class="language-lil">get "x"(1) from data.lil    # 1st previous value of x
+get "x"(2) from data.lil    # 2nd previous value
+</code></pre>
+<p>Index 0 (or no index) returns the current value. Uses the assignment history tracking in the VM.</p>
+<p><strong>Rename on import</strong>: map the file’s variable to a different name:</p>
+<pre><code class="language-lil">get "x" = "myX", "y" = "myY" from data.lil
+</code></pre>
+<p>The file’s <code>x</code> goes into your script’s <code>myX</code>, and <code>y</code> goes into <code>myY</code>.</p>
+<h2 id="include-with-function-selection"><a class="header" href="#include-with-function-selection">Include with Function Selection</a></h2>
+<p>The <code>include</code> statement can import specific functions from a file instead of registering everything:</p>
+<pre><code class="language-lil">include dice.lil/roll_dice flip_coin
+</code></pre>
+<p>Only <code>$roll_dice</code> and <code>$flip_coin</code> from <code>dice.lil</code> are registered. Other functions defined in the file are discarded. This is useful for utility files that define many helpers but you only need a few.</p>
 
                     </main>
 

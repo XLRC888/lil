@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5cdb715b.js";
+            window.path_to_searchindex_js = "searchindex-acd962cd.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d2c478dc.js"></script>
@@ -255,6 +255,10 @@ print roll
 }
 </code></pre>
 <p>Then your main script includes it and uses <code>$roll_dice</code> like any local function.</p>
+<p><strong>Selective import</strong>: specify which functions to import by appending <code>/</code> and function names:</p>
+<pre><code class="language-lil">include dice.lil/roll_dice flip_coin
+</code></pre>
+<p>Only <code>$roll_dice</code> and <code>$flip_coin</code> are registered from <code>dice.lil</code>. Other functions are discarded. The file runs in an isolated variable scope.</p>
 <h2 id="recursion"><a class="header" href="#recursion">Recursion</a></h2>
 <p>Functions can call themselves:</p>
 <pre><code class="language-lil">$fib(n) {
