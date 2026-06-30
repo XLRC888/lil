@@ -43,6 +43,10 @@ static struct wl_listener new_output_listener;
 static struct wl_listener new_toplevel_listener;
 static struct wl_listener new_input_listener;
 
+#define MAX_WINDOWS 64
+static struct { struct wlr_scene_node *node; char app_id[64]; char title[256]; } wl_windows[MAX_WINDOWS];
+static int wl_num_windows;
+
 static void wl_output_frame(struct wl_listener *listener, void *data) {
     (void)listener; (void)data;
     wl_frame = 1;
@@ -69,7 +73,15 @@ static void wl_new_output(struct wl_listener *listener, void *data) {
 static void wl_new_toplevel_cb(struct wl_listener *listener, void *data) {
     (void)listener;
     struct wlr_xdg_toplevel *toplevel = data;
-    wlr_scene_surface_create(&wscene->tree, toplevel->base->surface);
+    struct wlr_scene_surface *ss = wlr_scene_surface_create(&wscene->tree, toplevel->base->surface);
+    if (wl_num_windows < MAX_WINDOWS) {
+        wl_windows[wl_num_windows].node = &ss->buffer->node;
+        strncpy(wl_windows[wl_num_windows].app_id, toplevel->app_id ? toplevel->app_id : "", 63);
+        wl_windows[wl_num_windows].app_id[63] = 0;
+        strncpy(wl_windows[wl_num_windows].title, toplevel->title ? toplevel->title : "", 255);
+        wl_windows[wl_num_windows].title[255] = 0;
+        wl_num_windows++;
+    }
     if (wl_toplevel_var[0]) {
         char buf[256];
         snprintf(buf, sizeof(buf), "mapped:%s:%s", toplevel->app_id ? toplevel->app_id : "", toplevel->title ? toplevel->title : "");
@@ -167,6 +179,38 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         if (!woutput) fatal("line %d: no output", line);
         wlr_scene_output_commit(wlr_scene_get_scene_output(wscene, woutput), NULL);
         return make_str("");
+    }
+    if (!strcmp(fn, "move_window")) {
+        if (argc < 4) fatal("line %d: move_window expects app_id x y", line);
+        char *rid = resolve_arg(args[1]);
+        char *r2 = resolve_arg(args[2]), *r3 = resolve_arg(args[3]);
+        int nx = (int)strtod(r2, NULL); free(r2);
+        int ny = (int)strtod(r3, NULL); free(r3);
+        for (int i = 0; i < wl_num_windows; i++) {
+            if (!strcmp(wl_windows[i].app_id, rid) || !strcmp(wl_windows[i].title, rid)) {
+                wlr_scene_node_set_position(wl_windows[i].node, nx, ny);
+                break;
+            }
+        }
+        free(rid);
+        return make_str("");
+    }
+    if (!strcmp(fn, "window_at")) {
+        if (argc < 3) fatal("line %d: window_at expects x y", line);
+        char *r1 = resolve_arg(args[1]), *r2 = resolve_arg(args[2]);
+        double wx = strtod(r1, NULL); free(r1);
+        double wy = strtod(r2, NULL); free(r2);
+        struct wlr_scene_node *node = wlr_scene_node_at(&wscene->tree.node, (int)wx, (int)wy, NULL, NULL);
+        char result[256] = "";
+        if (node) {
+            for (int i = 0; i < wl_num_windows; i++) {
+                if (wl_windows[i].node == node) {
+                    snprintf(result, sizeof(result), "%s:%s", wl_windows[i].app_id, wl_windows[i].title);
+                    break;
+                }
+            }
+        }
+        return make_str(strlen(result) > 0 ? result : "none");
     }
     if (!strcmp(fn, "on")) {
         if (argc < 3) fatal("line %d: on expects signal and variable", line);
