@@ -60,8 +60,10 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
         if (argc < 5) fatal("line %d: &gtk|window name title width height", line);
         char *name = resolve_arg(args[1]);
         char *title = resolve_arg(args[2]);
-        int w = atoi(resolve_arg(args[3]));
-        int h = atoi(resolve_arg(args[4]));
+        char *ws = resolve_arg(args[3]);
+        char *hs = resolve_arg(args[4]);
+        int w = atoi(ws); free(ws);
+        int h = atoi(hs); free(hs);
         gtk_init_check(NULL, NULL);
         GtkWidget *win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
         gtk_window_set_title(GTK_WINDOW(win), title);
@@ -75,7 +77,8 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     if (!strcmp(fn, "vbox")) {
         if (argc < 3) fatal("line %d: &gtk|vbox name spacing", line);
         char *name = resolve_arg(args[1]);
-        int sp = atoi(resolve_arg(args[2]));
+        char *ss = resolve_arg(args[2]);
+        int sp = atoi(ss); free(ss);
         GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, sp);
         gtk_reg_w(name, box);
         free(name);
@@ -85,7 +88,8 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     if (!strcmp(fn, "hbox")) {
         if (argc < 3) fatal("line %d: &gtk|hbox name spacing", line);
         char *name = resolve_arg(args[1]);
-        int sp = atoi(resolve_arg(args[2]));
+        char *ss = resolve_arg(args[2]);
+        int sp = atoi(ss); free(ss);
         GtkWidget *box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, sp);
         gtk_reg_w(name, box);
         free(name);
@@ -239,7 +243,8 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
 
     if (!strcmp(fn, "timeout")) {
         if (argc < 4) fatal("line %d: &gtk|timeout ms signal varname", line);
-        int ms = atoi(resolve_arg(args[1]));
+        char *mss = resolve_arg(args[1]);
+        int ms = atoi(mss); free(mss);
         char *sig = resolve_arg(args[2]);
         char *vname = resolve_arg(args[3]);
         GtkSigData *sd = safe_alloc(sizeof(GtkSigData));

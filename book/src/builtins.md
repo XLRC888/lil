@@ -1,5 +1,17 @@
 # Built-in Libraries
 
+Libraries must be imported with `include` before use:
+
+```lil
+include math
+include date
+include string
+include file
+include sys
+include gtk
+include wlroots
+```
+
 Libraries are called with `&` syntax:
 
 ```lil
@@ -178,3 +190,33 @@ print short
 ```
 
 Most `date` functions return the date string. `&date|format` returns the current mode ("EU"/"US"), and setting the format returns empty.
+
+## Variable extraction (get)
+
+Extract variable values from other `.lil` files at runtime:
+
+```lil
+get "TOKEN" from /path/to/file.lil
+get "TOKEN" from file.lil              # relative path
+get "TOKEN" from /path/to/file         # .lil added automatically
+```
+
+**Selective extraction** with assignment index:
+
+```lil
+get "x"(2) from /tmp/data.lil          # 2nd-to-last assignment of x
+```
+
+**Renaming** on import:
+
+```lil
+get "TOKEN"="api_key" from auth.lil     # saves as api_key instead of TOKEN
+```
+
+**Multiple variables** in one call:
+
+```lil
+get "x", "y", "name" from data.lil
+```
+
+The target file is run in a sandboxed interpreter. Its variable state is isolated from the current script.

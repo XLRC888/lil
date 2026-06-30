@@ -303,21 +303,27 @@ Value eval_expr(ASTNode *n) {
                     free(ls); free(rs);
                     Value concatv = make_str(res);
                     free(res);
+                    val_free(l); val_free(r);
                     return concatv;
                 }
+                val_free(l); val_free(r);
                 return make_num(l.data.num + r.data.num);
             }
-            if (op == TOK_MINUS) return make_num(val_tonum(l) - val_tonum(r));
-            if (op == TOK_STAR)   return make_num(val_tonum(l) * val_tonum(r));
+            if (op == TOK_MINUS) { double _r = val_tonum(l) - val_tonum(r); val_free(l); val_free(r); return make_num(_r); }
+            if (op == TOK_STAR)  { double _r = val_tonum(l) * val_tonum(r); val_free(l); val_free(r); return make_num(_r); }
             if (op == TOK_SLASH) {
                 double rd = val_tonum(r);
                 if (rd == 0) fatal("line %d: division by zero", n->line);
-                return make_num(val_tonum(l) / rd);
+                double _r = val_tonum(l) / rd;
+                val_free(l); val_free(r);
+                return make_num(_r);
             }
             if (op == TOK_MOD) {
                 long rd = (long)val_tonum(r);
                 if (rd == 0) fatal("line %d: modulo by zero", n->line);
-                return make_num((long)val_tonum(l) % rd);
+                double _r = (long)val_tonum(l) % rd;
+                val_free(l); val_free(r);
+                return make_num(_r);
             }
 
             int result = 0;
@@ -355,6 +361,7 @@ Value eval_expr(ASTNode *n) {
                     default: fatal("line %d: unknown operator", n->line);
                 }
             }
+            val_free(l); val_free(r);
             return make_num(result);
         }
         case NODE_FUNCTION: {
@@ -969,10 +976,9 @@ void ce_stmt(ASTNode *n) {
             break;
         }
         case NODE_IF: {
-            if (n->data.if_stmt.has_mode || n->data.if_stmt.flags) {
+            if (n->data.if_stmt.has_mode || n->data.if_stmt.flags || !ce_expr(n->data.if_stmt.cond)) {
                 emit(OP_FALLBACK, add_fallback(n)); break;
             }
-            ce_expr(n->data.if_stmt.cond);
             emit(OP_JZ, 0);
             int pf = code_len - 1;
             ce_stmt(n->data.if_stmt.then);
@@ -988,7 +994,7 @@ void ce_stmt(ASTNode *n) {
             break;
         }
         case NODE_WHILE: {
-            if (!is_cstmt(n)) { emit(OP_FALLBACK, add_fallback(n)); break; }
+            if (!is_cstmt(n) || !ce_expr(n->data.while_stmt.cond)) { emit(OP_FALLBACK, add_fallback(n)); break; }
             int ls = code_len;
             ce_expr(n->data.while_stmt.cond);
             emit(OP_JZ, 0);
@@ -1002,7 +1008,9 @@ void ce_stmt(ASTNode *n) {
             break;
         }
         case NODE_FORTO: {
-            if (!is_cstmt(n)) { emit(OP_FALLBACK, add_fallback(n)); break; }
+            if (!is_cstmt(n) || !ce_expr(n->data.forto.start) || !ce_expr(n->data.forto.end)) {
+                emit(OP_FALLBACK, add_fallback(n)); break;
+            }
             int vidx = var_ensure(n->data.forto.var);
             ce_expr(n->data.forto.start);
             emit(OP_VAR_SET_IDX, vidx);
@@ -1118,6 +1126,7 @@ OP_VAR_SET_IDX: {
 }
 OP_INC_IDX: {
     int idx = code[ip].arg;
+    if (vars[idx].forced) fatal("cannot assign to a forced variable");
     if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);
     vars[idx].val.data.num += 1;
     vars[idx].val.type = VAL_NUM;
@@ -1125,6 +1134,7 @@ OP_INC_IDX: {
 }
 OP_DEC_IDX: {
     int idx = code[ip].arg;
+    if (vars[idx].forced) fatal("cannot assign to a forced variable");
     if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);
     vars[idx].val.data.num -= 1;
     vars[idx].val.type = VAL_NUM;

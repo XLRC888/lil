@@ -294,7 +294,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
                     if (!buf) fatal("out of memory");
                 }
                 if (pos + olen <= len && memcmp(arg + pos, old, olen) == 0) {
-                    size_t av = sizeof(buf) - ri - 1;
+                    size_t av = blen - ri - 1;
                     size_t cp = nlen < av ? nlen : av;
                     memcpy(buf + ri, new, cp); ri += cp;
                     pos += olen;
@@ -381,7 +381,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             char cmd[4096]; snprintf(cmd, sizeof(cmd), "ls -1 \"%s\"", path);
             FILE *fp = popen(cmd, "r");
             if (!fp) { free(path); return make_str(""); }
-            char buf[65536]; size_t total = 0;
+            char buf[65536] = {0}; size_t total = 0;
             while (fgets(buf + total, sizeof(buf) - total, fp)) total = strlen(buf);
             pclose(fp); free(path);
             return make_str(buf);
@@ -395,7 +395,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             char *cmd = resolve_arg(args[1]);
             FILE *fp = popen(cmd, "r");
             if (!fp) { free(cmd); return make_str(""); }
-            char buf[65536]; size_t total = 0;
+            char buf[65536] = {0}; size_t total = 0;
             while (fgets(buf + total, sizeof(buf) - total, fp)) total = strlen(buf);
             pclose(fp); free(cmd);
             return make_str(buf);

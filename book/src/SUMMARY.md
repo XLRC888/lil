@@ -31,3 +31,4 @@
   - [Compiled Mode](compiled.md)
   - [C Extensions](c_ext.md)
   - [GTK GUI Library](gtk.md)
+  - [WLROOTS Compositor](wlroots.md)

@@ -662,7 +662,7 @@ int generate_c(const char *path, const char *outpath) {
     char *src = malloc(sz + 1);
     if (!src) { fclose(f); fprintf(stderr, "out of memory\n"); return 1; }
     long got = fread(src, 1, sz, f);
-    fclose(f);
+    fclose(f); f = NULL;
     if (got < sz) fprintf(stderr, "warning: short read from '%s'\n", path);
     src[got] = 0;
 
@@ -674,7 +674,7 @@ int generate_c(const char *path, const char *outpath) {
         while (*psrc == '\n' || *psrc == '\r') psrc++;
     }
 
-    if (setjmp(error_jmp)) { free(src); src = NULL; return 1; }
+    if (setjmp(error_jmp)) { free(src); src = NULL; if (f) fclose(f); return 1; }
 
     lex_init(psrc);
     lex_next();
