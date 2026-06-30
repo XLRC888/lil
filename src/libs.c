@@ -2,7 +2,7 @@
 #include "lil.h"
 #include <sys/wait.h>
 
-int lib_imported[6];
+int lib_imported[7];
 
 int lib_idx(const char *name) {
     if (!strcmp(name, "math")) return 0;
@@ -11,6 +11,7 @@ int lib_idx(const char *name) {
     if (!strcmp(name, "file")) return 3;
     if (!strcmp(name, "sys")) return 4;
     if (!strcmp(name, "gtk")) return 5;
+    if (!strcmp(name, "wlroots")) return 6;
     return -1;
 }
 
