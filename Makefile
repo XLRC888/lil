@@ -21,7 +21,7 @@ wlroots: $(SRC) src/wlroots.c
 	$(CC) $(CFLAGS) $(WLROOTS_CFLAGS) -DHAVE_WLROOTS -Isrc -o $(TARGET_WL) $(SRC) src/wlroots.c $(WLROOTS_LIBS) -lm
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) $(TARGET_GTK) $(TARGET_WL)
 
 install: $(TARGET)
 	mkdir -p $(BINDIR)
