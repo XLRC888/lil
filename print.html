@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2c0d4416.js";
+            window.path_to_searchindex_js = "searchindex-4ba75574.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-fb6a48ea.js"></script>
@@ -659,6 +659,15 @@ include file
 include sys
 include gtk
 include wlroots
+</code></pre>
+<p>Libraries can be disabled with <code>uninclude</code>:</p>
+<pre><code class="language-lil">include math
+&amp;math|randint 1 10
+uninclude math
+&amp;math|randint 1 10    # error: library not imported
+</code></pre>
+<p>If the library wasn’t included, <code>uninclude</code> prints a warning and continues:</p>
+<pre><code class="language-lil">uninclude math          # warning: library 'math' was not included
 </code></pre>
 <p>Libraries are called with <code>&amp;</code> syntax:</p>
 <pre><code class="language-lil">&amp;&lt;library&gt;|&lt;function&gt; &lt;arguments...&gt;
