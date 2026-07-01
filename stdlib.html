@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Numbers and Strings - lil Book</title>
+        <title>Standard Library - lil Book</title>
 
 
         <!-- Custom HTML head -->
@@ -174,82 +174,31 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="numbers-and-strings"><a class="header" href="#numbers-and-strings">Numbers and Strings</a></h1>
-<h2 id="numbers"><a class="header" href="#numbers">Numbers</a></h2>
-<p>All numbers are floating point internally (C <code>double</code>). You can use them like integers:</p>
-<pre><code class="language-lil">x = 42
-y = 3.14
-z = -7
+                        <h1 id="standard-library"><a class="header" href="#standard-library">Standard Library</a></h1>
+<p>The <code>lib/</code> directory contains reusable lil modules that can be loaded with <code>include</code>.</p>
+<h2 id="loading-modules"><a class="header" href="#loading-modules">Loading Modules</a></h2>
+<pre><code>include lib/extra.lil/sum range_list
+print $sum([1, 2, 3])
+$range_list(1 5)
 </code></pre>
-<h2 id="strings"><a class="header" href="#strings">Strings</a></h2>
-<p>String literals use double quotes:</p>
-<pre><code class="language-lil">greeting = "hello"
-</code></pre>
-<p>You can concatenate strings with <code>+</code>:</p>
-<pre><code class="language-lil">a = "hello "
-b = "world"
-c = a + b
-print c
-</code></pre>
-<p>If you add a string to a number, the number is converted to a string first:</p>
-<pre><code class="language-lil">x = "score: " + 42
-print x
-</code></pre>
-<h2 id="string-length"><a class="header" href="#string-length">String length</a></h2>
-<p>Strings have a length you can store as a number:</p>
-<pre><code class="language-lil">name = "alice"
-len = 5
-print name, "has", len, "characters"
-print "length: 5"
-</code></pre>
-<h2 id="math-on-numbers"><a class="header" href="#math-on-numbers">Math on numbers</a></h2>
-<p>You can write math expressions directly:</p>
-<pre><code class="language-lil">result = 3.14 * 2
-print result
-
-r = 0.5
-print r
-</code></pre>
-<h2 id="type-conversion"><a class="header" href="#type-conversion">Type conversion</a></h2>
-<p>Use <code>strify</code> and <code>intify</code> to convert between types explicitly.</p>
-<p><code>strify</code> converts a variable to its string representation:</p>
-<pre><code class="language-lil">x = 42
-strify x
-</code></pre>
-<p><code>intify</code> converts a variable to a number. If the string is not numeric, it produces an error:</p>
-<pre><code class="language-lil">x = "42"
-intify x
-x = x + 5
-print x
-
-x = "hello"
-intify x
-</code></pre>
-<p><code>intify</code> can also format a string as binary, hex, or octal byte representation:</p>
-<pre><code class="language-lil">x = "hello"
-intify x binary
-intify x hex
-intify x octal
-</code></pre>
-<p><code>swify</code> toggles a variable between number and string. If its a number, it becomes a string. If its a string, it becomes a number:</p>
-<pre><code class="language-lil">x = 42
-strify x       # now "42"
-swify x        # back to 42
-swify x        # back to "42"
-swify x        # back to 42
-</code></pre>
+<h2 id="available-modules"><a class="header" href="#available-modules">Available Modules</a></h2>
+<h3 id="extralil"><a class="header" href="#extralil">extra.lil</a></h3>
+<ul>
+<li><code>$range(start end)</code> — print numbers from start to end-1</li>
+<li><code>$sum(list)</code> — sum all elements in a list</li>
+<li><code>$map(list fn)</code> — apply function to each element, return new list</li>
+<li><code>$filter(list fn)</code> — return new list with elements where fn returns truthy</li>
+<li><code>$range_list(start end)</code> — return list of numbers from start to end-1</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="hello_world.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="eval.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="variables.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -257,13 +206,10 @@ swify x        # back to 42
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="hello_world.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="eval.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="variables.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
-                    </a>
             </nav>
 
         </div>

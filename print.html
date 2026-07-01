@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-64f84909.js";
+            window.path_to_searchindex_js = "searchindex-983180c0.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-d2c478dc.js"></script>
+        <script src="toc-593fa1f3.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -658,6 +658,7 @@ include string
 include file
 include sys
 include gtk
+include list
 </code></pre>
 <p>Libraries can be disabled with <code>uninclude</code>:</p>
 <pre><code class="language-lil">include math
@@ -1533,6 +1534,42 @@ print y       # prints 99
 </code></pre>
 <p>The name after <code>?</code> is descriptive and ignored. Only one global default exists. Once set, every undefined variable will return that value until you change it again.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="lists"><a class="header" href="#lists">Lists</a></h1>
+<p>Lists are ordered collections of values. They are created with square bracket syntax and support index access.</p>
+<h2 id="creating-lists"><a class="header" href="#creating-lists">Creating Lists</a></h2>
+<pre><code>x = [1, 2, 3]
+mixed = ["hello", 42, 99]
+empty = []
+</code></pre>
+<h2 id="index-access"><a class="header" href="#index-access">Index Access</a></h2>
+<p>Access elements by position (0-indexed):</p>
+<pre><code>x = [10, 20, 30]
+print x[0]
+print x[1]
+x[2] = 99
+</code></pre>
+<p>Out-of-range access errors at runtime.</p>
+<h2 id="list-library"><a class="header" href="#list-library">List Library</a></h2>
+<p>The <code>list</code> library provides operations for dynamic list manipulation:</p>
+<pre><code>include list
+
+x = &amp;list|new
+&amp;list|push x 1
+&amp;list|push x 2
+&amp;list|push x 3
+print &amp;list|len x
+print &amp;list|at x 1
+val = &amp;list|pop x
+</code></pre>
+<h3 id="functions-1"><a class="header" href="#functions-1">Functions</a></h3>
+<ul>
+<li><code>&amp;list|new</code> — create empty list</li>
+<li><code>&amp;list|push list val</code> — append value to end</li>
+<li><code>&amp;list|pop list</code> — remove and return last element</li>
+<li><code>&amp;list|at list index</code> — retrieve element without modifying</li>
+<li><code>&amp;list|len list</code> — number of elements</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="advanced-features"><a class="header" href="#advanced-features">Advanced Features</a></h1>
 <p>This chapter covers the advanced features of lil: templates, the has operator, compiled mode, and C extensions. If you know Python, many of these concepts will feel familiar under a different syntax.</p>
 <h2 id="what-youll-find-here"><a class="header" href="#what-youll-find-here">What You’ll Find Here</a></h2>
@@ -1616,7 +1653,7 @@ ssh user@other-machine ./fib    # works without lil
 time ./fib
 </code></pre>
 <p>Compiled code matches C performance on simple numeric loops. The <code>$fib(35)</code> recursive function runs roughly 10x faster when compiled.</p>
-<h2 id="functions-1"><a class="header" href="#functions-1">Functions</a></h2>
+<h2 id="functions-2"><a class="header" href="#functions-2">Functions</a></h2>
 <p>User-defined functions (<code>$name()</code>) work in compiled mode. Each function becomes a standalone C function with its own local variable scope and type inference. Function calls work inside expressions, control flow, and can be recursive.</p>
 <h2 id="what-compiles-and-what-doesnt"><a class="header" href="#what-compiles-and-what-doesnt">What Compiles (and What Doesn’t)</a></h2>
 <p>Simple operations, arithmetic, control flow, user-defined functions, and variable assignments all compile fine:</p>
@@ -1836,6 +1873,35 @@ loop {
 <li>Widgets are automatically removed from the internal registry when destroyed.</li>
 <li>All event variables are initialized to <code>""</code> when connected, so you can check <code>if varname != ""</code> before any signal fires.</li>
 <li>Use <code>&amp;gtk|run</code> instead of a polling loop if you only need to handle a single event (it blocks until the window is closed).</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="dynamic-eval"><a class="header" href="#dynamic-eval">Dynamic Eval</a></h1>
+<p>The <code>sys</code> library includes an <code>eval</code> function that executes lil code from a string at runtime.</p>
+<pre><code>include sys
+&amp;sys|eval "x = 42"
+print x
+</code></pre>
+<p>The return value of eval is the value of the last expression:</p>
+<pre><code>result = &amp;sys|eval "1 + 2"
+print result
+</code></pre>
+<p>Variables set inside eval are visible to the caller. Errors are caught and return zero.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="standard-library"><a class="header" href="#standard-library">Standard Library</a></h1>
+<p>The <code>lib/</code> directory contains reusable lil modules that can be loaded with <code>include</code>.</p>
+<h2 id="loading-modules"><a class="header" href="#loading-modules">Loading Modules</a></h2>
+<pre><code>include lib/extra.lil/sum range_list
+print $sum([1, 2, 3])
+$range_list(1 5)
+</code></pre>
+<h2 id="available-modules"><a class="header" href="#available-modules">Available Modules</a></h2>
+<h3 id="extralil"><a class="header" href="#extralil">extra.lil</a></h3>
+<ul>
+<li><code>$range(start end)</code> — print numbers from start to end-1</li>
+<li><code>$sum(list)</code> — sum all elements in a list</li>
+<li><code>$map(list fn)</code> — apply function to each element, return new list</li>
+<li><code>$filter(list fn)</code> — return new list with elements where fn returns truthy</li>
+<li><code>$range_list(start end)</code> — return list of numbers from start to end-1</li>
 </ul>
 
                     </main>
