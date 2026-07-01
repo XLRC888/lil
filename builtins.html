@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-983180c0.js";
+            window.path_to_searchindex_js = "searchindex-f8c2b394.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-593fa1f3.js"></script>
@@ -287,6 +287,11 @@ print result
 <pre><code class="language-lil">shell = &amp;sys|env "SHELL"
 print "your shell is", shell
 </code></pre>
+<h3 id="debugging"><a class="header" href="#debugging">Debugging</a></h3>
+<pre><code>include sys
+&amp;sys|log "debug message"
+</code></pre>
+<p><code>&amp;sys|log</code> prints to stderr. <code>&amp;sys|last_error</code> returns the last error from a failed FFI call (file/read, sys/cmd). <code>&amp;sys|clear_error</code> resets it.</p>
 <h2 id="date-library"><a class="header" href="#date-library">date library</a></h2>
 <pre><code class="language-lil">print &amp;date|minimal
 print &amp;date|standart

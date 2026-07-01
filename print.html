@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-983180c0.js";
+            window.path_to_searchindex_js = "searchindex-f8c2b394.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-593fa1f3.js"></script>
@@ -763,6 +763,11 @@ print result
 <pre><code class="language-lil">shell = &amp;sys|env "SHELL"
 print "your shell is", shell
 </code></pre>
+<h3 id="debugging"><a class="header" href="#debugging">Debugging</a></h3>
+<pre><code>include sys
+&amp;sys|log "debug message"
+</code></pre>
+<p><code>&amp;sys|log</code> prints to stderr. <code>&amp;sys|last_error</code> returns the last error from a failed FFI call (file/read, sys/cmd). <code>&amp;sys|clear_error</code> resets it.</p>
 <h2 id="date-library"><a class="header" href="#date-library">date library</a></h2>
 <pre><code class="language-lil">print &amp;date|minimal
 print &amp;date|standart
@@ -1888,20 +1893,32 @@ print result
 <p>Variables set inside eval are visible to the caller. Errors are caught and return zero.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="standard-library"><a class="header" href="#standard-library">Standard Library</a></h1>
-<p>The <code>lib/</code> directory contains reusable lil modules that can be loaded with <code>include</code>.</p>
-<h2 id="loading-modules"><a class="header" href="#loading-modules">Loading Modules</a></h2>
-<pre><code>include lib/extra.lil/sum range_list
-print $sum([1, 2, 3])
-$range_list(1 5)
+<p>The <code>lib/</code> directory contains reusable lil modules loaded with <code>include</code>.</p>
+<h2 id="loading"><a class="header" href="#loading">Loading</a></h2>
+<pre><code>include lib/extra.lil/sum filter
 </code></pre>
-<h2 id="available-modules"><a class="header" href="#available-modules">Available Modules</a></h2>
+<h2 id="modules"><a class="header" href="#modules">Modules</a></h2>
 <h3 id="extralil"><a class="header" href="#extralil">extra.lil</a></h3>
 <ul>
-<li><code>$range(start end)</code> — print numbers from start to end-1</li>
-<li><code>$sum(list)</code> — sum all elements in a list</li>
-<li><code>$map(list fn)</code> — apply function to each element, return new list</li>
-<li><code>$filter(list fn)</code> — return new list with elements where fn returns truthy</li>
-<li><code>$range_list(start end)</code> — return list of numbers from start to end-1</li>
+<li><code>$sum(list)</code> — add all elements</li>
+<li><code>$map(list fn)</code> — apply function to each element</li>
+<li><code>$filter(list fn)</code> — keep elements where fn returns truthy</li>
+<li><code>$range_list(start end)</code> — build list of numbers</li>
+<li><code>$range(start end)</code> — print numbers</li>
+</ul>
+<h2 id="built-in-ffi-errors"><a class="header" href="#built-in-ffi-errors">Built-in FFI Errors</a></h2>
+<p>Functions that fail silently set a last error message:</p>
+<pre><code>include file
+include sys
+x = &amp;file|read "/nonexistent"
+print &amp;sys|last_error
+&amp;sys|clear_error
+print &amp;sys|last_error
+</code></pre>
+<ul>
+<li><code>&amp;sys|last_error</code> — returns last error string (empty if none)</li>
+<li><code>&amp;sys|clear_error</code> — resets error state</li>
+<li><code>&amp;sys|log "msg"</code> — prints to stderr for debugging</li>
 </ul>
 
                     </main>
