@@ -90,8 +90,8 @@ void infer_type_stmt(ASTNode *n) {
             break;
         case NODE_FORCE:
         case NODE_UNFORCE:
-            var_ensure(n->data.assign.name);
-            if (n->data.assign.value) infer_type_stmt(n->data.assign.value);
+            var_ensure(n->data.force.name);
+            if (n->data.force.value) infer_type_stmt(n->data.force.value);
             break;
         case NODE_LIST: break;
         case NODE_INDEX:
@@ -145,7 +145,7 @@ void cg_collect_vars(ASTNode *n) {
         case NODE_SWIFY: var_ensure(n->data.modify.name); break;
         case NODE_TRY: cg_collect_vars(n->data.try_stmt.body); cg_collect_vars(n->data.try_stmt.catch_body); break;
         case NODE_FORCE:
-        case NODE_UNFORCE: var_ensure(n->data.assign.name); if (n->data.assign.value) cg_collect_vars(n->data.assign.value); break;
+        case NODE_UNFORCE: var_ensure(n->data.force.name); if (n->data.force.value) cg_collect_vars(n->data.force.value); break;
         case NODE_SET_UNDEF: cg_collect_vars(n->data.assign.value); break;
         case NODE_ID: var_ensure(n->data.id); break;
         case NODE_BINOP: cg_collect_vars(n->data.binop.left); cg_collect_vars(n->data.binop.right); break;
@@ -610,16 +610,16 @@ void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
         case NODE_FUNC_DEF: break;
         case NODE_FORCE:
         case NODE_UNFORCE: {
-            if (n->data.assign.value) {
-                int idx = var_find(n->data.assign.name);
+            if (n->data.force.value) {
+                int idx = var_find(n->data.force.name);
                 VarType vt = idx >= 0 ? var_types[idx] : TY_DYN;
                 if (vt == TY_NUM) {
-                    fprintf(f, "%s = ", n->data.assign.name);
-                    cg_expr(f, n->data.assign.value, TY_NUM);
+                    fprintf(f, "%s = ", n->data.force.name);
+                    cg_expr(f, n->data.force.value, TY_NUM);
                     fprintf(f, ";\n");
                 } else {
-                    fprintf(f, "val_free(%s); %s = ", n->data.assign.name, n->data.assign.name);
-                    cg_expr(f, n->data.assign.value, TY_DYN);
+                    fprintf(f, "val_free(%s); %s = ", n->data.force.name, n->data.force.name);
+                    cg_expr(f, n->data.force.value, TY_DYN);
                     fprintf(f, ";\n");
                 }
             }

@@ -83,6 +83,7 @@ typedef struct ASTNode {
         char *id;
         struct { int op; struct ASTNode *left, *right; } binop;
         struct { int op; struct ASTNode *operand; } unary;
+        struct { char *name; struct ASTNode *value; int force_type; } force;
         struct { char *name; struct ASTNode *value; } assign;
         struct { struct ASTNode **exprs; int count; int cap; } print;
         struct { char *name; char *prompt; int force_type; } input;
@@ -117,6 +118,7 @@ typedef struct {
     char *name;
     Value val;
     int forced;
+    int forced_type;
 } Var;
 
 #ifdef HAVE_GTK
@@ -197,6 +199,7 @@ extern int fixup_len;
 extern int cur_loop;
 extern int for_counter;
 extern Value _last_expr_val;
+extern char last_error[256];
 
 int lib_idx(const char *name);
 Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int line);

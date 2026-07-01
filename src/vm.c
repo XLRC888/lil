@@ -13,6 +13,7 @@ Value assign_history[MAX_ASSIGN_HISTORY];
 int assign_hist_count;
 int assign_var_idx[MAX_ASSIGN_HISTORY];
 Value _last_expr_val;
+char last_error[256];
 
 void fatal(const char *fmt, ...) {
     error_occurred = 1;
@@ -54,6 +55,11 @@ int var_ensure(const char *name) {
 void var_set(const char *name, Value v) {
     int i = var_find(name);
     if (i >= 0) {
+        if (vars[i].forced) {
+            if (vars[i].forced_type == FORCE_NONE) fatal("cannot assign to a forced variable");
+            if (vars[i].forced_type == FORCE_INT && v.type == VAL_STR) fatal("cannot assign a string to an int-forced variable");
+            if (vars[i].forced_type == FORCE_STR && v.type == VAL_NUM) fatal("cannot assign a number to a str-forced variable");
+        }
         if (assign_hist_count < MAX_ASSIGN_HISTORY) {
             assign_history[assign_hist_count] = copy_val(vars[i].val);
             assign_var_idx[assign_hist_count] = i;
@@ -556,8 +562,11 @@ int exec_stmt(ASTNode *n) {
             Value v = eval_expr(n->data.assign.value);
             _last_expr_val = v;
             int idx = var_find(n->data.assign.name);
-            if (idx >= 0 && vars[idx].forced)
-                fatal("line %d: cannot assign to a forced variable", n->line);
+            if (idx >= 0 && vars[idx].forced) {
+                if (vars[idx].forced_type == FORCE_NONE) fatal("line %d: cannot assign to a forced variable", n->line);
+                if (vars[idx].forced_type == FORCE_INT && v.type == VAL_STR) fatal("line %d: cannot assign string to int-forced variable", n->line);
+                if (vars[idx].forced_type == FORCE_STR && v.type == VAL_NUM) fatal("line %d: cannot assign number to str-forced variable", n->line);
+            }
             var_set(n->data.assign.name, v);
             return 0;
         }
@@ -845,21 +854,23 @@ int exec_stmt(ASTNode *n) {
             return 0;
         }
         case NODE_FORCE: {
-            int idx = var_ensure(n->data.assign.name);
-            if (n->data.assign.value) {
-                Value v = eval_expr(n->data.assign.value);
-                var_set(n->data.assign.name, v);
-                idx = var_find(n->data.assign.name);
+            int idx = var_ensure(n->data.force.name);
+            if (n->data.force.value) {
+                Value v = eval_expr(n->data.force.value);
+                var_set(n->data.force.name, v);
+                idx = var_find(n->data.force.name);
             }
             vars[idx].forced = 1;
+            vars[idx].forced_type = n->data.force.force_type;
             return 0;
         }
         case NODE_UNFORCE: {
-            int idx = var_ensure(n->data.assign.name);
+            int idx = var_ensure(n->data.force.name);
             vars[idx].forced = 0;
-            if (n->data.assign.value) {
-                Value v = eval_expr(n->data.assign.value);
-                var_set(n->data.assign.name, v);
+            vars[idx].forced_type = 0;
+            if (n->data.force.value) {
+                Value v = eval_expr(n->data.force.value);
+                var_set(n->data.force.name, v);
             }
             return 0;
         }
@@ -1255,14 +1266,18 @@ OP_VAR_GET_IDX: {
 OP_VAR_SET_IDX: {
     int idx = code[ip].arg;
     Value v = vm_stack[--sp];
-    if (vars[idx].forced) fatal("cannot assign to a forced variable");
+    if (vars[idx].forced) {
+        if (vars[idx].forced_type == FORCE_NONE) fatal("cannot assign to a forced variable");
+        if (vars[idx].forced_type == FORCE_INT && v.type == VAL_STR) fatal("cannot assign string to int-forced variable");
+        if (vars[idx].forced_type == FORCE_STR && v.type == VAL_NUM) fatal("cannot assign number to str-forced variable");
+    }
     if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);
     vars[idx].val = v;
     ip++; goto *dtab[code[ip].op];
 }
 OP_INC_IDX: {
     int idx = code[ip].arg;
-    if (vars[idx].forced) fatal("cannot assign to a forced variable");
+    if (vars[idx].forced && vars[idx].forced_type != FORCE_INT) fatal("cannot assign to a forced variable");
     if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);
     vars[idx].val.data.num += 1;
     vars[idx].val.type = VAL_NUM;
@@ -1270,7 +1285,7 @@ OP_INC_IDX: {
 }
 OP_DEC_IDX: {
     int idx = code[ip].arg;
-    if (vars[idx].forced) fatal("cannot assign to a forced variable");
+    if (vars[idx].forced && vars[idx].forced_type != FORCE_INT) fatal("cannot assign to a forced variable");
     if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);
     vars[idx].val.data.num -= 1;
     vars[idx].val.type = VAL_NUM;

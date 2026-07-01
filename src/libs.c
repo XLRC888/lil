@@ -334,7 +334,8 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             if (argc < 2) fatal("line %d: file read expects a path", line);
             char *path = resolve_arg(args[1]);
             FILE *fp = fopen(path, "rb");
-            if (!fp) { free(path); return make_str(""); }
+            if (!fp) { snprintf(last_error, sizeof(last_error), "cannot open '%s'", path); free(path); return make_str(""); }
+            last_error[0] = 0;
             fseek(fp, 0, SEEK_END); long sz = ftell(fp); rewind(fp);
             char *buf = malloc(sz + 1); if (!buf) { fclose(fp); free(path); fatal("out of memory"); }
             long got = fread(buf, 1, sz, fp); fclose(fp);
@@ -488,7 +489,8 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
                 return make_str(buf);
             }
             FILE *fp = popen(cmd, "r");
-            if (!fp) { free(cmd); return make_str(""); }
+            if (!fp) { snprintf(last_error, sizeof(last_error), "popen failed: '%s'", cmd); free(cmd); return make_str(""); }
+            last_error[0] = 0;
             char buf[65536] = {0}; size_t total = 0;
             while (fgets(buf + total, sizeof(buf) - total, fp)) total = strlen(buf);
             pclose(fp); free(cmd);
@@ -501,6 +503,20 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             Value v = val ? make_str(val) : make_str("");
             free(name);
             return v;
+        }
+        if (!strcmp(fn, "log")) {
+            if (argc < 2) fatal("line %d: sys log expects a message", line);
+            char *msg = resolve_arg(args[1]);
+            fprintf(stderr, "%s\n", msg);
+            free(msg);
+            return make_num(0);
+        }
+        if (!strcmp(fn, "last_error")) {
+            return make_str(last_error[0] ? last_error : "");
+        }
+        if (!strcmp(fn, "clear_error")) {
+            last_error[0] = 0;
+            return make_num(0);
         }
         fatal("line %d: unknown sys function '%s'", line, fn);
     }
