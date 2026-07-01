@@ -17,6 +17,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 #include <wayland-server-core.h>
+#include <xkbcommon/xkbcommon.h>
 
 static struct wl_display *wdisplay;
 static struct wlr_backend *wbackend;
@@ -29,6 +30,7 @@ static struct wlr_allocator *wallocator;
 static struct wlr_cursor *wcursor;
 static struct wlr_xcursor_manager *wcursor_mgr;
 static struct wlr_seat *wseat;
+static struct wlr_keyboard *wl_keyboard;
 static struct wlr_output *woutput;
 static struct wl_event_loop *wevent_loop;
 static int wl_running;
@@ -146,9 +148,6 @@ static void wl_keyboard_key_cb(struct wl_listener *listener, void *data) {
     struct wlr_keyboard_key_event *ev = data;
     snprintf(wl_key_buf, sizeof(wl_key_buf), "%u:%s", ev->keycode,
         ev->state == WL_KEYBOARD_KEY_STATE_PRESSED ? "pressed" : "released");
-    if (ev->keycode == 24 && ev->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-        wl_quit_pending = 1;
-    }
 }
 
 struct wl_input_ctx { struct wl_listener destroy; struct wl_listener *ml, *bl, *kl; };
@@ -177,6 +176,7 @@ static void wl_new_input_cb(struct wl_listener *listener, void *data) {
         wlr_cursor_attach_input_device(wcursor, dev);
     } else if (dev->type == WLR_INPUT_DEVICE_KEYBOARD) {
         struct wlr_keyboard *kbd = wlr_keyboard_from_input_device(dev);
+        wl_keyboard = kbd;
         ctx->kl = calloc(1, sizeof(struct wl_listener));
         if (ctx->kl) { ctx->kl->notify = wl_keyboard_key_cb; wl_signal_add(&kbd->events.key, ctx->kl); }
         wlr_seat_set_keyboard(wseat, kbd);
@@ -311,14 +311,10 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         while (wl_running) {
             wl_display_flush_clients(wdisplay);
             if (wl_key_buf[0] && wl_key_var[0]) {
-                if (wl_key_buf[0] == '2' && wl_key_buf[1] == '4' && wl_key_buf[2] == ':') {
-                    wl_running = 0; break;
-                }
                 var_set(wl_key_var, make_str(wl_key_buf));
                 wl_key_buf[0] = 0;
             }
             if (wl_quit_pending) { wl_quit_pending = 0; wl_running = 0; break; }
-
             if (wl_frame) {
                 wl_frame = 0;
                 if (wl_frame_var[0]) var_set(wl_frame_var, make_str("1"));
@@ -326,8 +322,26 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
             }
             wl_event_loop_dispatch(wevent_loop, -1);
         }
-        if (wdisplay) { wl_display_destroy(wdisplay); wdisplay = NULL; }
+        if (wdisplay) {
+            wl_list_remove(&new_output_listener.link);
+            wl_list_remove(&new_toplevel_listener.link);
+            wl_list_remove(&new_input_listener.link);
+            wl_display_destroy(wdisplay);
+            wdisplay = NULL;
+        }
         return make_str("");
+    }
+    if (!strcmp(fn, "key_name")) {
+        if (argc < 2) fatal("line %d: key_name expects keycode", line);
+        char *r1 = resolve_arg(args[1]);
+        int kc = (int)strtod(r1, NULL); free(r1);
+        char name[64] = "?";
+        if (wl_keyboard && wl_keyboard->xkb_state) {
+            xkb_keysym_t sym = xkb_state_key_get_one_sym(wl_keyboard->xkb_state, kc);
+            if (sym != XKB_KEY_NoSymbol)
+                xkb_keysym_get_name(sym, name, sizeof(name));
+        }
+        return make_str(name);
     }
     if (!strcmp(fn, "set_offset")) {
         if (argc < 3) fatal("line %d: set_offset expects x y", line);

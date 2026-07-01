@@ -34,7 +34,8 @@ int var_find(const char *name) {
 Value var_get(const char *name) {
     int i = var_find(name);
     if (i < 0) return undef_val;
-    return vars[i].val;
+    if (vars[i].val.type == VAL_STR) return make_str(vars[i].val.data.str);
+    return make_num(vars[i].val.data.num);
 }
 
 int var_ensure(const char *name) {
@@ -57,11 +58,9 @@ void var_set(const char *name, Value v) {
             assign_hist_count++;
         }
         if (vars[i].val.type == VAL_STR) free(vars[i].val.data.str);
-        if (v.type == VAL_STR) v.data.str = sdup(v.data.str);
         vars[i].val = v;
     } else {
         if (var_count >= MAX_VARS) fatal("too many variables");
-        if (v.type == VAL_STR) v.data.str = sdup(v.data.str);
         vars[var_count].name = sdup(name);
         vars[var_count].val = v;
         var_count++;
@@ -1103,7 +1102,6 @@ OP_CONST: {
 }
 OP_VAR_GET: {
     Value v = var_get(strtab[code[ip].arg]);
-    if (v.type == VAL_STR) v.data.str = sdup(v.data.str);
     vm_stack[sp++] = v; ip++; goto *dtab[code[ip].op];
 }
 OP_VAR_SET: {
