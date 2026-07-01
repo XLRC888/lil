@@ -80,7 +80,7 @@ void infer_type_stmt(ASTNode *n) {
         case NODE_STRIFY:
         case NODE_INTIFY:
         case NODE_SWIFY: {
-            int i = var_ensure(n->data.input.name);
+            int i = var_ensure(n->data.modify.name);
             var_types[i] = TY_DYN;
             break;
         }
@@ -129,10 +129,10 @@ void cg_collect_vars(ASTNode *n) {
         case NODE_FORTO: var_ensure(n->data.forto.var); cg_collect_vars(n->data.forto.start); cg_collect_vars(n->data.forto.end); cg_collect_vars(n->data.forto.body); break;
         case NODE_BLOCK: for (int i = 0; i < n->data.block.count; i++) cg_collect_vars(n->data.block.stmts[i]); break;
         case NODE_PRINT: for (int i = 0; i < n->data.print.count; i++) cg_collect_vars(n->data.print.exprs[i]); break;
-        case NODE_INPUT:
+        case NODE_INPUT: var_ensure(n->data.input.name); break;
         case NODE_STRIFY:
         case NODE_INTIFY:
-        case NODE_SWIFY: var_ensure(n->data.input.name); break;
+        case NODE_SWIFY: var_ensure(n->data.modify.name); break;
         case NODE_TRY: cg_collect_vars(n->data.try_stmt.body); cg_collect_vars(n->data.try_stmt.catch_body); break;
         case NODE_FORCE:
         case NODE_UNFORCE: var_ensure(n->data.assign.name); if (n->data.assign.value) cg_collect_vars(n->data.assign.value); break;
@@ -543,14 +543,14 @@ void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
             break;
         }
         case NODE_STRIFY: {
-            fprintf(f, "{\n  char _b[128];\n  snprintf(_b,sizeof(_b),\"%%g\",%s.data.num);\n", n->data.input.name);
-            fprintf(f, "  val_free(%s); %s = make_str(_b);\n}\n", n->data.input.name, n->data.input.name);
+            fprintf(f, "{\n  char _b[128];\n  snprintf(_b,sizeof(_b),\"%%g\",%s.data.num);\n", n->data.modify.name);
+            fprintf(f, "  val_free(%s); %s = make_str(_b);\n}\n", n->data.modify.name, n->data.modify.name);
             break;
         }
         case NODE_INTIFY: {
-            if (n->data.input.prompt) {
-                char *fmt = n->data.input.prompt;
-                fprintf(f, "{\n  char *_s = val_tostr(%s);\n", n->data.input.name);
+            if (n->data.modify.fmt) {
+                char *fmt = n->data.modify.fmt;
+                fprintf(f, "{\n  char *_s = val_tostr(%s);\n", n->data.modify.name);
                 fprintf(f, "  size_t _n = strlen(_s);\n");
                 fprintf(f, "  char *_o = malloc(_n * 16 + 1); _o[0] = 0;\n");
                 fprintf(f, "  for (size_t _i = 0; _i < _n; _i++) {\n");
@@ -563,20 +563,20 @@ void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
                     fprintf(f, "    { char _b[16]; snprintf(_b,16,\"%%03o\",(unsigned char)_s[_i]); strcat(_o,_b); }\n");
                 }
                 fprintf(f, "  }\n");
-                fprintf(f, "  free(_s); val_free(%s); %s = make_str(_o); free(_o);\n", n->data.input.name, n->data.input.name);
+                fprintf(f, "  free(_s); val_free(%s); %s = make_str(_o); free(_o);\n", n->data.modify.name, n->data.modify.name);
                 fprintf(f, "}\n");
             } else {
-                fprintf(f, "%s.data.num = val_tonum(%s);\n", n->data.input.name, n->data.input.name);
-                fprintf(f, "%s.type = VAL_NUM;\n", n->data.input.name);
+                fprintf(f, "%s.data.num = val_tonum(%s);\n", n->data.modify.name, n->data.modify.name);
+                fprintf(f, "%s.type = VAL_NUM;\n", n->data.modify.name);
             }
             break;
         }
         case NODE_SWIFY: {
-            fprintf(f, "{\n  if (%s.type == VAL_STR) {\n", n->data.input.name);
-            fprintf(f, "    { char *_e = %s.data.str; char *_end; double _d = strtod(_e,&_end); if (*_end) { fprintf(stderr,\"convert error\\n\"); longjmp(_try_jmp,1); } val_free(%s); %s = make_num(_d); }\n", n->data.input.name, n->data.input.name, n->data.input.name);
+            fprintf(f, "{\n  if (%s.type == VAL_STR) {\n", n->data.modify.name);
+            fprintf(f, "    { char *_e = %s.data.str; char *_end; double _d = strtod(_e,&_end); if (*_end) { fprintf(stderr,\"convert error\\n\"); longjmp(_try_jmp,1); } val_free(%s); %s = make_num(_d); }\n", n->data.modify.name, n->data.modify.name, n->data.modify.name);
             fprintf(f, "  } else {\n");
-            fprintf(f, "    char _b[128];\n    snprintf(_b,sizeof(_b),\"%%g\",%s.data.num);\n", n->data.input.name);
-            fprintf(f, "    val_free(%s); %s = make_str(_b);\n  }\n}\n", n->data.input.name, n->data.input.name);
+            fprintf(f, "    char _b[128];\n    snprintf(_b,sizeof(_b),\"%%g\",%s.data.num);\n", n->data.modify.name);
+            fprintf(f, "    val_free(%s); %s = make_str(_b);\n  }\n}\n", n->data.modify.name, n->data.modify.name);
             break;
         }
         case NODE_TRY: {

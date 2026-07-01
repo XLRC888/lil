@@ -12,6 +12,7 @@ jmp_buf error_jmp;
 Value assign_history[MAX_ASSIGN_HISTORY];
 int assign_hist_count;
 int assign_var_idx[MAX_ASSIGN_HISTORY];
+Value _last_expr_val;
 
 void fatal(const char *fmt, ...) {
     error_occurred = 1;
@@ -65,6 +66,26 @@ void var_set(const char *name, Value v) {
         vars[var_count].val = v;
         var_count++;
     }
+}
+
+void state_save(LilState *s) {
+    s->var_count = var_count;
+    memcpy(s->vars, vars, sizeof(Var) * var_count);
+    s->func_count = func_count;
+    memcpy(s->funcs, funcs, sizeof(FuncDef) * func_count);
+    s->assign_hist_count = assign_hist_count;
+    memcpy(s->lib_imported, lib_imported, sizeof(lib_imported));
+    memcpy(s->error_jmp, error_jmp, sizeof(jmp_buf));
+}
+
+void state_restore(LilState *s) {
+    memcpy(error_jmp, s->error_jmp, sizeof(jmp_buf));
+    memcpy(vars, s->vars, sizeof(Var) * s->var_count);
+    var_count = s->var_count;
+    func_count = s->func_count;
+    memcpy(funcs, s->funcs, sizeof(FuncDef) * s->func_count);
+    assign_hist_count = s->assign_hist_count;
+    memcpy(lib_imported, s->lib_imported, sizeof(lib_imported));
 }
 
 void run_file_interpreted(const char *path) {
@@ -261,7 +282,12 @@ Value eval_expr(ASTNode *n) {
                     if (funcs[i].body->type == NODE_BLOCK && funcs[i].body->data.block.count > 0) {
                         ASTNode *last = funcs[i].body->data.block.stmts[funcs[i].body->data.block.count - 1];
                         if (last) {
-                            ret = stmt_val(last);
+                            if (last->type == NODE_ASSIGN) {
+                                int vi = var_find(last->data.assign.name);
+                                if (vi >= 0) ret = var_get(last->data.assign.name);
+                            } else {
+                                ret = copy_val(_last_expr_val);
+                            }
                         }
                     }
                     memcpy(vars, saved_vars, sizeof(Var) * saved_count);
@@ -416,6 +442,7 @@ int exec_stmt(ASTNode *n) {
     switch (n->type) {
         case NODE_ASSIGN: {
             Value v = eval_expr(n->data.assign.value);
+            _last_expr_val = v;
             int idx = var_find(n->data.assign.name);
             if (idx >= 0 && vars[idx].forced)
                 fatal("line %d: cannot assign to a forced variable", n->line);
@@ -446,7 +473,7 @@ int exec_stmt(ASTNode *n) {
             }
             size_t len = strlen(buf);
             while (len > 0 && (buf[len-1] == '\n' || buf[len-1] == '\r')) buf[--len] = 0;
-            if (n->data.input.force_type == 1) {
+            if (n->data.input.force_type == FORCE_INT) {
                 char *end;
                 double d = strtod(buf, &end);
                 while (*end == ' ' || *end == '\t') end++;
@@ -454,17 +481,17 @@ int exec_stmt(ASTNode *n) {
                 var_set(n->data.input.name, make_num(d));
                 int _fi = var_find(n->data.input.name);
                 if (_fi >= 0) vars[_fi].forced = 1;
-            } else if (n->data.input.force_type == 2) {
+            } else if (n->data.input.force_type == FORCE_STR) {
                 var_set(n->data.input.name, make_str(buf));
                 int _fi = var_find(n->data.input.name);
                 if (_fi >= 0) vars[_fi].forced = 1;
-            } else if (n->data.input.force_type == 3) {
+            } else if (n->data.input.force_type == FORCE_INPUT_INT) {
                 char *end;
                 double d = strtod(buf, &end);
                 while (*end == ' ' || *end == '\t') end++;
                 if (*end != 0) fatal("line %d: input '%s' is not a valid number", n->line, buf);
                 var_set(n->data.input.name, make_num(d));
-            } else if (n->data.input.force_type == 4) {
+            } else if (n->data.input.force_type == FORCE_INPUT_STR) {
                 var_set(n->data.input.name, make_str(buf));
             } else {
                 char *end;
@@ -479,20 +506,20 @@ int exec_stmt(ASTNode *n) {
             return 0;
         }
         case NODE_STRIFY: {
-            int idx = var_find(n->data.input.name);
-            if (idx < 0) { var_set(n->data.input.name, make_str("")); idx = var_count - 1; }
+            int idx = var_find(n->data.modify.name);
+            if (idx < 0) { var_set(n->data.modify.name, make_str("")); idx = var_count - 1; }
             if (vars[idx].forced) fatal("line %d: cannot strify a forced variable", n->line);
             char *s = val_tostr(vars[idx].val);
-            var_set(n->data.input.name, make_str(s));
+            var_set(n->data.modify.name, make_str(s));
             free(s);
             return 0;
         }
         case NODE_INTIFY: {
-            int _fidx = var_find(n->data.input.name);
+            int _fidx = var_find(n->data.modify.name);
             if (_fidx >= 0 && vars[_fidx].forced) fatal("line %d: cannot intify a forced variable", n->line);
-            if (n->data.input.prompt) {
-                int idx = var_find(n->data.input.name);
-                if (idx < 0) { var_set(n->data.input.name, make_str("")); idx = var_count - 1; }
+            if (n->data.modify.fmt) {
+                int idx = var_find(n->data.modify.name);
+                if (idx < 0) { var_set(n->data.modify.name, make_str("")); idx = var_count - 1; }
                 char *s = val_tostr(vars[idx].val);
                 size_t slen = strlen(s);
                 char *out = malloc(slen * 16 + 1);
@@ -500,9 +527,9 @@ int exec_stmt(ASTNode *n) {
                 out[0] = 0;
                 for (size_t i = 0; i < slen; i++) {
                     if (i > 0) strcat(out, " ");
-                    if (!strcmp(n->data.input.prompt, "binary")) {
+                    if (!strcmp(n->data.modify.fmt, "binary")) {
                         for (int b = 7; b >= 0; b--) strcat(out, ((unsigned char)s[i] >> b) & 1 ? "1" : "0");
-                    } else if (!strcmp(n->data.input.prompt, "hex")) {
+                    } else if (!strcmp(n->data.modify.fmt, "hex")) {
                         char buf[16]; snprintf(buf, sizeof(buf), "%02x", (unsigned char)s[i]);
                         strcat(out, buf);
                     } else {
@@ -511,25 +538,25 @@ int exec_stmt(ASTNode *n) {
                     }
                 }
                 free(s);
-                var_set(n->data.input.name, make_str(out));
+                var_set(n->data.modify.name, make_str(out));
                 free(out);
             } else {
-                Value v = var_get(n->data.input.name);
+                Value v = var_get(n->data.modify.name);
                 double d = val_tonum(v);
-                var_set(n->data.input.name, make_num(d));
+                var_set(n->data.modify.name, make_num(d));
             }
             return 0;
         }
         case NODE_SWIFY: {
-            int idx = var_find(n->data.input.name);
-            if (idx < 0) { var_set(n->data.input.name, make_str("")); idx = var_count - 1; }
+            int idx = var_find(n->data.modify.name);
+            if (idx < 0) { var_set(n->data.modify.name, make_str("")); idx = var_count - 1; }
             if (vars[idx].forced) fatal("line %d: cannot swify a forced variable", n->line);
             if (vars[idx].val.type == VAL_STR) {
                 double d = val_tonum(vars[idx].val);
-                var_set(n->data.input.name, make_num(d));
+                var_set(n->data.modify.name, make_num(d));
             } else {
                 char *s = val_tostr(vars[idx].val);
-                var_set(n->data.input.name, make_str(s));
+                var_set(n->data.modify.name, make_str(s));
                 free(s);
             }
             return 0;
@@ -618,24 +645,15 @@ int exec_stmt(ASTNode *n) {
         case NODE_CONTINUE:
             return 3;
         case NODE_GET: {
-            int svc = var_count;
-            Var svs[MAX_VARS];
-            memcpy(svs, vars, sizeof(Var) * var_count);
-            int sfc = func_count;
-            FuncDef sfs[MAX_FUNCS];
-            memcpy(sfs, funcs, sizeof(FuncDef) * func_count);
-            int shc = assign_hist_count;
-            int sli[7];
-            memcpy(sli, lib_imported, sizeof(lib_imported));
-            jmp_buf serr;
-            memcpy(serr, error_jmp, sizeof(jmp_buf));
+            LilState saved;
+            state_save(&saved);
 
             var_count = 0;
             func_count = 0;
             assign_hist_count = 0;
             run_file_interpreted(n->data.get_stmt.path);
 
-            memcpy(error_jmp, serr, sizeof(jmp_buf));
+            memcpy(error_jmp, saved.error_jmp, sizeof(jmp_buf));
             Value *ex = malloc(sizeof(Value) * n->data.get_stmt.nvars);
             for (int i = 0; i < n->data.get_stmt.nvars; i++) {
                 char *vn = n->data.get_stmt.varnames[i];
@@ -649,12 +667,12 @@ int exec_stmt(ASTNode *n) {
                 }
             }
 
-            memcpy(vars, svs, sizeof(Var) * svc);
-            var_count = svc;
-            func_count = sfc;
-            memcpy(funcs, sfs, sizeof(FuncDef) * sfc);
-            assign_hist_count = shc;
-            memcpy(lib_imported, sli, sizeof(lib_imported));
+            memcpy(vars, saved.vars, sizeof(Var) * saved.var_count);
+            var_count = saved.var_count;
+            func_count = saved.func_count;
+            memcpy(funcs, saved.funcs, sizeof(FuncDef) * saved.func_count);
+            assign_hist_count = saved.assign_hist_count;
+            memcpy(lib_imported, saved.lib_imported, sizeof(lib_imported));
 
             for (int i = 0; i < n->data.get_stmt.nvars; i++) {
                 char *nn = n->data.get_stmt.newnames[i] ? n->data.get_stmt.newnames[i] : n->data.get_stmt.varnames[i];
@@ -665,21 +683,14 @@ int exec_stmt(ASTNode *n) {
         }
         case NODE_INCLUDE: {
             if (n->data.include.funcs && n->data.include.nfuncs > 0) {
-                int svc = var_count;
-                Var svs[MAX_VARS];
-                memcpy(svs, vars, sizeof(Var) * var_count);
-                int shc = assign_hist_count;
-                int sli[7];
-                memcpy(sli, lib_imported, sizeof(lib_imported));
-                jmp_buf serr;
-                memcpy(serr, error_jmp, sizeof(jmp_buf));
+                LilState saved;
+                state_save(&saved);
                 int outer_fc = func_count;
 
                 var_count = 0;
                 assign_hist_count = 0;
                 run_file_interpreted(n->data.include.path);
 
-                memcpy(error_jmp, serr, sizeof(jmp_buf));
                 int nfc = func_count;
                 int wi = outer_fc;
                 for (int i = outer_fc; i < nfc; i++) {
@@ -699,10 +710,11 @@ int exec_stmt(ASTNode *n) {
                 }
                 func_count = wi;
 
-                memcpy(vars, svs, sizeof(Var) * svc);
-                var_count = svc;
-                assign_hist_count = shc;
-                memcpy(lib_imported, sli, sizeof(lib_imported));
+                memcpy(error_jmp, saved.error_jmp, sizeof(jmp_buf));
+                memcpy(vars, saved.vars, sizeof(Var) * saved.var_count);
+                var_count = saved.var_count;
+                assign_hist_count = saved.assign_hist_count;
+                memcpy(lib_imported, saved.lib_imported, sizeof(lib_imported));
             }
             return 0;
         }
@@ -748,7 +760,7 @@ int exec_stmt(ASTNode *n) {
             return 0;
         }
         default:
-            eval_expr(n);
+            _last_expr_val = eval_expr(n);
             return 0;
     }
 }
@@ -1083,7 +1095,7 @@ void vm_run(void) {
     void *dtab[] = { &&OP_NOP, &&OP_CONST, &&OP_VAR_GET, &&OP_VAR_SET,
         &&OP_VAR_GET_IDX, &&OP_VAR_SET_IDX, &&OP_INC_IDX, &&OP_DEC_IDX,
         &&OP_ADD, &&OP_SUB, &&OP_MUL, &&OP_DIV, &&OP_MOD, &&OP_NEG,
-        &&OP_CMP, &&OP_CMP, &&OP_CMP, &&OP_CMP, &&OP_CMP, &&OP_CMP,
+        &&OP_EQ, &&OP_NE, &&OP_LT, &&OP_GT, &&OP_LE, &&OP_GE,
         &&OP_AND, &&OP_OR, &&OP_NOT,
         &&OP_PRINT, &&OP_JMP, &&OP_JZ, &&OP_HALT, &&OP_EXIT, &&OP_FALLBACK, &&OP_POP };
     goto *dtab[code[ip].op];
@@ -1185,24 +1197,34 @@ OP_NEG: {
     else { double r = -a.data.num; val_free(a); vm_stack[sp++] = make_num(r); }
     ip++; goto *dtab[code[ip].op];
 }
-OP_CMP: {
+OP_EQ: {
     Value b = vm_stack[--sp], a = vm_stack[--sp];
-    int r;
-    uint16_t oc = code[ip].op;
-    if (a.type == VAL_STR || b.type == VAL_STR) {
-        char *as = val_tostr(a), *bs = val_tostr(b);
-        int c = strcmp(as, bs);
-        free(as); free(bs);
-        if (oc == OP_EQ) r = c == 0; else if (oc == OP_NE) r = c != 0;
-        else if (oc == OP_LT) r = c < 0; else if (oc == OP_GT) r = c > 0;
-        else if (oc == OP_LE) r = c <= 0; else r = c >= 0;
-    } else {
-        double av = a.data.num, bv = b.data.num;
-        if (oc == OP_EQ) r = av == bv; else if (oc == OP_NE) r = av != bv;
-        else if (oc == OP_LT) r = av < bv; else if (oc == OP_GT) r = av > bv;
-        else if (oc == OP_LE) r = av <= bv; else r = av >= bv;
-    }
-    val_free(a); val_free(b); vm_stack[sp++] = make_num(r);
+    vm_stack[sp++] = make_num(val_cmp(a, b, 0));
+    ip++; goto *dtab[code[ip].op];
+}
+OP_NE: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    vm_stack[sp++] = make_num(val_cmp(a, b, 1));
+    ip++; goto *dtab[code[ip].op];
+}
+OP_LT: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    vm_stack[sp++] = make_num(val_cmp(a, b, 2));
+    ip++; goto *dtab[code[ip].op];
+}
+OP_GT: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    vm_stack[sp++] = make_num(val_cmp(a, b, 3));
+    ip++; goto *dtab[code[ip].op];
+}
+OP_LE: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    vm_stack[sp++] = make_num(val_cmp(a, b, 4));
+    ip++; goto *dtab[code[ip].op];
+}
+OP_GE: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    vm_stack[sp++] = make_num(val_cmp(a, b, 5));
     ip++; goto *dtab[code[ip].op];
 }
 OP_AND: {

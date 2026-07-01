@@ -305,7 +305,7 @@ ASTNode *parse_stmt(void) {
         ASTNode *n = ast_alloc(NODE_INPUT);
         n->data.input.name = sdup(lex_cur.val.str);
         n->data.input.prompt = prompt;
-        n->data.input.force_type = is_int ? 3 : 4;
+        n->data.input.force_type = is_int ? FORCE_INPUT_INT : FORCE_INPUT_STR;
         lex_next();
         return n;
     }
@@ -650,7 +650,7 @@ ASTNode *parse_stmt(void) {
         char *name = sdup(lex_cur.val.str);
         lex_next();
         ASTNode *n = ast_alloc(NODE_STRIFY);
-        n->data.input.name = name;
+        n->data.modify.name = name;
         return n;
     }
     if (lex_cur.type == TOK_INTIFY) {
@@ -664,8 +664,8 @@ ASTNode *parse_stmt(void) {
             lex_next();
         }
         ASTNode *n = ast_alloc(NODE_INTIFY);
-        n->data.input.name = name;
-        n->data.input.prompt = fmt;
+        n->data.modify.name = name;
+        n->data.modify.fmt = fmt;
         return n;
     }
 
@@ -675,7 +675,7 @@ ASTNode *parse_stmt(void) {
         char *name = sdup(lex_cur.val.str);
         lex_next();
         ASTNode *n = ast_alloc(NODE_SWIFY);
-        n->data.input.name = name;
+        n->data.modify.name = name;
         return n;
     }
 
@@ -709,7 +709,7 @@ ASTNode *parse_stmt(void) {
             ASTNode *n = ast_alloc(NODE_INPUT);
             n->data.input.name = sdup(lex_cur.val.str);
             n->data.input.prompt = prompt;
-            n->data.input.force_type = is_int ? 1 : 2;
+            n->data.input.force_type = is_int ? FORCE_INT : FORCE_STR;
             lex_next();
             return n;
         }

@@ -33,6 +33,12 @@
 #define VM_STACK 2048
 #define MAX_ASSIGN_HISTORY 65536
 
+#define FORCE_NONE 0
+#define FORCE_INT 1
+#define FORCE_STR 2
+#define FORCE_INPUT_INT 3
+#define FORCE_INPUT_STR 4
+
 typedef enum { VAL_NUM, VAL_STR } ValType;
 
 typedef struct {
@@ -90,6 +96,7 @@ typedef struct ASTNode {
         struct { char *lib; char **args; int argc; } funcall;
         struct { char *raw; } templ;
         struct { struct ASTNode *body, *catch_body; } try_stmt;
+        struct { char *name; char *fmt; } modify;
         struct { struct ASTNode **stmts; int count, cap; } block;
     } data;
 } ASTNode;
@@ -113,6 +120,16 @@ typedef struct { char vname[64]; char sig[64]; } GtkSigData;
 #endif
 
 typedef struct { uint16_t op; int arg; } Instr;
+
+typedef struct {
+    int var_count;
+    Var vars[MAX_VARS];
+    int func_count;
+    FuncDef funcs[MAX_FUNCS];
+    int assign_hist_count;
+    int lib_imported[6];
+    jmp_buf error_jmp;
+} LilState;
 
 extern Var vars[MAX_VARS];
 extern int var_count;
@@ -169,6 +186,7 @@ extern int fb_len;
 extern int fixup_len;
 extern int cur_loop;
 extern int for_counter;
+extern Value _last_expr_val;
 
 int lib_idx(const char *name);
 Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int line);
@@ -178,6 +196,9 @@ extern int cg_loop_id;
 extern VarType var_types[MAX_VARS];
 
 int generate_c(const char *path, const char *outpath);
+
+void state_save(LilState *s);
+void state_restore(LilState *s);
 
 void run_file(const char *path);
 void repl(void);
