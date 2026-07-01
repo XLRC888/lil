@@ -103,6 +103,7 @@ void repl(void) {
 
 int main(int argc, char **argv) {
     error_occurred = 0;
+    in_try = 0;
     compile_mode = 0;
     const char *inpath = NULL;
     const char *outpath = NULL;

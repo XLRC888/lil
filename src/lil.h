@@ -200,6 +200,7 @@ extern int cur_loop;
 extern int for_counter;
 extern Value _last_expr_val;
 extern char last_error[256];
+extern int in_try;
 
 int lib_idx(const char *name);
 Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int line);

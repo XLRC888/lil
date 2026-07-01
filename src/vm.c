@@ -14,15 +14,16 @@ int assign_hist_count;
 int assign_var_idx[MAX_ASSIGN_HISTORY];
 Value _last_expr_val;
 char last_error[256];
+int in_try;
 
 void fatal(const char *fmt, ...) {
     error_occurred = 1;
-    fprintf(stderr, "\033[1;31merror:\033[0m ");
     va_list ap;
     va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
+    vsnprintf(last_error, sizeof(last_error), fmt, ap);
     va_end(ap);
-    fprintf(stderr, "\n");
+    if (!in_try)
+        fprintf(stderr, "\033[1;31merror:\033[0m %s\n", last_error);
     fflush(stderr);
     longjmp(error_jmp, 1);
 }
@@ -685,11 +686,15 @@ int exec_stmt(ASTNode *n) {
         case NODE_TRY: {
             jmp_buf old;
             memcpy(old, error_jmp, sizeof(jmp_buf));
+            in_try = 1;
             if (setjmp(error_jmp) == 0) {
                 exec_stmt(n->data.try_stmt.body);
                 memcpy(error_jmp, old, sizeof(jmp_buf));
+                in_try = 0;
             } else {
+                error_occurred = 0;
                 memcpy(error_jmp, old, sizeof(jmp_buf));
+                in_try = 0;
                 exec_stmt(n->data.try_stmt.catch_body);
             }
             return 0;
@@ -857,6 +862,8 @@ int exec_stmt(ASTNode *n) {
             int idx = var_ensure(n->data.force.name);
             if (n->data.force.value) {
                 Value v = eval_expr(n->data.force.value);
+                if (n->data.force.force_type == FORCE_NONE)
+                    n->data.force.force_type = (v.type == VAL_STR) ? FORCE_STR : FORCE_INT;
                 var_set(n->data.force.name, v);
                 idx = var_find(n->data.force.name);
             }
@@ -1400,7 +1407,7 @@ OP_PRINT: {
         else if (vals[i].type == VAL_LIST) { char *s = val_tostr(vals[i]); printf("%s", s); free(s); val_free(vals[i]); }
         else printf("%g", vals[i].data.num);
     }
-    free(vals); printf("\n");
+    free(vals); printf("\n"); fflush(stdout);
     ip++; goto *dtab[code[ip].op];
 }
 OP_JMP: {
