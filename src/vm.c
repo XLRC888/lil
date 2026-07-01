@@ -377,12 +377,6 @@ Value eval_expr(ASTNode *n) {
 #endif
             if (!strcmp(n->data.funcall.lib, "gtk"))
                 fatal("line %d: gtk not supported (recompile with 'make gtk')", n->line);
-#ifdef HAVE_WLROOTS
-            if (!strcmp(n->data.funcall.lib, "wlroots"))
-                return wlroots_dispatch(n->data.funcall.args[0], n->data.funcall.argc, n->data.funcall.args, n->line);
-#endif
-            if (!strcmp(n->data.funcall.lib, "wlroots"))
-                fatal("line %d: wlroots not supported (recompile with 'make wlroots')", n->line);
             return lib_dispatch(n->data.funcall.lib, n->data.funcall.args[0], n->data.funcall.argc, n->data.funcall.args, n->line);
         }
         default:

@@ -1,6 +1,5 @@
 lil
 lil-gtk
-lil-wlroots
 *.o
 *.out
 book/book/

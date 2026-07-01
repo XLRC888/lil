@@ -121,7 +121,7 @@ extern FuncDef funcs[MAX_FUNCS];
 extern int func_count;
 extern jmp_buf error_jmp;
 extern Value undef_val;
-extern int lib_imported[7];
+extern int lib_imported[6];
 extern Value assign_history[MAX_ASSIGN_HISTORY];
 extern int assign_hist_count;
 extern int assign_var_idx[MAX_ASSIGN_HISTORY];
@@ -197,10 +197,6 @@ int is_cstmt(ASTNode *n);
 GtkWidget *gtk_find_w(const char *name);
 void gtk_reg_w(const char *name, GtkWidget *w);
 Value gtk_dispatch(const char *fn, int argc, char **args, int line);
-#endif
-
-#ifdef HAVE_WLROOTS
-Value wlroots_dispatch(const char *fn, int argc, char **args, int line);
 #endif
 
 int check_has(ASTNode *lhs_expr, ASTNode *item, ASTNode **items, int nitems, int nocase);

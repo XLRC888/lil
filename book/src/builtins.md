@@ -9,7 +9,6 @@ include string
 include file
 include sys
 include gtk
-include wlroots
 ```
 
 Libraries can be disabled with `uninclude`:
