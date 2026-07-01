@@ -9,6 +9,7 @@ include string
 include file
 include sys
 include gtk
+include list
 ```
 
 Libraries can be disabled with `uninclude`:
