@@ -1,5 +1,5 @@
 #ifdef HAVE_WLROOTS
-#define _POSIX_C_SOURCE 199309L
+#define _GNU_SOURCE
 #include "lil.h"
 #include <time.h>
 #include <wlr/backend.h>
@@ -18,6 +18,7 @@
 #include <wlr/util/log.h>
 #include <wayland-server-core.h>
 #include <xkbcommon/xkbcommon.h>
+#include <xkbcommon/xkbcommon-compose.h>
 
 static struct wl_display *wdisplay;
 static struct wlr_backend *wbackend;
@@ -31,6 +32,7 @@ static struct wlr_cursor *wcursor;
 static struct wlr_xcursor_manager *wcursor_mgr;
 static struct wlr_seat *wseat;
 static struct wlr_keyboard *wl_keyboard;
+static struct xkb_state *wl_xkb_state;
 static struct wlr_output *woutput;
 static struct wl_event_loop *wevent_loop;
 static int wl_running;
@@ -99,7 +101,7 @@ static void wl_new_toplevel_cb(struct wl_listener *listener, void *data) {
     (void)listener;
     struct wlr_xdg_toplevel *toplevel = data;
     struct wlr_scene_surface *ss = wlr_scene_surface_create(&wscene->tree, toplevel->base->surface);
-    if (!ss) return;
+    if (!ss) { FILE *f = fopen("/tmp/followm_tl.txt","w"); if(f){fprintf(f,"ss_null\n");fclose(f);} return; }
     if (wl_num_windows < MAX_WINDOWS) {
         wl_windows[wl_num_windows].toplevel = toplevel;
         wl_windows[wl_num_windows].node = &ss->buffer->node;
@@ -110,8 +112,9 @@ static void wl_new_toplevel_cb(struct wl_listener *listener, void *data) {
         wl_windows[wl_num_windows].destroy.notify = wl_toplevel_destroy_cb;
         wl_signal_add(&toplevel->base->events.destroy, &wl_windows[wl_num_windows].destroy);
         wl_num_windows++;
+        FILE *f = fopen("/tmp/followm_tl.txt","w"); if(f){fprintf(f,"mapped:%s:%s\n",toplevel->app_id?toplevel->app_id:"?",toplevel->title?toplevel->title:"?");fclose(f);}
     }
-        if (wl_toplevel_var[0]) {
+    if (wl_toplevel_var[0]) {
         char buf[512];
         snprintf(buf, sizeof(buf), "mapped:%s:%s", toplevel->app_id ? toplevel->app_id : "", toplevel->title ? toplevel->title : "");
         var_set(wl_toplevel_var, make_str(buf));
@@ -146,27 +149,36 @@ static void wl_pointer_button_cb(struct wl_listener *listener, void *data) {
 static void wl_keyboard_key_cb(struct wl_listener *listener, void *data) {
     (void)listener;
     struct wlr_keyboard_key_event *ev = data;
+    if (ev->keycode == 16 && ev->state == WL_KEYBOARD_KEY_STATE_PRESSED)
+        wl_quit_pending = 1;
     snprintf(wl_key_buf, sizeof(wl_key_buf), "%u:%s", ev->keycode,
         ev->state == WL_KEYBOARD_KEY_STATE_PRESSED ? "pressed" : "released");
 }
 
-struct wl_input_ctx { struct wl_listener destroy; struct wl_listener *ml, *bl, *kl; };
+#define MAX_INPUT_CTX 16
+struct wl_input_ctx { struct wl_listener *ml, *bl, *kl; };
+static struct wl_input_ctx *wl_input_ctxs[MAX_INPUT_CTX];
+static int wl_num_input_ctxs;
 
-static void wl_input_destroy_cb(struct wl_listener *listener, void *data) {
-    (void)data;
-    struct wl_input_ctx *ctx = (struct wl_input_ctx *)listener;
-    if (ctx->ml && ctx->ml->link.prev) { wl_list_remove(&ctx->ml->link); free(ctx->ml); }
-    if (ctx->bl && ctx->bl->link.prev) { wl_list_remove(&ctx->bl->link); free(ctx->bl); }
-    if (ctx->kl && ctx->kl->link.prev) { wl_list_remove(&ctx->kl->link); free(ctx->kl); }
-    free(ctx);
+static void wl_cleanup_inputs(void) {
+    for (int i = 0; i < wl_num_input_ctxs; i++) {
+        struct wl_input_ctx *ctx = wl_input_ctxs[i];
+        if (!ctx) continue;
+        if (ctx->ml) { wl_list_remove(&ctx->ml->link); free(ctx->ml); }
+        if (ctx->bl) { wl_list_remove(&ctx->bl->link); free(ctx->bl); }
+        if (ctx->kl) { wl_list_remove(&ctx->kl->link); free(ctx->kl); }
+        free(ctx);
+    }
+    wl_num_input_ctxs = 0;
 }
 
 static void wl_new_input_cb(struct wl_listener *listener, void *data) {
     (void)listener;
     struct wlr_input_device *dev = data;
+    if (wl_num_input_ctxs >= MAX_INPUT_CTX) return;
     struct wl_input_ctx *ctx = calloc(1, sizeof(struct wl_input_ctx));
     if (!ctx) return;
-    ctx->destroy.notify = wl_input_destroy_cb;
+    wl_input_ctxs[wl_num_input_ctxs++] = ctx;
     if (dev->type == WLR_INPUT_DEVICE_POINTER) {
         struct wlr_pointer *ptr = wlr_pointer_from_input_device(dev);
         ctx->ml = calloc(1, sizeof(struct wl_listener));
@@ -181,7 +193,6 @@ static void wl_new_input_cb(struct wl_listener *listener, void *data) {
         if (ctx->kl) { ctx->kl->notify = wl_keyboard_key_cb; wl_signal_add(&kbd->events.key, ctx->kl); }
         wlr_seat_set_keyboard(wseat, kbd);
     }
-    wl_signal_add(&dev->events.destroy, &ctx->destroy);
 }
 
 Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
@@ -202,8 +213,21 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         wcursor = wlr_cursor_create();
         wcursor_mgr = wlr_xcursor_manager_create("default", 24);
         wlr_xcursor_manager_load(wcursor_mgr, 1);
+        const char *_sock = wl_display_add_socket_auto(wdisplay);
+        if (!_sock) fatal("line %d: failed to create display socket", line);
+        setenv("WAYLAND_DISPLAY", _sock, 1);
         wseat = wlr_seat_create(wdisplay, "seat0");
         wlr_cursor_attach_output_layout(wcursor, woutput_layout);
+        {
+            struct xkb_context *xkb_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+            struct xkb_rule_names names = { .rules = "evdev", .model = "pc105", .layout = "us" };
+            struct xkb_keymap *xkb_keymap = xkb_keymap_new_from_names(xkb_ctx, &names, 0);
+            if (xkb_keymap) {
+                wl_xkb_state = xkb_state_new(xkb_keymap);
+                xkb_keymap_unref(xkb_keymap);
+            }
+            xkb_context_unref(xkb_ctx);
+        }
         new_output_listener.notify = wl_new_output;
         wl_signal_add(&wbackend->events.new_output, &new_output_listener);
         new_toplevel_listener.notify = wl_new_toplevel_cb;
@@ -323,6 +347,7 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
             wl_event_loop_dispatch(wevent_loop, -1);
         }
         if (wdisplay) {
+            wl_cleanup_inputs();
             wl_list_remove(&new_output_listener.link);
             wl_list_remove(&new_toplevel_listener.link);
             wl_list_remove(&new_input_listener.link);
@@ -336,8 +361,8 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         char *r1 = resolve_arg(args[1]);
         int kc = (int)strtod(r1, NULL); free(r1);
         char name[64] = "?";
-        if (wl_keyboard && wl_keyboard->xkb_state) {
-            xkb_keysym_t sym = xkb_state_key_get_one_sym(wl_keyboard->xkb_state, kc);
+        if (wl_xkb_state) {
+            xkb_keysym_t sym = xkb_state_key_get_one_sym(wl_xkb_state, kc);
             if (sym != XKB_KEY_NoSymbol)
                 xkb_keysym_get_name(sym, name, sizeof(name));
         }
@@ -388,6 +413,7 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
     if (!strcmp(fn, "quit")) {
         wl_running = 0;
         if (wdisplay) {
+            wl_cleanup_inputs();
             wl_list_remove(&new_output_listener.link);
             wl_list_remove(&new_toplevel_listener.link);
             wl_list_remove(&new_input_listener.link);

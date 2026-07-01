@@ -527,6 +527,20 @@ ASTNode *parse_stmt(void) {
         return n;
     }
 
+    if (lex_cur.type == TOK_UNINCLUDE) {
+        lex_next();
+        if (lex_cur.type == TOK_ID && lib_idx(lex_cur.val.str) >= 0) {
+            int li = lib_idx(lex_cur.val.str);
+            if (!lib_imported[li])
+                fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: library '%s' was not included\n", lex_cur.line, lex_cur.val.str);
+            lib_imported[li] = 0;
+            lex_next();
+            return ast_alloc(NODE_EMPTY);
+        }
+        fatal("line %d: expected library name after uninclude", lex_cur.line);
+        return ast_alloc(NODE_EMPTY);
+    }
+
     if (lex_cur.type == TOK_GET) {
         lex_next();
         char **varnames = NULL, **newnames = NULL;

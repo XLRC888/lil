@@ -12,6 +12,21 @@ include gtk
 include wlroots
 ```
 
+Libraries can be disabled with `uninclude`:
+
+```lil
+include math
+&math|randint 1 10
+uninclude math
+&math|randint 1 10    # error: library not imported
+```
+
+If the library wasn't included, `uninclude` prints a warning and continues:
+
+```lil
+uninclude math          # warning: library 'math' was not included
+```
+
 Libraries are called with `&` syntax:
 
 ```lil

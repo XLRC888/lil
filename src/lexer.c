@@ -92,6 +92,7 @@ static Token lex_scan(void) {
             if (!strcmp(word, "break"))   { free(word); t.type = TOK_BREAK; return t; }
             if (!strcmp(word, "continue")) { free(word); t.type = TOK_CONTINUE; return t; }
             if (!strcmp(word, "include")) { free(word); t.type = TOK_INCLUDE; return t; }
+            if (!strcmp(word, "uninclude")) { free(word); t.type = TOK_UNINCLUDE; return t; }
             if (!strcmp(word, "has"))     { free(word); t.type = TOK_HAS; return t; }
             if (!strcmp(word, "nocase"))  { free(word); t.type = TOK_NOCASE; return t; }
             if (!strcmp(word, "anywhere")) { free(word); t.type = TOK_ANYWHERE; return t; }
