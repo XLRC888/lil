@@ -24,6 +24,8 @@ static struct wlr_scene *wscene;
 static struct wlr_scene_output_layout *wscene_layout;
 static struct wlr_output_layout *woutput_layout;
 static struct wlr_xdg_shell *wxdg_shell;
+static struct wlr_renderer *wrenderer;
+static struct wlr_allocator *wallocator;
 static struct wlr_cursor *wcursor;
 static struct wlr_xcursor_manager *wcursor_mgr;
 static struct wlr_seat *wseat;
@@ -31,21 +33,41 @@ static struct wlr_output *woutput;
 static struct wl_event_loop *wevent_loop;
 static int wl_running;
 static int wl_frame;
-static int wl_pointer_motion;
-static int wl_pointer_button;
-static int wl_key_event;
+static int wl_quit_pending;
+static int wl_mod_state;
+static int wl_pointer_press_time;
 static char wl_frame_var[64];
 static char wl_toplevel_var[64];
 static char wl_pointer_motion_var[64];
 static char wl_pointer_button_var[64];
 static char wl_key_var[64];
+static char wl_key_buf[64];
 static struct wl_listener new_output_listener;
 static struct wl_listener new_toplevel_listener;
 static struct wl_listener new_input_listener;
 
+static void wl_toplevel_destroy_cb(struct wl_listener *listener, void *data);
+
 #define MAX_WINDOWS 64
-static struct { struct wlr_scene_node *node; char app_id[64]; char title[256]; } wl_windows[MAX_WINDOWS];
+static struct {
+    struct wlr_xdg_toplevel *toplevel;
+    struct wlr_scene_node *node;
+    char app_id[64];
+    char title[256];
+    struct wl_listener destroy;
+} wl_windows[MAX_WINDOWS];
 static int wl_num_windows;
+
+static void wl_toplevel_destroy_cb(struct wl_listener *listener, void *data) {
+    (void)data;
+    for (int i = 0; i < wl_num_windows; i++) {
+        if (&wl_windows[i].destroy == listener) {
+            wl_windows[i].node = NULL;
+            wl_windows[i].toplevel = NULL;
+            break;
+        }
+    }
+}
 
 static void wl_output_frame(struct wl_listener *listener, void *data) {
     (void)listener; (void)data;
@@ -55,9 +77,11 @@ static void wl_output_frame(struct wl_listener *listener, void *data) {
 static void wl_new_output(struct wl_listener *listener, void *data) {
     (void)listener;
     struct wlr_output *output = data;
-    static struct wl_listener frame_listener;
-    frame_listener.notify = wl_output_frame;
-    wl_signal_add(&output->events.frame, &frame_listener);
+    struct wl_listener *fl = calloc(1, sizeof(struct wl_listener));
+    if (!fl) return;
+    fl->notify = wl_output_frame;
+    wl_signal_add(&output->events.frame, fl);
+    wlr_output_init_render(output, wallocator, wrenderer);
     struct wlr_scene_output *so = wlr_scene_output_create(wscene, output);
     struct wlr_output_layout_output *lo = wlr_output_layout_add_auto(woutput_layout, output);
     wlr_scene_output_layout_add_output(wscene_layout, lo, so);
@@ -73,23 +97,29 @@ static void wl_new_toplevel_cb(struct wl_listener *listener, void *data) {
     (void)listener;
     struct wlr_xdg_toplevel *toplevel = data;
     struct wlr_scene_surface *ss = wlr_scene_surface_create(&wscene->tree, toplevel->base->surface);
+    if (!ss) return;
     if (wl_num_windows < MAX_WINDOWS) {
+        wl_windows[wl_num_windows].toplevel = toplevel;
         wl_windows[wl_num_windows].node = &ss->buffer->node;
         strncpy(wl_windows[wl_num_windows].app_id, toplevel->app_id ? toplevel->app_id : "", 63);
         wl_windows[wl_num_windows].app_id[63] = 0;
         strncpy(wl_windows[wl_num_windows].title, toplevel->title ? toplevel->title : "", 255);
         wl_windows[wl_num_windows].title[255] = 0;
+        wl_windows[wl_num_windows].destroy.notify = wl_toplevel_destroy_cb;
+        wl_signal_add(&toplevel->base->events.destroy, &wl_windows[wl_num_windows].destroy);
         wl_num_windows++;
     }
-    if (wl_toplevel_var[0]) {
-        char buf[256];
+        if (wl_toplevel_var[0]) {
+        char buf[512];
         snprintf(buf, sizeof(buf), "mapped:%s:%s", toplevel->app_id ? toplevel->app_id : "", toplevel->title ? toplevel->title : "");
         var_set(wl_toplevel_var, make_str(buf));
     }
 }
 
 static void wl_pointer_motion_cb(struct wl_listener *listener, void *data) {
-    (void)listener; (void)data;
+    (void)listener;
+    struct wlr_pointer_motion_event *ev = data;
+    wlr_cursor_move(wcursor, &ev->pointer->base, ev->delta_x, ev->delta_y);
     if (wl_pointer_motion_var[0]) {
         char buf[64];
         snprintf(buf, sizeof(buf), "%.0f %.0f", wcursor->x, wcursor->y);
@@ -100,6 +130,10 @@ static void wl_pointer_motion_cb(struct wl_listener *listener, void *data) {
 static void wl_pointer_button_cb(struct wl_listener *listener, void *data) {
     (void)listener;
     struct wlr_pointer_button_event *ev = data;
+    if (ev->button == 273 && ev->state == WL_POINTER_BUTTON_STATE_PRESSED) {
+        wl_quit_pending = 2;
+        return;
+    }
     if (wl_pointer_button_var[0]) {
         char buf[64];
         snprintf(buf, sizeof(buf), "%u:%s", ev->button, ev->state == WL_POINTER_BUTTON_STATE_PRESSED ? "pressed" : "released");
@@ -110,27 +144,44 @@ static void wl_pointer_button_cb(struct wl_listener *listener, void *data) {
 static void wl_keyboard_key_cb(struct wl_listener *listener, void *data) {
     (void)listener;
     struct wlr_keyboard_key_event *ev = data;
-    if (wl_key_var[0]) {
-        char buf[64];
-        snprintf(buf, sizeof(buf), "%u:%s", ev->keycode, ev->state == WL_KEYBOARD_KEY_STATE_PRESSED ? "pressed" : "released");
-        var_set(wl_key_var, make_str(buf));
-        wl_key_event = 1;
+    snprintf(wl_key_buf, sizeof(wl_key_buf), "%u:%s", ev->keycode,
+        ev->state == WL_KEYBOARD_KEY_STATE_PRESSED ? "pressed" : "released");
+    if (ev->keycode == 24 && ev->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+        wl_quit_pending = 1;
     }
+}
+
+struct wl_input_ctx { struct wl_listener destroy; struct wl_listener *ml, *bl, *kl; };
+
+static void wl_input_destroy_cb(struct wl_listener *listener, void *data) {
+    (void)data;
+    struct wl_input_ctx *ctx = (struct wl_input_ctx *)listener;
+    if (ctx->ml && ctx->ml->link.prev) { wl_list_remove(&ctx->ml->link); free(ctx->ml); }
+    if (ctx->bl && ctx->bl->link.prev) { wl_list_remove(&ctx->bl->link); free(ctx->bl); }
+    if (ctx->kl && ctx->kl->link.prev) { wl_list_remove(&ctx->kl->link); free(ctx->kl); }
+    free(ctx);
 }
 
 static void wl_new_input_cb(struct wl_listener *listener, void *data) {
     (void)listener;
     struct wlr_input_device *dev = data;
+    struct wl_input_ctx *ctx = calloc(1, sizeof(struct wl_input_ctx));
+    if (!ctx) return;
+    ctx->destroy.notify = wl_input_destroy_cb;
     if (dev->type == WLR_INPUT_DEVICE_POINTER) {
         struct wlr_pointer *ptr = wlr_pointer_from_input_device(dev);
-        wl_signal_add(&ptr->events.motion, &(struct wl_listener){.notify = wl_pointer_motion_cb});
-        wl_signal_add(&ptr->events.button, &(struct wl_listener){.notify = wl_pointer_button_cb});
+        ctx->ml = calloc(1, sizeof(struct wl_listener));
+        ctx->bl = calloc(1, sizeof(struct wl_listener));
+        if (ctx->ml) { ctx->ml->notify = wl_pointer_motion_cb; wl_signal_add(&ptr->events.motion, ctx->ml); }
+        if (ctx->bl) { ctx->bl->notify = wl_pointer_button_cb; wl_signal_add(&ptr->events.button, ctx->bl); }
         wlr_cursor_attach_input_device(wcursor, dev);
     } else if (dev->type == WLR_INPUT_DEVICE_KEYBOARD) {
         struct wlr_keyboard *kbd = wlr_keyboard_from_input_device(dev);
-        wl_signal_add(&kbd->events.key, &(struct wl_listener){.notify = wl_keyboard_key_cb});
+        ctx->kl = calloc(1, sizeof(struct wl_listener));
+        if (ctx->kl) { ctx->kl->notify = wl_keyboard_key_cb; wl_signal_add(&kbd->events.key, ctx->kl); }
         wlr_seat_set_keyboard(wseat, kbd);
     }
+    wl_signal_add(&dev->events.destroy, &ctx->destroy);
 }
 
 Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
@@ -141,6 +192,8 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         wevent_loop = wl_display_get_event_loop(wdisplay);
         wbackend = wlr_backend_autocreate(wevent_loop, NULL);
         if (!wbackend) fatal("line %d: failed to create backend", line);
+        wrenderer = wlr_renderer_autocreate(wbackend);
+        wallocator = wlr_allocator_autocreate(wbackend, wrenderer);
         wscene = wlr_scene_create();
         woutput_layout = wlr_output_layout_create(wdisplay);
         wscene_layout = wlr_scene_attach_output_layout(wscene, woutput_layout);
@@ -157,6 +210,14 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         wl_signal_add(&wxdg_shell->events.new_toplevel, &new_toplevel_listener);
         new_input_listener.notify = wl_new_input_cb;
         wl_signal_add(&wbackend->events.new_input, &new_input_listener);
+        if (!wlr_backend_start(wbackend))
+            fatal("line %d: failed to start backend", line);
+        wl_display_init_shm(wdisplay);
+        for (int _wtries = 0; !woutput && _wtries < 200; _wtries++)
+            wl_event_loop_dispatch(wevent_loop, 50);
+        if (!woutput)
+            fatal("line %d: no output available", line);
+        wl_running = 1;
         return make_str("");
     }
     if (!strcmp(fn, "set_mode")) {
@@ -177,7 +238,8 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
     }
     if (!strcmp(fn, "render")) {
         if (!woutput) fatal("line %d: no output", line);
-        wlr_scene_output_commit(wlr_scene_get_scene_output(wscene, woutput), NULL);
+        struct wlr_scene_output *so = wlr_scene_get_scene_output(wscene, woutput);
+        if (so) wlr_scene_output_commit(so, NULL);
         return make_str("");
     }
     if (!strcmp(fn, "move_window")) {
@@ -187,7 +249,7 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         int nx = (int)strtod(r2, NULL); free(r2);
         int ny = (int)strtod(r3, NULL); free(r3);
         for (int i = 0; i < wl_num_windows; i++) {
-            if (!strcmp(wl_windows[i].app_id, rid) || !strcmp(wl_windows[i].title, rid)) {
+            if (wl_windows[i].node && (!strcmp(wl_windows[i].app_id, rid) || !strcmp(wl_windows[i].title, rid))) {
                 wlr_scene_node_set_position(wl_windows[i].node, nx, ny);
                 break;
             }
@@ -204,7 +266,7 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         char result[256] = "";
         if (node) {
             for (int i = 0; i < wl_num_windows; i++) {
-                if (wl_windows[i].node == node) {
+                if (wl_windows[i].node && wl_windows[i].node == node) {
                     snprintf(result, sizeof(result), "%s:%s", wl_windows[i].app_id, wl_windows[i].title);
                     break;
                 }
@@ -237,17 +299,26 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
     }
     if (!strcmp(fn, "frame")) {
         if (wl_frame) { wl_frame = 0; if (wl_frame_var[0]) var_set(wl_frame_var, make_str("1")); }
+        if (wl_key_buf[0] && wl_key_var[0]) {
+            var_set(wl_key_var, make_str(wl_key_buf));
+            wl_key_buf[0] = 0;
+        }
         wl_display_flush_clients(wdisplay);
         wl_event_loop_dispatch(wevent_loop, 0);
         return make_str("");
     }
     if (!strcmp(fn, "run")) {
-        wl_running = 1;
-        if (!wlr_backend_start(wbackend))
-            fatal("line %d: failed to start backend", line);
-        wl_display_init_shm(wdisplay);
         while (wl_running) {
             wl_display_flush_clients(wdisplay);
+            if (wl_key_buf[0] && wl_key_var[0]) {
+                if (wl_key_buf[0] == '2' && wl_key_buf[1] == '4' && wl_key_buf[2] == ':') {
+                    wl_running = 0; break;
+                }
+                var_set(wl_key_var, make_str(wl_key_buf));
+                wl_key_buf[0] = 0;
+            }
+            if (wl_quit_pending) { wl_quit_pending = 0; wl_running = 0; break; }
+
             if (wl_frame) {
                 wl_frame = 0;
                 if (wl_frame_var[0]) var_set(wl_frame_var, make_str("1"));
@@ -255,6 +326,7 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
             }
             wl_event_loop_dispatch(wevent_loop, -1);
         }
+        if (wdisplay) { wl_display_destroy(wdisplay); wdisplay = NULL; }
         return make_str("");
     }
     if (!strcmp(fn, "set_offset")) {
@@ -268,14 +340,46 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
     }
     if (!strcmp(fn, "cursor_show")) {
         wlr_cursor_set_xcursor(wcursor, wcursor_mgr, "default");
+        if (woutput) wlr_cursor_warp_closest(wcursor, NULL, woutput->width / 2, woutput->height / 2);
         return make_str("");
     }
     if (!strcmp(fn, "cursor_hide")) {
         wlr_cursor_set_xcursor(wcursor, wcursor_mgr, "none");
         return make_str("");
     }
+    if (!strcmp(fn, "window_pos")) {
+        if (argc < 2) fatal("line %d: window_pos expects app_id", line);
+        char *rid = resolve_arg(args[1]);
+        char result[64] = "";
+        for (int i = 0; i < wl_num_windows; i++) {
+            if (wl_windows[i].node && (!strcmp(wl_windows[i].app_id, rid) || !strcmp(wl_windows[i].title, rid))) {
+                snprintf(result, sizeof(result), "%.0f %.0f", wl_windows[i].node->x, wl_windows[i].node->y);
+                break;
+            }
+        }
+        free(rid);
+        return make_str(strlen(result) > 0 ? result : "none");
+    }
+    if (!strcmp(fn, "set_bg")) {
+        if (argc < 4) fatal("line %d: set_bg expects r g b", line);
+        char *r1 = resolve_arg(args[1]), *r2 = resolve_arg(args[2]), *r3 = resolve_arg(args[3]);
+        float r = (float)strtod(r1, NULL); free(r1);
+        float g = (float)strtod(r2, NULL); free(r2);
+        float b = (float)strtod(r3, NULL); free(r3);
+        float color[4] = {r, g, b, 1.0f};
+        struct wlr_scene_rect *bg = wlr_scene_rect_create(&wscene->tree, 32768, 32768, color);
+        wlr_scene_node_lower_to_bottom(&bg->node);
+        return make_str("");
+    }
     if (!strcmp(fn, "quit")) {
         wl_running = 0;
+        if (wdisplay) {
+            wl_list_remove(&new_output_listener.link);
+            wl_list_remove(&new_toplevel_listener.link);
+            wl_list_remove(&new_input_listener.link);
+            wl_display_destroy(wdisplay);
+            wdisplay = NULL;
+        }
         return make_str("");
     }
     fatal("line %d: unknown wlroots function '%s'", line, fn);

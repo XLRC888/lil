@@ -34,7 +34,8 @@ int var_find(const char *name) {
 Value var_get(const char *name) {
     int i = var_find(name);
     if (i < 0) return undef_val;
-    return vars[i].val;
+    if (vars[i].val.type == VAL_STR) return make_str(vars[i].val.data.str);
+    return make_num(vars[i].val.data.num);
 }
 
 int var_ensure(const char *name) {
