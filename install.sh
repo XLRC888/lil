@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-if [ ! -f lil.c ]; then
+if [ ! -f src/lil.h ]; then
     echo "error: run this script from the lil project directory"
     exit 1
 fi
