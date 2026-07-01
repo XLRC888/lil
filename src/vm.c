@@ -36,6 +36,7 @@ Value var_get(const char *name) {
     int i = var_find(name);
     if (i < 0) return undef_val;
     if (vars[i].val.type == VAL_STR) return make_str(vars[i].val.data.str);
+    if (vars[i].val.type == VAL_LIST) return copy_val(vars[i].val);
     return make_num(vars[i].val.data.num);
 }
 
@@ -134,10 +135,77 @@ Value make_str(const char *s) {
     return v;
 }
 
+Value make_list(void) {
+    Value v;
+    v.type = VAL_LIST;
+    v.data.list.items = NULL;
+    v.data.list.count = 0;
+    v.data.list.cap = 0;
+    return v;
+}
+
+void list_append(Value *v, Value item) {
+    if (v->type != VAL_LIST) fatal("not a list");
+    if (v->data.list.count >= v->data.list.cap) {
+        v->data.list.cap = v->data.list.cap ? v->data.list.cap * 2 : 4;
+        v->data.list.items = realloc(v->data.list.items, sizeof(Value) * v->data.list.cap);
+        if (!v->data.list.items) fatal("out of memory");
+    }
+    v->data.list.items[v->data.list.count++] = item;
+}
+
+Value list_get(Value v, int idx) {
+    if (v.type != VAL_LIST) fatal("not a list");
+    if (idx < 0 || idx >= v.data.list.count) fatal("list index out of range");
+    return copy_val(v.data.list.items[idx]);
+}
+
+void list_set(Value *v, int idx, Value item) {
+    if (v->type != VAL_LIST) fatal("not a list");
+    if (idx < 0) fatal("list index out of range");
+    if (idx >= v->data.list.count) {
+        while (v->data.list.cap <= idx) {
+            v->data.list.cap = v->data.list.cap ? v->data.list.cap * 2 : 4;
+            v->data.list.items = realloc(v->data.list.items, sizeof(Value) * v->data.list.cap);
+            if (!v->data.list.items) fatal("out of memory");
+        }
+        while (v->data.list.count <= idx) {
+            v->data.list.items[v->data.list.count++] = make_num(0);
+        }
+    }
+    val_free(v->data.list.items[idx]);
+    v->data.list.items[idx] = item;
+}
+
+int list_len(Value v) {
+    if (v.type != VAL_LIST) return 0;
+    return v.data.list.count;
+}
+
 char *val_tostr(Value v) {
     if (v.type == VAL_STR) return sdup(v.data.str);
-    char buf[128];
+    if (v.type == VAL_LIST) {
+        size_t cap = 64, pos = 0;
+        char *buf = malloc(cap);
+        if (!buf) fatal("out of memory");
+        buf[pos++] = '[';
+        for (int i = 0; i < v.data.list.count; i++) {
+            if (i > 0) {
+                if (pos + 2 >= cap) { cap *= 2; buf = realloc(buf, cap); if (!buf) fatal("out of memory"); }
+                buf[pos++] = ','; buf[pos++] = ' ';
+            }
+            char *s = val_tostr(v.data.list.items[i]);
+            size_t sl = strlen(s);
+            while (pos + sl + 2 >= cap) { cap *= 2; buf = realloc(buf, cap); if (!buf) fatal("out of memory"); }
+            memcpy(buf + pos, s, sl); pos += sl;
+            free(s);
+        }
+        if (pos + 2 >= cap) { buf = realloc(buf, cap + 2); if (!buf) fatal("out of memory"); }
+        buf[pos++] = ']'; buf[pos] = 0;
+        return buf;
+    }
     double d = v.data.num;
+    char buf[128];
     if (d == (long)d) snprintf(buf, sizeof(buf), "%ld", (long)d);
     else snprintf(buf, sizeof(buf), "%.10g", d);
     return sdup(buf);
@@ -145,6 +213,7 @@ char *val_tostr(Value v) {
 
 double val_tonum(Value v) {
     if (v.type == VAL_NUM) return v.data.num;
+    if (v.type == VAL_LIST) return v.data.list.count;
     char *end;
     double d = strtod(v.data.str, &end);
     if (*end) fatal("cannot convert '%s' to number", v.data.str);
@@ -153,19 +222,40 @@ double val_tonum(Value v) {
 
 void val_free(Value v) {
     if (v.type == VAL_STR) free(v.data.str);
+    else if (v.type == VAL_LIST) {
+        for (int i = 0; i < v.data.list.count; i++)
+            val_free(v.data.list.items[i]);
+        free(v.data.list.items);
+    }
 }
 
 Value copy_val(Value v) {
     if (v.type == VAL_STR) v.data.str = sdup(v.data.str);
+    else if (v.type == VAL_LIST) {
+        Value *items = malloc(sizeof(Value) * (v.data.list.cap > 0 ? v.data.list.cap : 4));
+        if (!items) fatal("out of memory");
+        for (int i = 0; i < v.data.list.count; i++)
+            items[i] = copy_val(v.data.list.items[i]);
+        v.data.list.items = items;
+    }
     return v;
 }
 
 int truthy(Value v) {
     if (v.type == VAL_STR) return strlen(v.data.str) != 0;
+    if (v.type == VAL_LIST) return v.data.list.count != 0;
     return v.data.num != 0;
 }
 
 Value val_add(Value a, Value b) {
+    if (a.type == VAL_LIST || b.type == VAL_LIST) {
+        char *as = val_tostr(a), *bs = val_tostr(b);
+        char *r = malloc(strlen(as) + strlen(bs) + 1);
+        if (!r) fatal("out of memory");
+        strcpy(r, as); strcat(r, bs);
+        val_free(a); val_free(b); free(as); free(bs);
+        Value vr = make_str(r); free(r); return vr;
+    }
     if (a.type == VAL_STR || b.type == VAL_STR) {
         char *as = val_tostr(a), *bs = val_tostr(b);
         char *r = malloc(strlen(as) + strlen(bs) + 1);
@@ -179,6 +269,7 @@ Value val_add(Value a, Value b) {
 }
 
 Value val_arith(Value a, Value b, int op) {
+    if (a.type == VAL_LIST || b.type == VAL_LIST) { val_free(a); val_free(b); return make_num(0); }
     if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); return make_num(0); }
     double av = a.data.num, bv = b.data.num;
     val_free(a); val_free(b);
@@ -194,6 +285,7 @@ Value val_arith(Value a, Value b, int op) {
 }
 
 Value val_neg(Value a) {
+    if (a.type == VAL_LIST) { val_free(a); return make_num(0); }
     if (a.type == VAL_STR) { val_free(a); return make_num(0); }
     double r = -a.data.num; val_free(a); return make_num(r);
 }
@@ -297,6 +389,26 @@ Value eval_expr(ASTNode *n) {
             }
             fatal("line %d: function '%s' not defined", n->line, n->data.func_call.name);
             return make_num(0);
+        }
+        case NODE_LIST: {
+            Value list = make_list();
+            for (int i = 0; i < n->data.list.count; i++) {
+                Value elem = eval_expr(n->data.list.elements[i]);
+                list_append(&list, elem);
+            }
+            return list;
+        }
+        case NODE_INDEX: {
+            Value container = eval_expr(n->data.idx.container);
+            Value idx = eval_expr(n->data.idx.index);
+            double di = val_tonum(idx);
+            val_free(idx);
+            if (container.type != VAL_LIST) { val_free(container); fatal("line %d: cannot index non-list", n->line); }
+            int iidx = (int)di;
+            if (iidx < 0 || iidx >= container.data.list.count) { val_free(container); fatal("line %d: list index out of range", n->line); }
+            Value result = copy_val(container.data.list.items[iidx]);
+            val_free(container);
+            return result;
         }
         case NODE_ID:
             return var_get(n->data.id);
@@ -751,6 +863,22 @@ int exec_stmt(ASTNode *n) {
             }
             return 0;
         }
+        case NODE_INDEX_SET: {
+            Value cval = eval_expr(n->data.idx_set.container);
+            Value ival = eval_expr(n->data.idx_set.index);
+            Value vval = eval_expr(n->data.idx_set.value);
+            double di = val_tonum(ival);
+            val_free(ival);
+            if (cval.type != VAL_LIST) { val_free(cval); val_free(vval); fatal("line %d: cannot index non-list", n->line); }
+            int iidx = (int)di;
+            if (iidx < 0) { val_free(cval); val_free(vval); fatal("line %d: negative list index", n->line); }
+            int found = var_find(n->data.idx_set.container->data.id);
+            if (found >= 0 && vars[found].forced) fatal("line %d: cannot modify forced list", n->line);
+            list_set(&cval, iidx, vval);
+            if (found >= 0) var_set(n->data.idx_set.container->data.id, cval);
+            else val_free(cval);
+            return 0;
+        }
         case NODE_EXIT:
             return 1;
         case NODE_SET_UNDEF: {
@@ -1104,6 +1232,7 @@ OP_NOP: ip++; goto *dtab[code[ip].op];
 OP_CONST: {
     Value v = consts[code[ip].arg];
     if (v.type == VAL_STR) v.data.str = sdup(v.data.str);
+    else if (v.type == VAL_LIST) v = copy_val(v);
     vm_stack[sp++] = v; ip++; goto *dtab[code[ip].op];
 }
 OP_VAR_GET: {
@@ -1120,6 +1249,7 @@ OP_VAR_SET: {
 OP_VAR_GET_IDX: {
     Value v = vars[code[ip].arg].val;
     if (v.type == VAL_STR) v.data.str = sdup(v.data.str);
+    else if (v.type == VAL_LIST) v = copy_val(v);
     vm_stack[sp++] = v; ip++; goto *dtab[code[ip].op];
 }
 OP_VAR_SET_IDX: {
@@ -1252,6 +1382,7 @@ OP_PRINT: {
         vals[i] = vm_stack[--sp];
     for (int i = 0; i < n; i++) {
         if (vals[i].type == VAL_STR) { printf("%s", vals[i].data.str); free(vals[i].data.str); }
+        else if (vals[i].type == VAL_LIST) { char *s = val_tostr(vals[i]); printf("%s", s); free(s); val_free(vals[i]); }
         else printf("%g", vals[i].data.num);
     }
     free(vals); printf("\n");

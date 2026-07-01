@@ -93,6 +93,16 @@ void infer_type_stmt(ASTNode *n) {
             var_ensure(n->data.assign.name);
             if (n->data.assign.value) infer_type_stmt(n->data.assign.value);
             break;
+        case NODE_LIST: break;
+        case NODE_INDEX:
+            infer_type_stmt(n->data.idx.container);
+            infer_type_stmt(n->data.idx.index);
+            break;
+        case NODE_INDEX_SET:
+            infer_type_stmt(n->data.idx_set.container);
+            infer_type_stmt(n->data.idx_set.index);
+            infer_type_stmt(n->data.idx_set.value);
+            break;
         default: break;
     }
 }
@@ -142,6 +152,9 @@ void cg_collect_vars(ASTNode *n) {
         case NODE_UNARY: cg_collect_vars(n->data.unary.operand); break;
         case NODE_FUNC_CALL: for (int i = 0; i < n->data.func_call.nargs; i++) cg_collect_vars(n->data.func_call.args[i]); break;
         case NODE_TEMPLATE: break;
+        case NODE_LIST: for (int i = 0; i < n->data.list.count; i++) cg_collect_vars(n->data.list.elements[i]); break;
+        case NODE_INDEX: cg_collect_vars(n->data.idx.container); cg_collect_vars(n->data.idx.index); break;
+        case NODE_INDEX_SET: cg_collect_vars(n->data.idx_set.container); cg_collect_vars(n->data.idx_set.index); cg_collect_vars(n->data.idx_set.value); break;
         default: break;
     }
 }
@@ -377,6 +390,10 @@ void cg_expr(FILE *f, ASTNode *n, VarType want) {
                 fprintf(f, want == TY_NUM ? "0" : "make_num(0)");
             break;
         }
+        case NODE_LIST:
+        case NODE_INDEX:
+            fprintf(f, want == TY_NUM ? "0" : "make_num(0)");
+            break;
         default: fprintf(f, want == TY_NUM ? "0" : "make_num(0)"); break;
     }
 }
@@ -606,6 +623,12 @@ void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
                     fprintf(f, ";\n");
                 }
             }
+            break;
+        }
+        case NODE_LIST:
+        case NODE_INDEX:
+        case NODE_INDEX_SET: {
+            fprintf(f, "/* list ops only available in interpreted mode */\n");
             break;
         }
     }

@@ -2,7 +2,7 @@
 #include "lil.h"
 #include <sys/wait.h>
 
-int lib_imported[6];
+int lib_imported[7];
 
 int lib_idx(const char *name) {
     if (!strcmp(name, "math")) return 0;
@@ -11,6 +11,7 @@ int lib_idx(const char *name) {
     if (!strcmp(name, "file")) return 3;
     if (!strcmp(name, "sys")) return 4;
     if (!strcmp(name, "gtk")) return 5;
+    if (!strcmp(name, "list")) return 6;
     return -1;
 }
 
@@ -388,7 +389,92 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         fatal("line %d: unknown file function '%s'", line, fn);
     }
 
+    if (!strcmp(lib, "list")) {
+        if (!strcmp(fn, "new")) {
+            return make_list();
+        }
+        if (!strcmp(fn, "push")) {
+            if (argc < 3) fatal("line %d: list push expects list name and value", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0) { var_set(vname, make_list()); vi = var_find(vname); }
+            if (vars[vi].val.type != VAL_LIST) fatal("line %d: '%s' is not a list", line, vname);
+            char *vs = resolve_arg(args[2]);
+            char *end;
+            double d = strtod(vs, &end);
+            Value item;
+            if (*end) {
+                if (args[2][0] == '$') {
+                    int oi = var_find(args[2] + 1);
+                    if (oi >= 0) item = copy_val(vars[oi].val);
+                    else item = make_str(vs);
+                } else {
+                    item = make_str(vs);
+                }
+            } else item = make_num(d);
+            free(vs);
+            list_append(&vars[vi].val, item);
+            return make_num(0);
+        }
+        if (!strcmp(fn, "pop")) {
+            if (argc < 2) fatal("line %d: list pop expects list name", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
+            if (vars[vi].val.data.list.count == 0) return make_num(0);
+            Value item = vars[vi].val.data.list.items[--vars[vi].val.data.list.count];
+            return item;
+        }
+        if (!strcmp(fn, "len")) {
+            if (argc < 2) fatal("line %d: list len expects list name", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0) return make_num(0);
+            if (vars[vi].val.type != VAL_LIST) return make_num(0);
+            return make_num(vars[vi].val.data.list.count);
+        }
+        if (!strcmp(fn, "at")) {
+            if (argc < 3) fatal("line %d: list get expects list name and index", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
+            char *is = resolve_arg(args[2]);
+            int idx = (int)strtod(is, NULL); free(is);
+            return list_get(vars[vi].val, idx);
+        }
+        fatal("line %d: unknown list function '%s'", line, fn);
+    }
+
     if (!strcmp(lib, "sys")) {
+        if (!strcmp(fn, "eval")) {
+            if (argc < 2) fatal("line %d: sys eval expects code string", line);
+            char *code = resolve_arg(args[1]);
+            jmp_buf old;
+            memcpy(old, error_jmp, sizeof(jmp_buf));
+            if (setjmp(error_jmp) == 0) {
+                lex_init(code);
+                lex_next();
+                while (lex_cur.type != TOK_EOF) {
+                    ASTNode *s = parse_stmt();
+                    if (s->type != NODE_EMPTY) {
+                        int r = exec_stmt(s);
+                        if (r == 1) { memcpy(error_jmp, old, sizeof(jmp_buf)); free(code); return make_num(0); }
+                    }
+                    if (lex_cur.type == TOK_NEWLINE) lex_next();
+                }
+                memcpy(error_jmp, old, sizeof(jmp_buf));
+                free(code);
+                return copy_val(_last_expr_val);
+            } else {
+                memcpy(error_jmp, old, sizeof(jmp_buf));
+                free(code);
+                return make_num(0);
+            }
+        }
         if (!strcmp(fn, "cmd")) {
             if (argc < 2) fatal("line %d: sys cmd expects a command", line);
             char *cmd = resolve_arg(args[1]);

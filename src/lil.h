@@ -39,12 +39,13 @@
 #define FORCE_INPUT_INT 3
 #define FORCE_INPUT_STR 4
 
-typedef enum { VAL_NUM, VAL_STR } ValType;
+typedef enum { VAL_NUM, VAL_STR, VAL_LIST } ValType;
 
-typedef struct {
+typedef struct Value {
     ValType type;
-    union { double num; char *str; } data;
+    union { double num; char *str; struct { struct Value *items; int count; int cap; } list; } data;
 } Value;
+
 
 typedef enum { TY_NUM, TY_STR, TY_DYN } VarType;
 
@@ -70,7 +71,8 @@ typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_FORTO, NODE_BLOCK, NODE_EXIT, NODE_EMPTY,
     NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_GET, NODE_FUNCTION,
     NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE,
-    NODE_STRIFY, NODE_INTIFY, NODE_SWIFY, NODE_TRY, NODE_FORCE, NODE_UNFORCE, NODE_SET_UNDEF } NodeType;
+    NODE_STRIFY, NODE_INTIFY, NODE_SWIFY, NODE_TRY, NODE_FORCE, NODE_UNFORCE, NODE_SET_UNDEF,
+    NODE_LIST, NODE_INDEX, NODE_INDEX_SET } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -97,6 +99,9 @@ typedef struct ASTNode {
         struct { char *raw; } templ;
         struct { struct ASTNode *body, *catch_body; } try_stmt;
         struct { char *name; char *fmt; } modify;
+        struct { struct ASTNode **elements; int count; } list;
+        struct { struct ASTNode *container, *index; } idx;
+        struct { struct ASTNode *container, *index, *value; } idx_set;
         struct { struct ASTNode **stmts; int count, cap; } block;
     } data;
 } ASTNode;
@@ -127,7 +132,7 @@ typedef struct {
     int func_count;
     FuncDef funcs[MAX_FUNCS];
     int assign_hist_count;
-    int lib_imported[6];
+    int lib_imported[7];
     jmp_buf error_jmp;
 } LilState;
 
@@ -138,7 +143,7 @@ extern FuncDef funcs[MAX_FUNCS];
 extern int func_count;
 extern jmp_buf error_jmp;
 extern Value undef_val;
-extern int lib_imported[6];
+extern int lib_imported[7];
 extern Value assign_history[MAX_ASSIGN_HISTORY];
 extern int assign_hist_count;
 extern int assign_var_idx[MAX_ASSIGN_HISTORY];
@@ -159,6 +164,11 @@ Value var_get_history(int var_idx, int nth);
 
 Value make_num(double n);
 Value make_str(const char *s);
+Value make_list(void);
+void list_append(Value *v, Value item);
+Value list_get(Value v, int idx);
+void list_set(Value *v, int idx, Value item);
+int list_len(Value v);
 char *val_tostr(Value v);
 double val_tonum(Value v);
 void val_free(Value v);

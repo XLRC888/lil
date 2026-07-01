@@ -4,6 +4,7 @@ ASTNode *parse_expr(void);
 ASTNode *parse_stmt(void);
 ASTNode *parse_block(void);
 ASTNode *parse_else_chain(void);
+ASTNode *parse_postfix(void);
 
 ASTNode *ast_alloc(NodeType type) {
     ASTNode *n = safe_alloc(sizeof(ASTNode));
@@ -759,10 +760,35 @@ ASTNode *parse_stmt(void) {
         }
     }
 
+    if (lex_cur.type == TOK_ASSIGN && e->type == NODE_INDEX) {
+        lex_next();
+        ASTNode *n = ast_alloc(NODE_INDEX_SET);
+        n->data.idx_set.container = e->data.idx.container;
+        n->data.idx_set.index = e->data.idx.index;
+        n->data.idx_set.value = parse_expr();
+        return n;
+    }
+
     return e;
 }
 
 ASTNode *parse_primary(void) {
+    if (lex_cur.type == TOK_LBRACKET) {
+        lex_next();
+        ASTNode **elements = NULL;
+        int count = 0, cap = 0;
+        while (lex_cur.type != TOK_RBRACKET && lex_cur.type != TOK_EOF) {
+            if (count >= cap) { cap = cap ? cap * 2 : 4; elements = realloc(elements, sizeof(ASTNode*) * cap); if (!elements) fatal("out of memory"); }
+            elements[count++] = parse_expr();
+            if (lex_cur.type == TOK_COMMA) lex_next();
+        }
+        if (lex_cur.type != TOK_RBRACKET) fatal("line %d: expected ']'", lex_cur.line);
+        lex_next();
+        ASTNode *n = ast_alloc(NODE_LIST);
+        n->data.list.elements = elements;
+        n->data.list.count = count;
+        return n;
+    }
     if (lex_cur.type == TOK_NUM) {
         double v = lex_cur.val.num;
         lex_next();
@@ -881,7 +907,22 @@ ASTNode *parse_unary(void) {
         ASTNode *o = parse_unary();
         return ast_unary(TOK_CARET, o);
     }
-    return parse_primary();
+    return parse_postfix();
+}
+
+ASTNode *parse_postfix(void) {
+    ASTNode *e = parse_primary();
+    while (lex_cur.type == TOK_LBRACKET) {
+        lex_next();
+        ASTNode *idx = parse_expr();
+        if (lex_cur.type != TOK_RBRACKET) fatal("line %d: expected ']'", lex_cur.line);
+        lex_next();
+        ASTNode *n = ast_alloc(NODE_INDEX);
+        n->data.idx.container = e;
+        n->data.idx.index = idx;
+        e = n;
+    }
+    return e;
 }
 
 ASTNode *parse_mul(void) {
