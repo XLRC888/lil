@@ -393,6 +393,15 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "cmd")) {
             if (argc < 2) fatal("line %d: sys cmd expects a command", line);
             char *cmd = resolve_arg(args[1]);
+            size_t clen = strlen(cmd);
+            while (clen > 0 && (cmd[clen-1] == ' ' || cmd[clen-1] == '\t')) clen--;
+            if (clen > 0 && cmd[clen-1] == '&') {
+                int rc = system(cmd);
+                free(cmd);
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%d", rc);
+                return make_str(buf);
+            }
             FILE *fp = popen(cmd, "r");
             if (!fp) { free(cmd); return make_str(""); }
             char buf[65536] = {0}; size_t total = 0;

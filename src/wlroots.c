@@ -55,10 +55,11 @@ static void wl_toplevel_destroy_cb(struct wl_listener *listener, void *data);
 #define MAX_WINDOWS 64
 static struct {
     struct wlr_xdg_toplevel *toplevel;
-    struct wlr_scene_node *node;
+    struct wlr_scene_tree *node;
     char app_id[64];
     char title[256];
     struct wl_listener destroy;
+    struct wl_listener map;
 } wl_windows[MAX_WINDOWS];
 static int wl_num_windows;
 
@@ -68,6 +69,18 @@ static void wl_toplevel_destroy_cb(struct wl_listener *listener, void *data) {
         if (&wl_windows[i].destroy == listener) {
             wl_windows[i].node = NULL;
             wl_windows[i].toplevel = NULL;
+            break;
+        }
+    }
+}
+
+static void wl_toplevel_map_cb(struct wl_listener *listener, void *data) {
+    (void)data;
+    for (int i = 0; i < wl_num_windows; i++) {
+        if (&wl_windows[i].map == listener && wl_windows[i].toplevel) {
+            struct wlr_surface *s = wl_windows[i].toplevel->base->surface;
+            if (wl_keyboard)
+                wlr_seat_keyboard_notify_enter(wseat, s, wl_keyboard->keycodes, wl_keyboard->num_keycodes, &wl_keyboard->modifiers);
             break;
         }
     }
@@ -100,20 +113,23 @@ static void wl_new_output(struct wl_listener *listener, void *data) {
 static void wl_new_toplevel_cb(struct wl_listener *listener, void *data) {
     (void)listener;
     struct wlr_xdg_toplevel *toplevel = data;
-    struct wlr_scene_surface *ss = wlr_scene_surface_create(&wscene->tree, toplevel->base->surface);
-    if (!ss) { FILE *f = fopen("/tmp/followm_tl.txt","w"); if(f){fprintf(f,"ss_null\n");fclose(f);} return; }
+    struct wlr_scene_tree *st = wlr_scene_xdg_surface_create(&wscene->tree, toplevel->base);
+    if (!st) return;
     if (wl_num_windows < MAX_WINDOWS) {
         wl_windows[wl_num_windows].toplevel = toplevel;
-        wl_windows[wl_num_windows].node = &ss->buffer->node;
+        wl_windows[wl_num_windows].node = st;
         strncpy(wl_windows[wl_num_windows].app_id, toplevel->app_id ? toplevel->app_id : "", 63);
         wl_windows[wl_num_windows].app_id[63] = 0;
         strncpy(wl_windows[wl_num_windows].title, toplevel->title ? toplevel->title : "", 255);
         wl_windows[wl_num_windows].title[255] = 0;
         wl_windows[wl_num_windows].destroy.notify = wl_toplevel_destroy_cb;
         wl_signal_add(&toplevel->base->events.destroy, &wl_windows[wl_num_windows].destroy);
+        wl_windows[wl_num_windows].map.notify = wl_toplevel_map_cb;
+        wl_signal_add(&toplevel->base->surface->events.map, &wl_windows[wl_num_windows].map);
         wl_num_windows++;
-        FILE *f = fopen("/tmp/followm_tl.txt","w"); if(f){fprintf(f,"mapped:%s:%s\n",toplevel->app_id?toplevel->app_id:"?",toplevel->title?toplevel->title:"?");fclose(f);}
     }
+    wlr_xdg_toplevel_set_activated(toplevel, true);
+    wlr_xdg_surface_schedule_configure(toplevel->base);
     if (wl_toplevel_var[0]) {
         char buf[512];
         snprintf(buf, sizeof(buf), "mapped:%s:%s", toplevel->app_id ? toplevel->app_id : "", toplevel->title ? toplevel->title : "");
@@ -125,6 +141,14 @@ static void wl_pointer_motion_cb(struct wl_listener *listener, void *data) {
     (void)listener;
     struct wlr_pointer_motion_event *ev = data;
     wlr_cursor_move(wcursor, &ev->pointer->base, ev->delta_x, ev->delta_y);
+    double sx, sy;
+    struct wlr_scene_node *node = wlr_scene_node_at(&wscene->tree.node, (int)wcursor->x, (int)wcursor->y, &sx, &sy);
+    struct wlr_scene_buffer *sbuf = node ? wlr_scene_buffer_from_node(node) : NULL;
+    struct wlr_scene_surface *ss = sbuf ? wlr_scene_surface_try_from_buffer(sbuf) : NULL;
+    if (ss && ss->surface) {
+        wlr_seat_pointer_notify_enter(wseat, ss->surface, sx, sy);
+        wlr_seat_pointer_notify_motion(wseat, ev->time_msec, sx, sy);
+    }
     if (wl_pointer_motion_var[0]) {
         char buf[64];
         snprintf(buf, sizeof(buf), "%.0f %.0f", wcursor->x, wcursor->y);
@@ -208,7 +232,7 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         wscene = wlr_scene_create();
         woutput_layout = wlr_output_layout_create(wdisplay);
         wscene_layout = wlr_scene_attach_output_layout(wscene, woutput_layout);
-        wxdg_shell = wlr_xdg_shell_create(wdisplay, 1);
+        wxdg_shell = wlr_xdg_shell_create(wdisplay, 7);
         if (!wxdg_shell) fatal("line %d: failed to create xdg shell", line);
         wcursor = wlr_cursor_create();
         wcursor_mgr = wlr_xcursor_manager_create("default", 24);
@@ -274,7 +298,7 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         int ny = (int)strtod(r3, NULL); free(r3);
         for (int i = 0; i < wl_num_windows; i++) {
             if (wl_windows[i].node && (!strcmp(wl_windows[i].app_id, rid) || !strcmp(wl_windows[i].title, rid))) {
-                wlr_scene_node_set_position(wl_windows[i].node, nx, ny);
+                wlr_scene_node_set_position(&wl_windows[i].node->node, nx, ny);
                 break;
             }
         }
@@ -290,7 +314,7 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         char result[256] = "";
         if (node) {
             for (int i = 0; i < wl_num_windows; i++) {
-                if (wl_windows[i].node && wl_windows[i].node == node) {
+                if (wl_windows[i].node && &wl_windows[i].node->node == node) {
                     snprintf(result, sizeof(result), "%s:%s", wl_windows[i].app_id, wl_windows[i].title);
                     break;
                 }
@@ -392,7 +416,7 @@ Value wlroots_dispatch(const char *fn, int argc, char **args, int line) {
         char result[64] = "";
         for (int i = 0; i < wl_num_windows; i++) {
             if (wl_windows[i].node && (!strcmp(wl_windows[i].app_id, rid) || !strcmp(wl_windows[i].title, rid))) {
-                snprintf(result, sizeof(result), "%.0f %.0f", wl_windows[i].node->x, wl_windows[i].node->y);
+                snprintf(result, sizeof(result), "%d %d", wl_windows[i].node->node.x, wl_windows[i].node->node.y);
                 break;
             }
         }
