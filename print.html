@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4ba75574.js";
+            window.path_to_searchindex_js = "searchindex-64f84909.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-fb6a48ea.js"></script>
+        <script src="toc-d2c478dc.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -658,7 +658,6 @@ include string
 include file
 include sys
 include gtk
-include wlroots
 </code></pre>
 <p>Libraries can be disabled with <code>uninclude</code>:</p>
 <pre><code class="language-lil">include math
@@ -1838,74 +1837,6 @@ loop {
 <li>All event variables are initialized to <code>""</code> when connected, so you can check <code>if varname != ""</code> before any signal fires.</li>
 <li>Use <code>&amp;gtk|run</code> instead of a polling loop if you only need to handle a single event (it blocks until the window is closed).</li>
 </ul>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="wlroots-compositor-library"><a class="header" href="#wlroots-compositor-library">WLROOTS Compositor Library</a></h1>
-<p>Build a Wayland compositor using wlroots. Requires <code>make wlroots</code> (depends on <code>wlroots</code>, <code>wayland-server</code>, <code>xkbcommon</code>).</p>
-<h2 id="functions-2"><a class="header" href="#functions-2">Functions</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Function</th><th>Arguments</th><th>Description</th></tr>
-</thead>
-<tbody>
-<tr><td><code>init</code></td><td></td><td>Create display, backend, scene, xdg_shell, cursor, seat</td></tr>
-<tr><td><code>set_mode</code></td><td>width, height, refresh</td><td>Set output mode</td></tr>
-<tr><td><code>render</code></td><td></td><td>Commit the scene graph to output</td></tr>
-<tr><td><code>on</code></td><td>signal, variable</td><td>Connect event to variable</td></tr>
-<tr><td><code>frame</code></td><td></td><td>Dispatch events, poll for signals</td></tr>
-<tr><td><code>run</code></td><td></td><td>Start the compositor event loop</td></tr>
-<tr><td><code>move_window</code></td><td>app_id, x, y</td><td>Position a window on the grid</td></tr>
-<tr><td><code>window_at</code></td><td>x, y</td><td>Get app_id:title at coordinates</td></tr>
-<tr><td><code>set_offset</code></td><td>x, y</td><td>Scroll the canvas/scene offset</td></tr>
-<tr><td><code>cursor_show</code></td><td></td><td>Show cursor with default theme</td></tr>
-<tr><td><code>cursor_hide</code></td><td></td><td>Hide cursor</td></tr>
-<tr><td><code>quit</code></td><td></td><td>Quit the event loop</td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="signals"><a class="header" href="#signals">Signals</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Signal</th><th>Variable Set To</th><th>Description</th></tr>
-</thead>
-<tbody>
-<tr><td><code>frame</code></td><td><code>"1"</code></td><td>Vblank signal, ready to render</td></tr>
-<tr><td><code>new_toplevel</code></td><td><code>"mapped:app_id:title"</code></td><td>New app window opened</td></tr>
-<tr><td><code>key</code></td><td><code>"keycode:pressed/released"</code></td><td>Keyboard event</td></tr>
-<tr><td><code>pointer_motion</code></td><td><code>"x y"</code></td><td>Cursor moved</td></tr>
-<tr><td><code>pointer_button</code></td><td><code>"button:pressed/released"</code></td><td>Mouse click</td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="example"><a class="header" href="#example">Example</a></h2>
-<pre><code class="language-lil">include wlroots
-
-&amp;wlroots|init
-&amp;wlroots|set_mode 1920 1080 60
-&amp;wlroots|on "frame" frame
-&amp;wlroots|on "key" key
-&amp;wlroots|on "new_toplevel" win
-&amp;wlroots|on "pointer_motion" ptr
-&amp;wlroots|cursor_show
-
-loop {
-    &amp;wlroots|frame
-    if frame != "" {
-        &amp;wlroots|render
-        frame = ""
-    }
-    if key != "" {
-        print "key:", key
-        key = ""
-    }
-    if win != "" {
-        print "window:", win
-        &amp;wlroots|move_window "firefox" 100 100
-        win = ""
-    }
-}
-</code></pre>
 
                     </main>
 
