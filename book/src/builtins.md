@@ -172,6 +172,15 @@ shell = &sys|env "SHELL"
 print "your shell is", shell
 ```
 
+### Debugging
+
+```
+include sys
+&sys|log "debug message"
+```
+
+`&sys|log` prints to stderr. `&sys|last_error` returns the last error from a failed FFI call (file/read, sys/cmd). `&sys|clear_error` resets it.
+
 ## date library
 
 ```lil
