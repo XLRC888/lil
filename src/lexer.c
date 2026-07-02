@@ -155,7 +155,7 @@ static Token lex_scan(void) {
             case '^': t.type = TOK_CARET; return t;
             case '?': t.type = TOK_QMARK; return t;
             case '.': t.type = TOK_DOT; return t;
-            case '$': {
+            case ':': t.type = TOK_COLON; return t;            case '$': {
                 if (lex_pos < lex_len && (isalpha(lex_src[lex_pos]) || lex_src[lex_pos] == '_')) {
                     int start = lex_pos;
                     while (lex_pos < lex_len && (isalnum(lex_src[lex_pos]) || lex_src[lex_pos] == '_')) lex_pos++;

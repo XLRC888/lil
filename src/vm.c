@@ -40,7 +40,7 @@ Value var_get(const char *name) {
     int i = var_find(name);
     if (i < 0) return undef_val;
     if (vars[i].val.type == VAL_STR) return make_str(vars[i].val.data.str);
-    if (vars[i].val.type == VAL_LIST) return copy_val(vars[i].val);
+    if (vars[i].val.type == VAL_LIST || vars[i].val.type == VAL_DICT) return copy_val(vars[i].val);
     return make_num(vars[i].val.data.num);
 }
 
@@ -231,6 +231,97 @@ int list_len(Value v) {
     return v.data.list.count;
 }
 
+Value make_dict(void) {
+    Value v;
+    v.type = VAL_DICT;
+    v.data.dict.keys = NULL;
+    v.data.dict.values = NULL;
+    v.data.dict.count = 0;
+    v.data.dict.cap = 0;
+    return v;
+}
+
+void dict_set(Value *v, const char *key, Value val) {
+    if (v->type != VAL_DICT) fatal("not a dict");
+    for (int i = 0; i < v->data.dict.count; i++) {
+        if (!strcmp(v->data.dict.keys[i], key)) {
+            val_free(v->data.dict.values[i]);
+            v->data.dict.values[i] = val;
+            return;
+        }
+    }
+    if (v->data.dict.count >= v->data.dict.cap) {
+        v->data.dict.cap = v->data.dict.cap ? v->data.dict.cap * 2 : 4;
+        v->data.dict.keys = realloc(v->data.dict.keys, sizeof(char*) * v->data.dict.cap);
+        v->data.dict.values = realloc(v->data.dict.values, sizeof(Value) * v->data.dict.cap);
+        if (!v->data.dict.keys || !v->data.dict.values) fatal("out of memory");
+    }
+    v->data.dict.keys[v->data.dict.count] = sdup(key);
+    v->data.dict.values[v->data.dict.count] = val;
+    v->data.dict.count++;
+}
+
+Value dict_get(Value v, const char *key) {
+    if (v.type != VAL_DICT) fatal("not a dict");
+    for (int i = 0; i < v.data.dict.count; i++) {
+        if (!strcmp(v.data.dict.keys[i], key))
+            return copy_val(v.data.dict.values[i]);
+    }
+    return make_num(0);
+}
+
+int dict_has(Value v, const char *key) {
+    if (v.type != VAL_DICT) return 0;
+    for (int i = 0; i < v.data.dict.count; i++) {
+        if (!strcmp(v.data.dict.keys[i], key)) return 1;
+    }
+    return 0;
+}
+
+int dict_len(Value v) {
+    if (v.type != VAL_DICT) return 0;
+    return v.data.dict.count;
+}
+
+Value dict_keys(Value v) {
+    if (v.type != VAL_DICT) return make_list();
+    Value list = make_list();
+    for (int i = 0; i < v.data.dict.count; i++)
+        list_append(&list, make_str(v.data.dict.keys[i]));
+    return list;
+}
+
+int dict_remove(Value *v, const char *key) {
+    if (v->type != VAL_DICT) return 0;
+    for (int i = 0; i < v->data.dict.count; i++) {
+        if (!strcmp(v->data.dict.keys[i], key)) {
+            free(v->data.dict.keys[i]);
+            val_free(v->data.dict.values[i]);
+            v->data.dict.count--;
+            for (int j = i; j < v->data.dict.count; j++) {
+                v->data.dict.keys[j] = v->data.dict.keys[j+1];
+                v->data.dict.values[j] = v->data.dict.values[j+1];
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void dict_clear(Value *v) {
+    if (v->type != VAL_DICT) return;
+    for (int i = 0; i < v->data.dict.count; i++) {
+        free(v->data.dict.keys[i]);
+        val_free(v->data.dict.values[i]);
+    }
+    free(v->data.dict.keys);
+    free(v->data.dict.values);
+    v->data.dict.keys = NULL;
+    v->data.dict.values = NULL;
+    v->data.dict.count = 0;
+    v->data.dict.cap = 0;
+}
+
 char *val_tostr(Value v) {
     if (v.type == VAL_STR) return sdup(v.data.str);
     if (v.type == VAL_LIST) {
@@ -253,6 +344,31 @@ char *val_tostr(Value v) {
         buf[pos++] = ']'; buf[pos] = 0;
         return buf;
     }
+    if (v.type == VAL_DICT) {
+        size_t cap = 64, pos = 0;
+        char *buf = malloc(cap);
+        if (!buf) fatal("out of memory");
+        buf[pos++] = '{';
+        for (int i = 0; i < v.data.dict.count; i++) {
+            if (i > 0) {
+                if (pos + 2 >= cap) { cap *= 2; buf = realloc(buf, cap); if (!buf) fatal("out of memory"); }
+                buf[pos++] = ','; buf[pos++] = ' ';
+            }
+            buf[pos++] = '"';
+            size_t kl = strlen(v.data.dict.keys[i]);
+            while (pos + kl + 4 >= cap) { cap *= 2; buf = realloc(buf, cap); if (!buf) fatal("out of memory"); }
+            memcpy(buf + pos, v.data.dict.keys[i], kl); pos += kl;
+            buf[pos++] = '"'; buf[pos++] = ':'; buf[pos++] = ' ';
+            char *vs = val_tostr(v.data.dict.values[i]);
+            size_t vl = strlen(vs);
+            while (pos + vl + 2 >= cap) { cap *= 2; buf = realloc(buf, cap); if (!buf) fatal("out of memory"); }
+            memcpy(buf + pos, vs, vl); pos += vl;
+            free(vs);
+        }
+        if (pos + 2 >= cap) { buf = realloc(buf, cap + 2); if (!buf) fatal("out of memory"); }
+        buf[pos++] = '}'; buf[pos] = 0;
+        return buf;
+    }
     double d = v.data.num;
     char buf[128];
     if (d == (long)d) snprintf(buf, sizeof(buf), "%ld", (long)d);
@@ -263,6 +379,7 @@ char *val_tostr(Value v) {
 double val_tonum(Value v) {
     if (v.type == VAL_NUM) return v.data.num;
     if (v.type == VAL_LIST) return v.data.list.count;
+    if (v.type == VAL_DICT) return v.data.dict.count;
     char *end;
     double d = strtod(v.data.str, &end);
     if (*end) fatal("cannot convert '%s' to number", v.data.str);
@@ -275,6 +392,13 @@ void val_free(Value v) {
         for (int i = 0; i < v.data.list.count; i++)
             val_free(v.data.list.items[i]);
         free(v.data.list.items);
+    } else if (v.type == VAL_DICT) {
+        for (int i = 0; i < v.data.dict.count; i++) {
+            free(v.data.dict.keys[i]);
+            val_free(v.data.dict.values[i]);
+        }
+        free(v.data.dict.keys);
+        free(v.data.dict.values);
     }
 }
 
@@ -286,6 +410,17 @@ Value copy_val(Value v) {
         for (int i = 0; i < v.data.list.count; i++)
             items[i] = copy_val(v.data.list.items[i]);
         v.data.list.items = items;
+    } else if (v.type == VAL_DICT) {
+        int cap = v.data.dict.cap > 0 ? v.data.dict.cap : 4;
+        char **ok = v.data.dict.keys;
+        Value *ov = v.data.dict.values;
+        v.data.dict.keys = malloc(sizeof(char*) * cap);
+        v.data.dict.values = malloc(sizeof(Value) * cap);
+        if (!v.data.dict.keys || !v.data.dict.values) fatal("out of memory");
+        for (int i = 0; i < v.data.dict.count; i++) {
+            v.data.dict.keys[i] = sdup(ok[i]);
+            v.data.dict.values[i] = copy_val(ov[i]);
+        }
     }
     return v;
 }
@@ -293,11 +428,12 @@ Value copy_val(Value v) {
 int truthy(Value v) {
     if (v.type == VAL_STR) return strlen(v.data.str) != 0;
     if (v.type == VAL_LIST) return v.data.list.count != 0;
+    if (v.type == VAL_DICT) return v.data.dict.count != 0;
     return v.data.num != 0;
 }
 
 Value val_add(Value a, Value b) {
-    if (a.type == VAL_LIST || b.type == VAL_LIST) {
+    if (a.type == VAL_LIST || b.type == VAL_LIST || a.type == VAL_DICT || b.type == VAL_DICT) {
         char *as = val_tostr(a), *bs = val_tostr(b);
         char *r = malloc(strlen(as) + strlen(bs) + 1);
         if (!r) fatal("out of memory");
@@ -305,7 +441,7 @@ Value val_add(Value a, Value b) {
         val_free(a); val_free(b); free(as); free(bs);
         Value vr = make_str(r); free(r); return vr;
     }
-    if (a.type == VAL_STR || b.type == VAL_STR) {
+    if (a.type == VAL_STR || b.type == VAL_STR || a.type == VAL_LIST || b.type == VAL_LIST || a.type == VAL_DICT || b.type == VAL_DICT) {
         char *as = val_tostr(a), *bs = val_tostr(b);
         char *r = malloc(strlen(as) + strlen(bs) + 1);
         if (!r) fatal("out of memory");
@@ -318,7 +454,7 @@ Value val_add(Value a, Value b) {
 }
 
 Value val_arith(Value a, Value b, int op) {
-    if (a.type == VAL_LIST || b.type == VAL_LIST) { val_free(a); val_free(b); return make_num(0); }
+    if (a.type == VAL_LIST || b.type == VAL_LIST || a.type == VAL_DICT || b.type == VAL_DICT) { val_free(a); val_free(b); return make_num(0); }
     if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); return make_num(0); }
     double av = a.data.num, bv = b.data.num;
     val_free(a); val_free(b);
@@ -334,7 +470,7 @@ Value val_arith(Value a, Value b, int op) {
 }
 
 Value val_neg(Value a) {
-    if (a.type == VAL_LIST) { val_free(a); return make_num(0); }
+    if (a.type == VAL_LIST || a.type == VAL_DICT) { val_free(a); return make_num(0); }
     if (a.type == VAL_STR) { val_free(a); return make_num(0); }
     double r = -a.data.num; val_free(a); return make_num(r);
 }
@@ -456,9 +592,29 @@ Value eval_expr(ASTNode *n) {
             }
             return list;
         }
+        case NODE_DICT: {
+            Value d = make_dict();
+            for (int i = 0; i < n->data.dict.count; i++) {
+                Value k = eval_expr(n->data.dict.keys[i]);
+                char *ks = val_tostr(k);
+                val_free(k);
+                Value v = eval_expr(n->data.dict.values[i]);
+                dict_set(&d, ks, v);
+                free(ks);
+            }
+            return d;
+        }
         case NODE_INDEX: {
             Value container = eval_expr(n->data.idx.container);
             Value idx = eval_expr(n->data.idx.index);
+            if (container.type == VAL_DICT) {
+                char *ks = val_tostr(idx);
+                val_free(idx);
+                Value result = dict_get(container, ks);
+                free(ks);
+                val_free(container);
+                return result;
+            }
             double di = val_tonum(idx);
             val_free(idx);
             if (container.type != VAL_LIST) { val_free(container); fatal("line %d: cannot index non-list", n->line); }
@@ -934,6 +1090,16 @@ int exec_stmt(ASTNode *n) {
             Value cval = eval_expr(n->data.idx_set.container);
             Value ival = eval_expr(n->data.idx_set.index);
             Value vval = eval_expr(n->data.idx_set.value);
+            if (cval.type == VAL_DICT) {
+                char *ks = val_tostr(ival);
+                val_free(ival);
+                dict_set(&cval, ks, vval);
+                free(ks);
+                int found = var_find(n->data.idx_set.container->data.id);
+                if (found >= 0) var_set(n->data.idx_set.container->data.id, cval);
+                else val_free(cval);
+                return 0;
+            }
             double di = val_tonum(ival);
             val_free(ival);
             if (cval.type != VAL_LIST) { val_free(cval); val_free(vval); fatal("line %d: cannot index non-list", n->line); }
@@ -1306,7 +1472,7 @@ OP_NOP: ip++; goto *dtab[code[ip].op];
 OP_CONST: {
     Value v = consts[code[ip].arg];
     if (v.type == VAL_STR) v.data.str = sdup(v.data.str);
-    else if (v.type == VAL_LIST) v = copy_val(v);
+    else if (v.type == VAL_LIST || v.type == VAL_DICT) v = copy_val(v);
     vm_stack[sp++] = v; ip++; goto *dtab[code[ip].op];
 }
 OP_VAR_GET: {
@@ -1323,7 +1489,7 @@ OP_VAR_SET: {
 OP_VAR_GET_IDX: {
     Value v = vars[code[ip].arg].val;
     if (v.type == VAL_STR) v.data.str = sdup(v.data.str);
-    else if (v.type == VAL_LIST) v = copy_val(v);
+    else if (v.type == VAL_LIST || v.type == VAL_DICT) v = copy_val(v);
     vm_stack[sp++] = v; ip++; goto *dtab[code[ip].op];
 }
 OP_VAR_SET_IDX: {
@@ -1460,7 +1626,7 @@ OP_PRINT: {
         vals[i] = vm_stack[--sp];
     for (int i = 0; i < n; i++) {
         if (vals[i].type == VAL_STR) { printf("%s", vals[i].data.str); free(vals[i].data.str); }
-        else if (vals[i].type == VAL_LIST) { char *s = val_tostr(vals[i]); printf("%s", s); free(s); val_free(vals[i]); }
+        else if (vals[i].type == VAL_LIST || vals[i].type == VAL_DICT) { char *s = val_tostr(vals[i]); printf("%s", s); free(s); val_free(vals[i]); }
         else printf("%g", vals[i].data.num);
     }
     free(vals); printf("\n"); fflush(stdout);

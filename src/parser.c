@@ -806,6 +806,28 @@ ASTNode *parse_primary(void) {
         n->data.list.count = count;
         return n;
     }
+    if (lex_cur.type == TOK_LBRACE) {
+        lex_next();
+        ASTNode **keys = NULL;
+        ASTNode **values = NULL;
+        int count = 0, cap = 0;
+        while (lex_cur.type != TOK_RBRACE && lex_cur.type != TOK_EOF) {
+            if (count >= cap) { cap = cap ? cap * 2 : 4; keys = realloc(keys, sizeof(ASTNode*) * cap); values = realloc(values, sizeof(ASTNode*) * cap); if (!keys || !values) fatal("out of memory"); }
+            keys[count] = parse_expr();
+            if (lex_cur.type != TOK_COLON) fatal("line %d: expected ':' after dict key", lex_cur.line);
+            lex_next();
+            values[count] = parse_expr();
+            count++;
+            if (lex_cur.type == TOK_COMMA) lex_next();
+        }
+        if (lex_cur.type != TOK_RBRACE) fatal("line %d: expected '}'", lex_cur.line);
+        lex_next();
+        ASTNode *n = ast_alloc(NODE_DICT);
+        n->data.dict.keys = keys;
+        n->data.dict.values = values;
+        n->data.dict.count = count;
+        return n;
+    }
     if (lex_cur.type == TOK_NUM) {
         double v = lex_cur.val.num;
         lex_next();

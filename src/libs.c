@@ -2,7 +2,7 @@
 #include "lil.h"
 #include <sys/wait.h>
 
-int lib_imported[7];
+int lib_imported[8];
 
 int lib_idx(const char *name) {
     if (!strcmp(name, "math")) return 0;
@@ -12,6 +12,7 @@ int lib_idx(const char *name) {
     if (!strcmp(name, "sys")) return 4;
     if (!strcmp(name, "gtk")) return 5;
     if (!strcmp(name, "list")) return 6;
+    if (!strcmp(name, "dict")) return 7;
     return -1;
 }
 
@@ -628,6 +629,97 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             return accum;
         }
         fatal("line %d: unknown list function '%s'", line, fn);
+    }
+
+    if (!strcmp(lib, "dict")) {
+        if (!strcmp(fn, "new")) {
+            return make_dict();
+        }
+        if (!strcmp(fn, "set")) {
+            if (argc < 4) fatal("line %d: dict set expects dict name, key, and value", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0) { var_set(vname, make_dict()); vi = var_find(vname); }
+            if (vars[vi].val.type != VAL_DICT) fatal("line %d: '%s' is not a dict", line, vname);
+            char *key = resolve_arg(args[2]);
+            char *vs = resolve_arg(args[3]);
+            char *end;
+            double d = strtod(vs, &end);
+            Value item;
+            if (*end) {
+                if (args[3][0] == '$') {
+                    int oi = var_find(args[3] + 1);
+                    if (oi >= 0) item = copy_val(vars[oi].val);
+                    else item = make_str(vs);
+                } else {
+                    item = make_str(vs);
+                }
+            } else item = make_num(d);
+            free(vs);
+            dict_set(&vars[vi].val, key, item);
+            free(key);
+            return make_num(0);
+        }
+        if (!strcmp(fn, "get")) {
+            if (argc < 3) fatal("line %d: dict get expects dict name and key", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0 || vars[vi].val.type != VAL_DICT) fatal("line %d: dict '%s' not found", line, vname);
+            char *key = resolve_arg(args[2]);
+            Value v = dict_get(vars[vi].val, key);
+            free(key);
+            return v;
+        }
+        if (!strcmp(fn, "contains")) {
+            if (argc < 3) fatal("line %d: dict has expects dict name and key", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0 || vars[vi].val.type != VAL_DICT) return make_num(0);
+            char *key = resolve_arg(args[2]);
+            int r = dict_has(vars[vi].val, key);
+            free(key);
+            return make_num(r);
+        }
+        if (!strcmp(fn, "keys")) {
+            if (argc < 2) fatal("line %d: dict keys expects dict name", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0 || vars[vi].val.type != VAL_DICT) return make_list();
+            return dict_keys(vars[vi].val);
+        }
+        if (!strcmp(fn, "len")) {
+            if (argc < 2) fatal("line %d: dict len expects dict name", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0 || vars[vi].val.type != VAL_DICT) return make_num(0);
+            return make_num(vars[vi].val.data.dict.count);
+        }
+        if (!strcmp(fn, "remove")) {
+            if (argc < 3) fatal("line %d: dict remove expects dict name and key", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0 || vars[vi].val.type != VAL_DICT) return make_num(0);
+            char *key = resolve_arg(args[2]);
+            int r = dict_remove(&vars[vi].val, key);
+            free(key);
+            return make_num(r);
+        }
+        if (!strcmp(fn, "clear")) {
+            if (argc < 2) fatal("line %d: dict clear expects dict name", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0 || vars[vi].val.type != VAL_DICT) return make_num(0);
+            dict_clear(&vars[vi].val);
+            return make_num(0);
+        }
+        fatal("line %d: unknown dict function '%s'", line, fn);
     }
 
     if (!strcmp(lib, "sys")) {

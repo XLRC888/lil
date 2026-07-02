@@ -39,11 +39,12 @@
 #define FORCE_INPUT_INT 3
 #define FORCE_INPUT_STR 4
 
-typedef enum { VAL_NUM, VAL_STR, VAL_LIST } ValType;
+typedef enum { VAL_NUM, VAL_STR, VAL_LIST, VAL_DICT } ValType;
 
 typedef struct Value {
     ValType type;
-    union { double num; char *str; struct { struct Value *items; int count; int cap; } list; } data;
+    union { double num; char *str; struct { struct Value *items; int count; int cap; } list;
+        struct { char **keys; struct Value *values; int count; int cap; } dict; } data;
 } Value;
 
 
@@ -58,7 +59,7 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
     TOK_LBRACKET, TOK_RBRACKET,
     TOK_TEMPLATE, TOK_DOLLAR_ID, TOK_AT, TOK_CARET,     TOK_AMPERSAND, TOK_PIPE, TOK_DOT,
-    TOK_TRY, TOK_CATCH, TOK_FORCE, TOK_UNFORCE, TOK_QMARK, TOK_UNINCLUDE } TokenType;
+    TOK_TRY, TOK_CATCH, TOK_FORCE, TOK_UNFORCE, TOK_QMARK, TOK_UNINCLUDE, TOK_COLON } TokenType;
 
 typedef struct {
     TokenType type;
@@ -72,7 +73,7 @@ typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_GET, NODE_FUNCTION,
     NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE,
     NODE_STRINGIFY, NODE_INTIFY, NODE_TOGGLE, NODE_TRY, NODE_FORCE, NODE_UNFORCE, NODE_SET_UNDEF,
-    NODE_LIST, NODE_INDEX, NODE_INDEX_SET } NodeType;
+    NODE_LIST, NODE_INDEX, NODE_INDEX_SET, NODE_DICT } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -101,6 +102,7 @@ typedef struct ASTNode {
         struct { struct ASTNode *body, *catch_body; } try_stmt;
         struct { char *name; char *fmt; } modify;
         struct { struct ASTNode **elements; int count; } list;
+        struct { struct ASTNode **keys; struct ASTNode **values; int count; } dict;
         struct { struct ASTNode *container, *index; } idx;
         struct { struct ASTNode *container, *index, *value; } idx_set;
         struct { struct ASTNode **stmts; int count, cap; } block;
@@ -135,7 +137,7 @@ typedef struct {
     int func_count;
     FuncDef funcs[MAX_FUNCS];
     int assign_hist_count;
-    int lib_imported[7];
+    int lib_imported[8];
     jmp_buf error_jmp;
     int scope_depth;
 } LilState;
@@ -147,7 +149,7 @@ extern FuncDef funcs[MAX_FUNCS];
 extern int func_count;
 extern jmp_buf error_jmp;
 extern Value undef_val;
-extern int lib_imported[7];
+extern int lib_imported[8];
 extern Value assign_history[MAX_ASSIGN_HISTORY];
 extern int assign_hist_count;
 extern int assign_var_idx[MAX_ASSIGN_HISTORY];
@@ -174,6 +176,15 @@ void list_append(Value *v, Value item);
 Value list_get(Value v, int idx);
 void list_set(Value *v, int idx, Value item);
 int list_len(Value v);
+Value make_dict(void);
+void dict_set(Value *v, const char *key, Value val);
+Value dict_get(Value v, const char *key);
+int dict_has(Value v, const char *key);
+int dict_len(Value v);
+Value dict_keys(Value v);
+int dict_remove(Value *v, const char *key);
+void dict_clear(Value *v);
+
 char *val_tostr(Value v);
 double val_tonum(Value v);
 void val_free(Value v);

@@ -94,6 +94,7 @@ void infer_type_stmt(ASTNode *n) {
             if (n->data.force.value) infer_type_stmt(n->data.force.value);
             break;
         case NODE_LIST: break;
+        case NODE_DICT: break;
         case NODE_INDEX:
             infer_type_stmt(n->data.idx.container);
             infer_type_stmt(n->data.idx.index);
@@ -153,6 +154,7 @@ void cg_collect_vars(ASTNode *n) {
         case NODE_FUNC_CALL: for (int i = 0; i < n->data.func_call.nargs; i++) cg_collect_vars(n->data.func_call.args[i]); break;
         case NODE_TEMPLATE: break;
         case NODE_LIST: for (int i = 0; i < n->data.list.count; i++) cg_collect_vars(n->data.list.elements[i]); break;
+        case NODE_DICT: for (int i = 0; i < n->data.dict.count; i++) { cg_collect_vars(n->data.dict.keys[i]); cg_collect_vars(n->data.dict.values[i]); } break;
         case NODE_INDEX: cg_collect_vars(n->data.idx.container); cg_collect_vars(n->data.idx.index); break;
         case NODE_INDEX_SET: cg_collect_vars(n->data.idx_set.container); cg_collect_vars(n->data.idx_set.index); cg_collect_vars(n->data.idx_set.value); break;
         default: break;
@@ -391,6 +393,7 @@ void cg_expr(FILE *f, ASTNode *n, VarType want) {
             break;
         }
         case NODE_LIST:
+        case NODE_DICT:
         case NODE_INDEX:
             fprintf(f, want == TY_NUM ? "0" : "make_num(0)");
             break;
@@ -626,6 +629,7 @@ void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
             break;
         }
         case NODE_LIST:
+        case NODE_DICT:
         case NODE_INDEX:
         case NODE_INDEX_SET: {
             fprintf(f, "/* list ops only available in interpreted mode */\n");
@@ -710,7 +714,7 @@ int generate_c(const char *path, const char *outpath) {
     if (!f) { fprintf(stderr, "error: cannot write '%s'\n", cpath); free(src); return 1; }
 
     fprintf(f, "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <stdint.h>\n#include <math.h>\n#include <setjmp.h>\n#include <time.h>\n#include <sys/time.h>\n#include <unistd.h>\n\n");
-    fprintf(f, "typedef enum { VAL_NUM, VAL_STR } ValType;\n");
+    fprintf(f, "typedef enum { VAL_NUM, VAL_STR, VAL_LIST, VAL_DICT } ValType;\n");
     fprintf(f, "typedef struct { ValType type; union { double num; char *str; } data; } Value;\n");
     fprintf(f, "static jmp_buf _try_jmp;\n");
     fprintf(f, "Value make_num(double n) { Value v = {VAL_NUM,{.num=n}}; return v; }\n");
