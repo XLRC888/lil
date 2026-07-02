@@ -1625,6 +1625,7 @@ OP_PRINT: {
     for (int i = n - 1; i >= 0; i--)
         vals[i] = vm_stack[--sp];
     for (int i = 0; i < n; i++) {
+        if (i > 0) printf(" ");
         if (vals[i].type == VAL_STR) { printf("%s", vals[i].data.str); free(vals[i].data.str); }
         else if (vals[i].type == VAL_LIST || vals[i].type == VAL_DICT) { char *s = val_tostr(vals[i]); printf("%s", s); free(s); val_free(vals[i]); }
         else printf("%g", vals[i].data.num);
