@@ -1,0 +1,1 @@
+if "hello" has ["x","y"] { print "all" } else { print "not all" }

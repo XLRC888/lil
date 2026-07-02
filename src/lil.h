@@ -164,7 +164,7 @@ void *safe_alloc(size_t sz);
 int var_find(const char *name);
 Value var_get(const char *name);
 int var_ensure(const char *name);
-void var_set(const char *name, Value v, int is_for);
+void var_set(const char *name, Value v);
 Value var_get_history(int var_idx, int nth);
 
 Value make_num(double n);
