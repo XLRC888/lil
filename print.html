@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-b080193e.js";
+            window.path_to_searchindex_js = "searchindex-4b387dc0.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-593fa1f3.js"></script>
@@ -682,6 +682,30 @@ uninclude math
 &amp;string|repeat $s 3
 &amp;string|substr $s 1 3
 &amp;string|replace $s "old" "new"
+&amp;string|split $s ","
+&amp;string|join list ","
+&amp;string|contains $s "sub"
+&amp;string|find $s "sub"
+</code></pre>
+<p><code>split</code> returns a list of substrings:</p>
+<pre><code class="language-lil">include string
+parts = &amp;string|split "a,b,c" ","
+print parts
+</code></pre>
+<p><code>join</code> concatenates list elements with a delimiter:</p>
+<pre><code class="language-lil">include string
+result = &amp;string|join parts "-"
+print result
+</code></pre>
+<p><code>contains</code> returns 1 if the string contains the substring, 0 otherwise:</p>
+<pre><code class="language-lil">include string
+x = &amp;string|contains "hello world" "world"
+print x
+</code></pre>
+<p><code>find</code> returns the index of the first occurrence, or -1 if not found:</p>
+<pre><code class="language-lil">include string
+idx = &amp;string|find "hello" "ell"
+print idx
 </code></pre>
 <p>The <code>$</code> prefix tells lil to use the variable’s value:</p>
 <pre><code class="language-lil">name = "alice"
@@ -1574,7 +1598,42 @@ val = &amp;list|pop x
 <li><code>&amp;list|pop list</code> — remove and return last element</li>
 <li><code>&amp;list|at list index</code> — retrieve element without modifying</li>
 <li><code>&amp;list|len list</code> — number of elements</li>
+<li><code>&amp;list|map list $fn</code> — apply function to each element, returns new list</li>
+<li><code>&amp;list|filter list $fn</code> — keep elements where function returns truthy</li>
+<li><code>&amp;list|reduce list $fn init</code> — reduce list to single value</li>
 </ul>
+<h2 id="mapfilterreduce"><a class="header" href="#mapfilterreduce">map/filter/reduce</a></h2>
+<p>These higher-order functions take a user-defined function and apply it to each element:</p>
+<pre><code class="language-lil">include list
+
+$double(x) {
+    x * 2
+}
+
+nums = &amp;list|new
+&amp;list|push nums 1
+&amp;list|push nums 2
+&amp;list|push nums 3
+
+doubled = &amp;list|map nums $double
+print doubled
+</code></pre>
+<p><code>filter</code> keeps elements where the function returns truthy:</p>
+<pre><code class="language-lil">$isbig(x) {
+    if x &gt; 5 { 1 } else { 0 }
+}
+
+filtered = &amp;list|filter nums $isbig
+print filtered
+</code></pre>
+<p><code>reduce</code> combines all elements using a two-parameter function and an initial value:</p>
+<pre><code class="language-lil">$add(a, b) {
+    a + b
+}
+
+total = &amp;list|reduce nums $add 0
+print total
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="advanced-features"><a class="header" href="#advanced-features">Advanced Features</a></h1>
 <p>This chapter covers the advanced features of lil: templates, the has operator, compiled mode, and C extensions. If you know Python, many of these concepts will feel familiar under a different syntax.</p>
