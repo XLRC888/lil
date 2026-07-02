@@ -326,6 +326,80 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             free(res);
             return v;
         }
+        if (!strcmp(fn, "split")) {
+            if (argc < 3) fatal("line %d: string split expects string and delimiter", line);
+            char *arg = resolve_arg(args[1]);
+            char *delim = resolve_arg(args[2]);
+            size_t dlen = strlen(delim);
+            Value list = make_list();
+            if (dlen == 0) {
+                for (size_t i = 0; arg[i]; i++) {
+                    char buf[2] = { arg[i], 0 };
+                    list_append(&list, make_str(buf));
+                }
+            } else {
+                char *p = arg;
+                while (1) {
+                    char *found = strstr(p, delim);
+                    if (found) {
+                        list_append(&list, make_str(sdupn(p, found - p)));
+                        p = found + dlen;
+                    } else {
+                        list_append(&list, make_str(sdup(p)));
+                        break;
+                    }
+                }
+            }
+            free(arg); free(delim);
+            return list;
+        }
+        if (!strcmp(fn, "join")) {
+            if (argc < 3) fatal("line %d: string join expects list and delimiter", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: '%s' is not a list", line, vname);
+            char *delim = resolve_arg(args[2]);
+            Value lst = vars[vi].val;
+            size_t dlen = strlen(delim);
+            size_t total = 1;
+            for (int i = 0; i < lst.data.list.count; i++) {
+                char *s = val_tostr(lst.data.list.items[i]);
+                total += strlen(s);
+                free(s);
+                if (i > 0) total += dlen;
+            }
+            char *buf = malloc(total);
+            if (!buf) fatal("out of memory");
+            buf[0] = 0;
+            for (int i = 0; i < lst.data.list.count; i++) {
+                char *s = val_tostr(lst.data.list.items[i]);
+                if (i > 0) strcat(buf, delim);
+                strcat(buf, s);
+                free(s);
+            }
+            free(delim);
+            Value rv = make_str(buf);
+            free(buf);
+            return rv;
+        }
+        if (!strcmp(fn, "contains")) {
+            if (argc < 3) fatal("line %d: string contains expects string and substring", line);
+            char *arg = resolve_arg(args[1]);
+            char *sub = resolve_arg(args[2]);
+            int r = strstr(arg, sub) ? 1 : 0;
+            free(arg); free(sub);
+            return make_num(r);
+        }
+        if (!strcmp(fn, "find")) {
+            if (argc < 3) fatal("line %d: string find expects string and substring", line);
+            char *arg = resolve_arg(args[1]);
+            char *sub = resolve_arg(args[2]);
+            char *pos = strstr(arg, sub);
+            double idx = pos ? (double)(pos - arg) : -1;
+            free(arg); free(sub);
+            return make_num(idx);
+        }
         fatal("line %d: unknown string function '%s'", line, fn);
     }
 
@@ -446,6 +520,112 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             char *is = resolve_arg(args[2]);
             int idx = (int)strtod(is, NULL); free(is);
             return list_get(vars[vi].val, idx);
+        }
+        if (!strcmp(fn, "map")) {
+            if (argc < 3) fatal("line %d: list map expects list name and function name", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
+            char *fname = args[2];
+            if (fname[0] == '$') fname++;
+            int fi = -1;
+            for (int i = 0; i < func_count; i++) {
+                if (!strcmp(funcs[i].name, fname)) { fi = i; break; }
+            }
+            if (fi < 0) fatal("line %d: function '%s' not found", line, args[2]);
+            if (funcs[fi].nparams < 1) fatal("line %d: function '%s' expects at least 1 parameter", line, args[2]);
+            Value lst = vars[vi].val;
+            Value result = make_list();
+            Var saved[MAX_VARS];
+            int saved_count = var_count;
+            memcpy(saved, vars, sizeof(Var) * var_count);
+            for (int i = 0; i < lst.data.list.count; i++) {
+                var_count = saved_count;
+                memcpy(vars, saved, sizeof(Var) * var_count);
+                int pi = var_ensure(funcs[fi].params[0]);
+                vars[pi].val = copy_val(lst.data.list.items[i]);
+                _last_expr_val = make_num(0);
+                exec_stmt(funcs[fi].body);
+                list_append(&result, copy_val(_last_expr_val));
+            }
+            var_count = saved_count;
+            memcpy(vars, saved, sizeof(Var) * var_count);
+            return result;
+        }
+        if (!strcmp(fn, "filter")) {
+            if (argc < 3) fatal("line %d: list filter expects list name and function name", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
+            char *fname = args[2];
+            if (fname[0] == '$') fname++;
+            int fi = -1;
+            for (int i = 0; i < func_count; i++) {
+                if (!strcmp(funcs[i].name, fname)) { fi = i; break; }
+            }
+            if (fi < 0) fatal("line %d: function '%s' not found", line, args[2]);
+            if (funcs[fi].nparams < 1) fatal("line %d: function '%s' expects at least 1 parameter", line, args[2]);
+            Value lst = vars[vi].val;
+            Value result = make_list();
+            Var saved[MAX_VARS];
+            int saved_count = var_count;
+            memcpy(saved, vars, sizeof(Var) * var_count);
+            for (int i = 0; i < lst.data.list.count; i++) {
+                var_count = saved_count;
+                memcpy(vars, saved, sizeof(Var) * var_count);
+                int pi = var_ensure(funcs[fi].params[0]);
+                vars[pi].val = copy_val(lst.data.list.items[i]);
+                _last_expr_val = make_num(0);
+                exec_stmt(funcs[fi].body);
+                if (truthy(_last_expr_val))
+                    list_append(&result, copy_val(lst.data.list.items[i]));
+            }
+            var_count = saved_count;
+            memcpy(vars, saved, sizeof(Var) * var_count);
+            return result;
+        }
+        if (!strcmp(fn, "reduce")) {
+            if (argc < 4) fatal("line %d: list reduce expects list name, function name, and initial value", line);
+            char *vname = args[1];
+            if (vname[0] == '$') vname++;
+            int vi = var_find(vname);
+            if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
+            char *fname = args[2];
+            if (fname[0] == '$') fname++;
+            int fi = -1;
+            for (int i = 0; i < func_count; i++) {
+                if (!strcmp(funcs[i].name, fname)) { fi = i; break; }
+            }
+            if (fi < 0) fatal("line %d: function '%s' not found", line, args[2]);
+            if (funcs[fi].nparams < 2) fatal("line %d: function '%s' expects at least 2 parameters for reduce", line, args[2]);
+            Value lst = vars[vi].val;
+            char *is = resolve_arg(args[3]);
+            char *end;
+            double d = strtod(is, &end);
+            Value accum;
+            if (*end) accum = make_str(is);
+            else accum = make_num(d);
+            free(is);
+            Var saved[MAX_VARS];
+            int saved_count = var_count;
+            memcpy(saved, vars, sizeof(Var) * var_count);
+            for (int i = 0; i < lst.data.list.count; i++) {
+                var_count = saved_count;
+                memcpy(vars, saved, sizeof(Var) * var_count);
+                int pa = var_ensure(funcs[fi].params[0]);
+                int pb = var_ensure(funcs[fi].params[1]);
+                vars[pa].val = copy_val(accum);
+                vars[pb].val = copy_val(lst.data.list.items[i]);
+                val_free(accum);
+                _last_expr_val = make_num(0);
+                exec_stmt(funcs[fi].body);
+                accum = copy_val(_last_expr_val);
+            }
+            var_count = saved_count;
+            memcpy(vars, saved, sizeof(Var) * var_count);
+            return accum;
         }
         fatal("line %d: unknown list function '%s'", line, fn);
     }

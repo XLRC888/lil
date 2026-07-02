@@ -45,6 +45,42 @@ Arguments are separated by spaces. Prefix a variable name with `$` to dereferenc
 &string|repeat $s 3
 &string|substr $s 1 3
 &string|replace $s "old" "new"
+&string|split $s ","
+&string|join list ","
+&string|contains $s "sub"
+&string|find $s "sub"
+```
+
+`split` returns a list of substrings:
+
+```lil
+include string
+parts = &string|split "a,b,c" ","
+print parts
+```
+
+`join` concatenates list elements with a delimiter:
+
+```lil
+include string
+result = &string|join parts "-"
+print result
+```
+
+`contains` returns 1 if the string contains the substring, 0 otherwise:
+
+```lil
+include string
+x = &string|contains "hello world" "world"
+print x
+```
+
+`find` returns the index of the first occurrence, or -1 if not found:
+
+```lil
+include string
+idx = &string|find "hello" "ell"
+print idx
 ```
 
 The `$` prefix tells lil to use the variable's value:

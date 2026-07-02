@@ -45,3 +45,48 @@ val = &list|pop x
 - `&list|pop list` — remove and return last element
 - `&list|at list index` — retrieve element without modifying
 - `&list|len list` — number of elements
+- `&list|map list $fn` — apply function to each element, returns new list
+- `&list|filter list $fn` — keep elements where function returns truthy
+- `&list|reduce list $fn init` — reduce list to single value
+
+## map/filter/reduce
+
+These higher-order functions take a user-defined function and apply it to each element:
+
+```lil
+include list
+
+$double(x) {
+    x * 2
+}
+
+nums = &list|new
+&list|push nums 1
+&list|push nums 2
+&list|push nums 3
+
+doubled = &list|map nums $double
+print doubled
+```
+
+`filter` keeps elements where the function returns truthy:
+
+```lil
+$isbig(x) {
+    if x > 5 { 1 } else { 0 }
+}
+
+filtered = &list|filter nums $isbig
+print filtered
+```
+
+`reduce` combines all elements using a two-parameter function and an initial value:
+
+```lil
+$add(a, b) {
+    a + b
+}
+
+total = &list|reduce nums $add 0
+print total
+```
