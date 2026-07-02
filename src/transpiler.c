@@ -108,6 +108,133 @@ void infer_type_stmt(ASTNode *n) {
     }
 }
 
+static int lit_zero(ASTNode *n) {
+    return n->type == NODE_NUM && n->data.num == 0;
+}
+
+void typecheck_stmt(ASTNode *n) {
+    if (!n) return;
+    switch (n->type) {
+        case NODE_BINOP: {
+            VarType lt = infer_expr_type(n->data.binop.left);
+            VarType rt = infer_expr_type(n->data.binop.right);
+            int op = n->data.binop.op;
+            if ((op == TOK_SLASH || op == TOK_MOD) && lit_zero(n->data.binop.right))
+                fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: division by zero\n", n->line);
+            if (op != TOK_PLUS && op != TOK_MINUS && op != TOK_STAR && op != TOK_SLASH && op != TOK_MOD)
+                { typecheck_stmt(n->data.binop.left); typecheck_stmt(n->data.binop.right); break; }
+            if ((lt == TY_STR || rt == TY_STR) && op != TOK_PLUS)
+                fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: arithmetic on string\n", n->line);
+            typecheck_stmt(n->data.binop.left);
+            typecheck_stmt(n->data.binop.right);
+            break;
+        }
+        case NODE_ASSIGN: {
+            typecheck_stmt(n->data.assign.value);
+            break;
+        }
+        case NODE_WHILE: {
+            VarType ct = infer_expr_type(n->data.while_stmt.cond);
+            if (ct == TY_STR)
+                fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: while condition is a string\n", n->line);
+            typecheck_stmt(n->data.while_stmt.cond);
+            typecheck_stmt(n->data.while_stmt.body);
+            break;
+        }
+        case NODE_IF: {
+            VarType ct = infer_expr_type(n->data.if_stmt.cond);
+            if (ct == TY_STR)
+                fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: if condition is a string\n", n->line);
+            typecheck_stmt(n->data.if_stmt.cond);
+            typecheck_stmt(n->data.if_stmt.then);
+            if (n->data.if_stmt.els) typecheck_stmt((ASTNode*)n->data.if_stmt.els);
+            break;
+        }
+        case NODE_LOOP:
+            typecheck_stmt(n->data.loop.body);
+            break;
+        case NODE_FORTO:
+            typecheck_stmt(n->data.forto.start);
+            typecheck_stmt(n->data.forto.end);
+            typecheck_stmt(n->data.forto.body);
+            break;
+        case NODE_BLOCK:
+            for (int i = 0; i < n->data.block.count; i++)
+                typecheck_stmt(n->data.block.stmts[i]);
+            break;
+        case NODE_FUNC_CALL: {
+            for (int i = 0; i < func_count; i++) {
+                if (!strcmp(funcs[i].name, n->data.func_call.name)) {
+                    if (n->data.func_call.nargs != funcs[i].nparams)
+                        fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: function '$%s' got %d args, expects %d\n",
+                            n->line, n->data.func_call.name, n->data.func_call.nargs, funcs[i].nparams);
+                    break;
+                }
+            }
+            for (int i = 0; i < n->data.func_call.nargs; i++)
+                typecheck_stmt(n->data.func_call.args[i]);
+            break;
+        }
+        case NODE_INDEX: {
+            VarType ct = infer_expr_type(n->data.idx.container);
+            if (ct == TY_NUM)
+                fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: indexing a number\n", n->line);
+            typecheck_stmt(n->data.idx.container);
+            typecheck_stmt(n->data.idx.index);
+            break;
+        }
+        case NODE_INDEX_SET: {
+            VarType ct = infer_expr_type(n->data.idx_set.container);
+            if (ct == TY_NUM)
+                fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: indexing a number\n", n->line);
+            typecheck_stmt(n->data.idx_set.container);
+            typecheck_stmt(n->data.idx_set.index);
+            typecheck_stmt(n->data.idx_set.value);
+            break;
+        }
+        case NODE_TRY:
+            typecheck_stmt(n->data.try_stmt.body);
+            typecheck_stmt(n->data.try_stmt.catch_body);
+            break;
+        case NODE_PRINT:
+            for (int i = 0; i < n->data.print.count; i++)
+                typecheck_stmt(n->data.print.exprs[i]);
+            break;
+        case NODE_INPUT:
+        case NODE_STRINGIFY:
+        case NODE_INTIFY:
+        case NODE_TOGGLE:
+        case NODE_EXIT:
+        case NODE_STOP:
+        case NODE_BREAK:
+        case NODE_CONTINUE:
+        case NODE_NUM:
+        case NODE_STR:
+        case NODE_ID:
+        case NODE_UNARY:
+        case NODE_TEMPLATE:
+        case NODE_LIST:
+        case NODE_DICT:
+        case NODE_EMPTY:
+        case NODE_FUNC_DEF:
+        case NODE_SET_UNDEF:
+        case NODE_FORCE:
+        case NODE_UNFORCE:
+        case NODE_GET:
+        case NODE_INCLUDE:
+            break;
+    }
+}
+
+void typecheck_prog(ASTNode *prog) {
+    for (int i = 0; i < MAX_VARS; i++) var_types[i] = TY_DYN;
+    var_count = 0;
+    for (int i = 0; i < prog->data.block.count; i++)
+        infer_type_stmt(prog->data.block.stmts[i]);
+    for (int i = 0; i < prog->data.block.count; i++)
+        typecheck_stmt(prog->data.block.stmts[i]);
+}
+
 void cg_collect_vars(ASTNode *n);
 void cg_varinit(FILE *f, ASTNode *prog) {
     var_count = 0;
@@ -707,6 +834,7 @@ int generate_c(const char *path, const char *outpath) {
     lex_init(psrc);
     lex_next();
     ASTNode *prog = parse_program();
+    typecheck_prog(prog);
 
     char cpath[1024];
     snprintf(cpath, sizeof(cpath), "%s.c", outpath);

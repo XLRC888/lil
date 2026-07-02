@@ -245,6 +245,7 @@ VarType infer_expr_type(ASTNode *n);
 void infer_type_stmt(ASTNode *n);
 void cg_emit_func(FILE *f, ASTNode *n);
 int is_cstmt(ASTNode *n);
+void typecheck_prog(ASTNode *prog);
 
 #ifdef HAVE_GTK
 GtkWidget *gtk_find_w(const char *name);
