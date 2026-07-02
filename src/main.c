@@ -59,7 +59,6 @@ void run_file(const char *path) {
 
     if (setjmp(error_jmp)) { free(src); src = NULL; return; }
 
-    scope_depth = 0;
     lex_init(psrc);
     lex_next();
     scope_depth = 0;

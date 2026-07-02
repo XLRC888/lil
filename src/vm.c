@@ -103,7 +103,7 @@ void pop_scope(void) {
     int w = 0;
     for (int i = 0; i < var_count; i++) {
         if (vars[i].scope_id == scope_depth) {
-            if (vars[i].val.type == VAL_STR) free(vars[i].val.data.str);
+            val_free(vars[i].val);
             free(vars[i].name);
         } else {
             if (w != i) vars[w] = vars[i];
@@ -613,12 +613,6 @@ int exec_stmt(ASTNode *n) {
         case NODE_ASSIGN: {
             Value v = eval_expr(n->data.assign.value);
             _last_expr_val = v;
-            int idx = var_find(n->data.assign.name);
-            if (idx >= 0 && vars[idx].forced) {
-                if (vars[idx].forced_type == FORCE_NONE) fatal("line %d: cannot assign to a forced variable", n->line);
-                if (vars[idx].forced_type == FORCE_INT && v.type == VAL_STR) fatal("line %d: cannot assign string to int-forced variable", n->line);
-                if (vars[idx].forced_type == FORCE_STR && v.type == VAL_NUM) fatal("line %d: cannot assign number to str-forced variable", n->line);
-            }
             var_set(n->data.assign.name, v);
             return 0;
         }
@@ -983,7 +977,6 @@ enum {
 Instr *code;
 int code_len, code_cap;
 int *code_line;
-int code_line_cap;
 Value *consts;
 int const_len, const_cap;
 char **strtab;
