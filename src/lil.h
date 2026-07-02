@@ -119,6 +119,7 @@ typedef struct {
     Value val;
     int forced;
     int forced_type;
+    int scope_id;
 } Var;
 
 #ifdef HAVE_GTK
@@ -136,6 +137,7 @@ typedef struct {
     int assign_hist_count;
     int lib_imported[7];
     jmp_buf error_jmp;
+    int scope_depth;
 } LilState;
 
 extern Var vars[MAX_VARS];
@@ -152,6 +154,7 @@ extern int assign_var_idx[MAX_ASSIGN_HISTORY];
 extern int compile_mode;
 extern int compiled_header;
 extern Token lex_cur;
+extern int scope_depth;
 
 void fatal(const char *fmt, ...);
 char *sdup(const char *s);
@@ -161,7 +164,7 @@ void *safe_alloc(size_t sz);
 int var_find(const char *name);
 Value var_get(const char *name);
 int var_ensure(const char *name);
-void var_set(const char *name, Value v);
+void var_set(const char *name, Value v, int is_for);
 Value var_get_history(int var_idx, int nth);
 
 Value make_num(double n);
@@ -213,6 +216,10 @@ int generate_c(const char *path, const char *outpath);
 
 void state_save(LilState *s);
 void state_restore(LilState *s);
+void push_scope(void);
+void pop_scope(void);
+int get_scope_depth(void);
+void var_set_no_scope(const char *name, Value v);
 
 void run_file(const char *path);
 void repl(void);

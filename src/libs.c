@@ -473,7 +473,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             char *vname = args[1];
             if (vname[0] == '$') vname++;
             int vi = var_find(vname);
-            if (vi < 0) { var_set(vname, make_list()); vi = var_find(vname); }
+            if (vi < 0) { var_set(vname, make_list(), 0); vi = var_find(vname); }
             if (vars[vi].val.type != VAL_LIST) fatal("line %d: '%s' is not a list", line, vname);
             char *vs = resolve_arg(args[2]);
             char *end;

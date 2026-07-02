@@ -699,6 +699,7 @@ int generate_c(const char *path, const char *outpath) {
 
     if (setjmp(error_jmp)) { free(src); src = NULL; if (f) fclose(f); return 1; }
 
+    scope_depth = 0;
     lex_init(psrc);
     lex_next();
     ASTNode *prog = parse_program();

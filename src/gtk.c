@@ -35,17 +35,17 @@ void gtk_destroy_cb(GtkWidget *w, gpointer d) {
 void gtk_sig_cb(GtkWidget *w, gpointer d) {
     GtkSigData *sd = (GtkSigData *)d;
     if (!strcmp(sd->sig, "changed")) {
-        if (!GTK_IS_ENTRY(w)) { var_set(sd->vname, make_str("")); return; }
-        var_set(sd->vname, make_str(gtk_entry_get_text(GTK_ENTRY(w))));
+        if (!GTK_IS_ENTRY(w)) { var_set(sd->vname, make_str(""), 0); return; }
+        var_set(sd->vname, make_str(gtk_entry_get_text(GTK_ENTRY(w))), 0);
     } else
-        var_set(sd->vname, make_str("1"));
+        var_set(sd->vname, make_str("1"), 0);
     if (gtk_in_main && strcmp(sd->vname, "__gtk_quit"))
         gtk_main_quit();
 }
 
 static gboolean gtk_timeout_cb(gpointer d) {
     GtkSigData *sd = (GtkSigData *)d;
-    var_set(sd->vname, make_str("1"));
+    var_set(sd->vname, make_str("1"), 0);
     if (gtk_in_main) gtk_main_quit();
     return FALSE;
 }
@@ -218,7 +218,7 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
         GtkSigData *sd = safe_alloc(sizeof(GtkSigData));
         strncpy(sd->vname, vname, 63); sd->vname[63] = 0;
         strncpy(sd->sig, sig, 63); sd->sig[63] = 0;
-        var_set(vname, make_str(""));
+        var_set(vname, make_str(""), 0);
         if (!strcmp(sig, "destroy")) {
             g_signal_connect(w, "destroy", G_CALLBACK(gtk_destroy_cb), NULL);
         } else {
@@ -250,7 +250,7 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
         GtkSigData *sd = safe_alloc(sizeof(GtkSigData));
         strncpy(sd->vname, vname, 63); sd->vname[63] = 0;
         strncpy(sd->sig, sig, 63); sd->sig[63] = 0;
-        var_set(vname, make_str(""));
+        var_set(vname, make_str(""), 0);
         g_timeout_add(ms, gtk_timeout_cb, sd);
         free(sig); free(vname);
         return make_num(0);

@@ -69,7 +69,59 @@ print x
 
 ## Scope
 
-Parameters are local to the function call and don't leak to the caller:
+Each function call gets its own scope. Parameters and local variables are isolated to that call and don't leak:
+
+```lil
+$a(x) {
+  x = x + 10
+  x
+}
+
+$b(x) {
+  x = x * 2
+  x
+}
+
+print $a(5)    # 15
+print $b(5)    # 10
+print $a(100)  # 110
+```
+
+Two functions with the same parameter name don't interfere with each other:
+
+```lil
+$a(x) {
+  print x
+}
+
+$b(x) {
+  $a(x + 1)
+  print x
+}
+
+$b(100)
+# prints 101 (from $a)
+# prints 100 (from $b, unchanged)
+```
+
+Variables created inside a function are local to that call and cleaned up when the function returns:
+
+```lil
+$outer() {
+  x = 99
+  $inner()
+  print x
+}
+
+$inner() {
+  x = 42
+}
+
+$outer()
+# prints 99 (inner's x didn't leak)
+```
+
+Variables inside a function create new bindings in the function's scope. They don't modify outer-scope variables of the same name:
 
 ```lil
 x = 10
@@ -78,21 +130,9 @@ $set_x(val) {
   x = val
 }
 
-$set_x(5)
+$set_x(42)
 print x
-```
-
-Non-parameter variables inside a function refer to global variables:
-
-```lil
-x = 0
-
-$increment() {
-  x = x + 1
-}
-
-$increment()
-print x
+# prints 10 (the function created a local x, didn't modify the global)
 ```
 
 ## Include
