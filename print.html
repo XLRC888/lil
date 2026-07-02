@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f8c2b394.js";
+            window.path_to_searchindex_js = "searchindex-b080193e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-593fa1f3.js"></script>
@@ -303,10 +303,10 @@ r = 0.5
 print r
 </code></pre>
 <h2 id="type-conversion"><a class="header" href="#type-conversion">Type conversion</a></h2>
-<p>Use <code>strify</code> and <code>intify</code> to convert between types explicitly.</p>
-<p><code>strify</code> converts a variable to its string representation:</p>
+<p>Use <code>stringify</code> and <code>intify</code> to convert between types explicitly.</p>
+<p><code>stringify</code> converts a variable to its string representation:</p>
 <pre><code class="language-lil">x = 42
-strify x
+stringify x
 </code></pre>
 <p><code>intify</code> converts a variable to a number. If the string is not numeric, it produces an error:</p>
 <pre><code class="language-lil">x = "42"
@@ -323,13 +323,14 @@ intify x binary
 intify x hex
 intify x octal
 </code></pre>
-<p><code>swify</code> toggles a variable between number and string. If its a number, it becomes a string. If its a string, it becomes a number:</p>
+<p><code>toggle</code> toggles a variable between number and string. If its a number, it becomes a string. If its a string, it becomes a number:</p>
 <pre><code class="language-lil">x = 42
-strify x       # now "42"
-swify x        # back to 42
-swify x        # back to "42"
-swify x        # back to 42
+stringify x     # now "42"
+toggle x        # back to 42
+toggle x        # back to "42"
+toggle x        # back to 42
 </code></pre>
+<p>The old names <code>strify</code> and <code>swify</code> still work but are deprecated. Use <code>stringify</code> and <code>toggle</code> instead.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="variables"><a class="header" href="#variables">Variables</a></h1>
 <p>Variables hold values. You assign them with <code>=</code>:</p>
@@ -364,11 +365,11 @@ print "number:", n
 print "area is", area
 </code></pre>
 <h2 id="forcing-variable-types"><a class="header" href="#forcing-variable-types">Forcing variable types</a></h2>
-<p><code>force</code> locks a variable completely. Once forced, you cannot change it with <code>strify</code>, <code>intify</code>, <code>swify</code>, or regular assignment:</p>
+<p><code>force</code> locks a variable completely. Once forced, you cannot change it with <code>stringify</code>, <code>intify</code>, <code>toggle</code>, or regular assignment:</p>
 <pre><code class="language-lil">x = 42
 force x
 x = 30        # ERROR: cannot assign to a forced variable
-strify x      # ERROR: cannot strify a forced variable
+stringify x   # ERROR: cannot stringify a forced variable
 unforce x     # unlock it
 x = 30        # works again
 </code></pre>

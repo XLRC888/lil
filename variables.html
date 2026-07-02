@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f8c2b394.js";
+            window.path_to_searchindex_js = "searchindex-b080193e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-593fa1f3.js"></script>
@@ -207,11 +207,11 @@ print "number:", n
 print "area is", area
 </code></pre>
 <h2 id="forcing-variable-types"><a class="header" href="#forcing-variable-types">Forcing variable types</a></h2>
-<p><code>force</code> locks a variable completely. Once forced, you cannot change it with <code>strify</code>, <code>intify</code>, <code>swify</code>, or regular assignment:</p>
+<p><code>force</code> locks a variable completely. Once forced, you cannot change it with <code>stringify</code>, <code>intify</code>, <code>toggle</code>, or regular assignment:</p>
 <pre><code class="language-lil">x = 42
 force x
 x = 30        # ERROR: cannot assign to a forced variable
-strify x      # ERROR: cannot strify a forced variable
+stringify x   # ERROR: cannot stringify a forced variable
 unforce x     # unlock it
 x = 30        # works again
 </code></pre>

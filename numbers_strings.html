@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f8c2b394.js";
+            window.path_to_searchindex_js = "searchindex-b080193e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-593fa1f3.js"></script>
@@ -211,10 +211,10 @@ r = 0.5
 print r
 </code></pre>
 <h2 id="type-conversion"><a class="header" href="#type-conversion">Type conversion</a></h2>
-<p>Use <code>strify</code> and <code>intify</code> to convert between types explicitly.</p>
-<p><code>strify</code> converts a variable to its string representation:</p>
+<p>Use <code>stringify</code> and <code>intify</code> to convert between types explicitly.</p>
+<p><code>stringify</code> converts a variable to its string representation:</p>
 <pre><code class="language-lil">x = 42
-strify x
+stringify x
 </code></pre>
 <p><code>intify</code> converts a variable to a number. If the string is not numeric, it produces an error:</p>
 <pre><code class="language-lil">x = "42"
@@ -231,13 +231,14 @@ intify x binary
 intify x hex
 intify x octal
 </code></pre>
-<p><code>swify</code> toggles a variable between number and string. If its a number, it becomes a string. If its a string, it becomes a number:</p>
+<p><code>toggle</code> toggles a variable between number and string. If its a number, it becomes a string. If its a string, it becomes a number:</p>
 <pre><code class="language-lil">x = 42
-strify x       # now "42"
-swify x        # back to 42
-swify x        # back to "42"
-swify x        # back to 42
+stringify x     # now "42"
+toggle x        # back to 42
+toggle x        # back to "42"
+toggle x        # back to 42
 </code></pre>
+<p>The old names <code>strify</code> and <code>swify</code> still work but are deprecated. Use <code>stringify</code> and <code>toggle</code> instead.</p>
 
                     </main>
 
