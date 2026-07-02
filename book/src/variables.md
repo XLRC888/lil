@@ -56,13 +56,13 @@ print "area is", area
 
 ## Forcing variable types
 
-`force` locks a variable completely. Once forced, you cannot change it with `strify`, `intify`, `swify`, or regular assignment:
+`force` locks a variable completely. Once forced, you cannot change it with `stringify`, `intify`, `toggle`, or regular assignment:
 
 ```lil
 x = 42
 force x
 x = 30        # ERROR: cannot assign to a forced variable
-strify x      # ERROR: cannot strify a forced variable
+stringify x   # ERROR: cannot stringify a forced variable
 unforce x     # unlock it
 x = 30        # works again
 ```

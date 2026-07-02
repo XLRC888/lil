@@ -645,12 +645,12 @@ ASTNode *parse_stmt(void) {
         n->data.get_stmt.indices = indices;
         return n;
     }
-    if (lex_cur.type == TOK_STRIFY) {
+    if (lex_cur.type == TOK_STRINGIFY) {
         lex_next();
-        if (lex_cur.type != TOK_ID) fatal("line %d: strify expects a variable name", lex_cur.line);
+        if (lex_cur.type != TOK_ID) fatal("line %d: stringify expects a variable name", lex_cur.line);
         char *name = sdup(lex_cur.val.str);
         lex_next();
-        ASTNode *n = ast_alloc(NODE_STRIFY);
+        ASTNode *n = ast_alloc(NODE_STRINGIFY);
         n->data.modify.name = name;
         return n;
     }
@@ -670,12 +670,12 @@ ASTNode *parse_stmt(void) {
         return n;
     }
 
-    if (lex_cur.type == TOK_SWIFY) {
+    if (lex_cur.type == TOK_TOGGLE) {
         lex_next();
-        if (lex_cur.type != TOK_ID) fatal("line %d: swify expects a variable name", lex_cur.line);
+        if (lex_cur.type != TOK_ID) fatal("line %d: toggle expects a variable name", lex_cur.line);
         char *name = sdup(lex_cur.val.str);
         lex_next();
-        ASTNode *n = ast_alloc(NODE_SWIFY);
+        ASTNode *n = ast_alloc(NODE_TOGGLE);
         n->data.modify.name = name;
         return n;
     }

@@ -82,9 +82,11 @@ static Token lex_scan(void) {
             if (!strcmp(word, "and"))     { free(word); t.type = TOK_AND; return t; }
             if (!strcmp(word, "or"))      { free(word); t.type = TOK_OR; return t; }
             if (!strcmp(word, "not"))     { free(word); t.type = TOK_NOT; return t; }
-            if (!strcmp(word, "strify"))  { free(word); t.type = TOK_STRIFY; return t; }
-            if (!strcmp(word, "intify"))  { free(word); t.type = TOK_INTIFY; return t; }
-            if (!strcmp(word, "swify"))   { free(word); t.type = TOK_SWIFY; return t; }
+            if (!strcmp(word, "stringify")) { free(word); t.type = TOK_STRINGIFY; return t; }
+            if (!strcmp(word, "strify"))   { free(word); fprintf(stderr, "line %d: warning: \"strify\" is deprecated, use \"stringify\" instead\n", lex_line); t.type = TOK_STRINGIFY; return t; }
+            if (!strcmp(word, "intify"))   { free(word); t.type = TOK_INTIFY; return t; }
+            if (!strcmp(word, "toggle"))   { free(word); t.type = TOK_TOGGLE; return t; }
+            if (!strcmp(word, "swify"))    { free(word); fprintf(stderr, "line %d: warning: \"swify\" is deprecated, use \"toggle\" instead\n", lex_line); t.type = TOK_TOGGLE; return t; }
             if (!strcmp(word, "try"))     { free(word); t.type = TOK_TRY; return t; }
             if (!strcmp(word, "catch"))   { free(word); t.type = TOK_CATCH; return t; }
             if (!strcmp(word, "loop"))    { free(word); t.type = TOK_LOOP; return t; }

@@ -59,13 +59,13 @@ print r
 
 ## Type conversion
 
-Use `strify` and `intify` to convert between types explicitly.
+Use `stringify` and `intify` to convert between types explicitly.
 
-`strify` converts a variable to its string representation:
+`stringify` converts a variable to its string representation:
 
 ```lil
 x = 42
-strify x
+stringify x
 ```
 
 `intify` converts a variable to a number. If the string is not numeric, it produces an error:
@@ -89,12 +89,14 @@ intify x hex
 intify x octal
 ```
 
-`swify` toggles a variable between number and string. If its a number, it becomes a string. If its a string, it becomes a number:
+`toggle` toggles a variable between number and string. If its a number, it becomes a string. If its a string, it becomes a number:
 
 ```lil
 x = 42
-strify x       # now "42"
-swify x        # back to 42
-swify x        # back to "42"
-swify x        # back to 42
+stringify x     # now "42"
+toggle x        # back to 42
+toggle x        # back to "42"
+toggle x        # back to 42
 ```
+
+The old names `strify` and `swify` still work but are deprecated. Use `stringify` and `toggle` instead.

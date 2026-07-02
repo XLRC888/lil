@@ -627,10 +627,10 @@ int exec_stmt(ASTNode *n) {
             }
             return 0;
         }
-        case NODE_STRIFY: {
+        case NODE_STRINGIFY: {
             int idx = var_find(n->data.modify.name);
             if (idx < 0) { var_set(n->data.modify.name, make_str("")); idx = var_count - 1; }
-            if (vars[idx].forced) fatal("line %d: cannot strify a forced variable", n->line);
+            if (vars[idx].forced) fatal("line %d: cannot stringify a forced variable", n->line);
             char *s = val_tostr(vars[idx].val);
             var_set(n->data.modify.name, make_str(s));
             free(s);
@@ -669,10 +669,10 @@ int exec_stmt(ASTNode *n) {
             }
             return 0;
         }
-        case NODE_SWIFY: {
+        case NODE_TOGGLE: {
             int idx = var_find(n->data.modify.name);
             if (idx < 0) { var_set(n->data.modify.name, make_str("")); idx = var_count - 1; }
-            if (vars[idx].forced) fatal("line %d: cannot swify a forced variable", n->line);
+            if (vars[idx].forced) fatal("line %d: cannot toggle a forced variable", n->line);
             if (vars[idx].val.type == VAL_STR) {
                 double d = val_tonum(vars[idx].val);
                 var_set(n->data.modify.name, make_num(d));
