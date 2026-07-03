@@ -214,14 +214,31 @@ void typecheck_stmt(ASTNode *n) {
         case NODE_UNARY:
         case NODE_TEMPLATE:
         case NODE_LIST:
+            for (int i = 0; i < n->data.list.count; i++)
+                typecheck_stmt(n->data.list.elements[i]);
+            break;
         case NODE_DICT:
+            for (int i = 0; i < n->data.dict.count; i++) {
+                typecheck_stmt(n->data.dict.keys[i]);
+                typecheck_stmt(n->data.dict.values[i]);
+            }
+            break;
         case NODE_EMPTY:
         case NODE_FUNC_DEF:
+            typecheck_stmt(n->data.func_def.body);
+            break;
         case NODE_SET_UNDEF:
+            typecheck_stmt(n->data.assign.value);
+            break;
         case NODE_FORCE:
         case NODE_UNFORCE:
+            if (n->data.force.value) typecheck_stmt(n->data.force.value);
+            break;
         case NODE_GET:
         case NODE_INCLUDE:
+        case NODE_FUNCTION:
+            break;
+        default:
             break;
     }
 }
@@ -562,7 +579,7 @@ void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
                     fprintf(f, "{\n  Value _v = ");
                     cg_expr(f, n->data.print.exprs[i], TY_DYN);
                     fprintf(f, ";\n  if (_v.type == VAL_STR) { printf(\"%%s\",_v.data.str); val_free(_v); }\n");
-                    fprintf(f, "  else printf(\"%%g\",_v.data.num);\n}\n");
+                    fprintf(f, "  else { char *_s = val_tostr(_v); printf(\"%%s\", _s); free(_s); val_free(_v); }\n}\n");
                 }
             }
             fprintf(f, "printf(\"\\n\");\n");

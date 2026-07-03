@@ -71,7 +71,7 @@ void var_set(const char *name, Value v) {
             assign_var_idx[assign_hist_count] = i;
             assign_hist_count++;
         }
-        if (vars[i].val.type == VAL_STR) free(vars[i].val.data.str);
+        val_free(vars[i].val);
         vars[i].val = v;
     } else {
         if (var_count >= MAX_VARS) fatal("too many variables");
@@ -87,7 +87,7 @@ void var_set_no_scope(const char *name, Value v) {
     for (i = var_count - 1; i >= 0; i--)
         if (!strcmp(vars[i].name, name) && vars[i].scope_id == scope_depth) break;
     if (i >= 0) {
-        if (vars[i].val.type == VAL_STR) free(vars[i].val.data.str);
+        val_free(vars[i].val);
         vars[i].val = v;
     } else {
         if (var_count >= MAX_VARS) fatal("too many variables");
@@ -252,9 +252,11 @@ void dict_set(Value *v, const char *key, Value val) {
     }
     if (v->data.dict.count >= v->data.dict.cap) {
         v->data.dict.cap = v->data.dict.cap ? v->data.dict.cap * 2 : 4;
-        v->data.dict.keys = realloc(v->data.dict.keys, sizeof(char*) * v->data.dict.cap);
-        v->data.dict.values = realloc(v->data.dict.values, sizeof(Value) * v->data.dict.cap);
-        if (!v->data.dict.keys || !v->data.dict.values) fatal("out of memory");
+        void *nk = realloc(v->data.dict.keys, sizeof(char*) * v->data.dict.cap);
+        void *nv = realloc(v->data.dict.values, sizeof(Value) * v->data.dict.cap);
+        if (!nk || !nv) fatal("out of memory");
+        v->data.dict.keys = nk;
+        v->data.dict.values = nv;
     }
     v->data.dict.keys[v->data.dict.count] = sdup(key);
     v->data.dict.values[v->data.dict.count] = val;
@@ -779,6 +781,7 @@ int exec_stmt(ASTNode *n) {
                 char *s = val_tostr(v);
                 printf("%s", s);
                 free(s);
+                val_free(v);
             }
             printf("\n");
             fflush(stdout);
@@ -1095,9 +1098,13 @@ int exec_stmt(ASTNode *n) {
                 val_free(ival);
                 dict_set(&cval, ks, vval);
                 free(ks);
-                int found = var_find(n->data.idx_set.container->data.id);
-                if (found >= 0) var_set(n->data.idx_set.container->data.id, cval);
-                else val_free(cval);
+                if (n->data.idx_set.container->type == NODE_ID) {
+                    int found = var_find(n->data.idx_set.container->data.id);
+                    if (found >= 0) var_set(n->data.idx_set.container->data.id, cval);
+                    else val_free(cval);
+                } else {
+                    val_free(cval);
+                }
                 return 0;
             }
             double di = val_tonum(ival);
@@ -1500,7 +1507,7 @@ OP_VAR_SET_IDX: {
         if (vars[idx].forced_type == FORCE_INT && v.type == VAL_STR) fatal("line %d: cannot assign string to int-forced variable", code_line[ip]);
         if (vars[idx].forced_type == FORCE_STR && v.type == VAL_NUM) fatal("line %d: cannot assign number to str-forced variable", code_line[ip]);
     }
-    if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);
+    val_free(vars[idx].val);
     vars[idx].val = v;
     ip++; goto *dtab[code[ip].op];
 }

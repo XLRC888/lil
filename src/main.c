@@ -65,14 +65,7 @@ void run_file(const char *path) {
 
     ASTNode *prog = parse_program();
 
-    {
-        int svc = var_count;
-        typecheck_prog(prog);
-        var_count = svc;
-    }
-
-    code_len = 0; const_len = 0; fb_len = 0;
-    fixup_len = 0; cur_loop = 0; for_counter = 0;
+    code_len = 0; const_len = 0; fb_len = 0;    fixup_len = 0; cur_loop = 0; for_counter = 0;
     compile_prog(prog->data.block.stmts, prog->data.block.count);
     vm_run();
     free(src);
