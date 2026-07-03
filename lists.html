@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4b387dc0.js";
+            window.path_to_searchindex_js = "searchindex-4e6dddd3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-593fa1f3.js"></script>
+        <script src="toc-76adc0db.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -188,60 +188,66 @@ print x[0]
 print x[1]
 x[2] = 99
 </code></pre>
+<p>String indexing works the same way. <code>s[i]</code> returns a single-character string, and <code>s[i] = "x"</code> replaces a character:</p>
+<pre><code>s = "hello"
+print s[0]          # "h"
+s[0] = "j"
+print s             # "jello"
+</code></pre>
 <p>Out-of-range access errors at runtime.</p>
 <h2 id="list-library"><a class="header" href="#list-library">List Library</a></h2>
 <p>The <code>list</code> library provides operations for dynamic list manipulation:</p>
 <pre><code>include list
 
-x = &amp;list|new
-&amp;list|push x 1
-&amp;list|push x 2
-&amp;list|push x 3
-print &amp;list|len x
-print &amp;list|at x 1
-val = &amp;list|pop x
+x = new@list
+push@list x 1
+push@list x 2
+push@list x 3
+print len@list x
+print at@list x 1
+val = pop@list x
 </code></pre>
 <h3 id="functions"><a class="header" href="#functions">Functions</a></h3>
 <ul>
-<li><code>&amp;list|new</code> — create empty list</li>
-<li><code>&amp;list|push list val</code> — append value to end</li>
-<li><code>&amp;list|pop list</code> — remove and return last element</li>
-<li><code>&amp;list|at list index</code> — retrieve element without modifying</li>
-<li><code>&amp;list|len list</code> — number of elements</li>
-<li><code>&amp;list|map list $fn</code> — apply function to each element, returns new list</li>
-<li><code>&amp;list|filter list $fn</code> — keep elements where function returns truthy</li>
-<li><code>&amp;list|reduce list $fn init</code> — reduce list to single value</li>
+<li><code>new@list</code> — create empty list</li>
+<li><code>push@list list val</code> — append value to end</li>
+<li><code>pop@list list</code> — remove and return last element</li>
+<li><code>at@list list index</code> — retrieve element without modifying</li>
+<li><code>len@list list</code> — number of elements</li>
+<li><code>map@list list fn</code> — apply function to each element, returns new list</li>
+<li><code>filter@list list fn</code> — keep elements where function returns truthy</li>
+<li><code>reduce@list list fn init</code> — reduce list to single value</li>
 </ul>
 <h2 id="mapfilterreduce"><a class="header" href="#mapfilterreduce">map/filter/reduce</a></h2>
 <p>These higher-order functions take a user-defined function and apply it to each element:</p>
 <pre><code class="language-lil">include list
 
-$double(x) {
+#double(x) {
     x * 2
 }
 
-nums = &amp;list|new
-&amp;list|push nums 1
-&amp;list|push nums 2
-&amp;list|push nums 3
+nums = new@list
+push@list nums 1
+push@list nums 2
+push@list nums 3
 
-doubled = &amp;list|map nums $double
+doubled = map@list nums double
 print doubled
 </code></pre>
 <p><code>filter</code> keeps elements where the function returns truthy:</p>
-<pre><code class="language-lil">$isbig(x) {
+<pre><code class="language-lil">#isbig(x) {
     if x &gt; 5 { 1 } else { 0 }
 }
 
-filtered = &amp;list|filter nums $isbig
+filtered = filter@list nums isbig
 print filtered
 </code></pre>
 <p><code>reduce</code> combines all elements using a two-parameter function and an initial value:</p>
-<pre><code class="language-lil">$add(a, b) {
+<pre><code class="language-lil">#add(a, b) {
     a + b
 }
 
-total = &amp;list|reduce nums $add 0
+total = reduce@list nums add 0
 print total
 </code></pre>
 

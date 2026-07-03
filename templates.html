@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4b387dc0.js";
+            window.path_to_searchindex_js = "searchindex-4e6dddd3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-593fa1f3.js"></script>
+        <script src="toc-76adc0db.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -175,39 +175,42 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="templates"><a class="header" href="#templates">Templates</a></h1>
-<p>Template strings let you embed variable values inside a string using <code>$varname</code>. In Python this would be an f-string like <code>f"hello {name}"</code>. In lil it’s <code>"hello $name"</code>:</p>
+<p>Template strings let you embed variable values inside a string using <code>{varname}</code> with backtick strings. In Python this would be an f-string like <code>f"hello {name}"</code>. In lil it’s <code>`hello {name}`</code>:</p>
 <pre><code class="language-lil">name = "alice"
 age = 30
-print "my name is $name and i am $age years old"
+print `my name is {name} and i am {age} years old`
 </code></pre>
-<p>This prints: <code>my name is alice and i am 30 years old</code></p>
-<h2 id="storing-template-results"><a class="header" href="#storing-template-results">Storing template results</a></h2>
-<p>Templates work anywhere a string is expected, including variable assignment:</p>
-<pre><code class="language-lil">greeting = "hello $name"
-print greeting
+<p>This prints <code>my name is alice and i am 30 years old</code>.</p>
+<h2 id="template-vs-concatenation"><a class="header" href="#template-vs-concatenation">Template vs Concatenation</a></h2>
+<p>Without templates:</p>
+<pre><code class="language-lil">greeting = "hello " + name + " you are " + age + " years old"
 </code></pre>
+<p>With templates:</p>
+<pre><code class="language-lil">greeting = `hello {name} you are {age} years old`
+</code></pre>
+<p>Templates are cleaner for anything more than a single concatenation.</p>
+<h2 id="practical-example"><a class="header" href="#practical-example">Practical example</a></h2>
 <pre><code class="language-lil">username = "bob"
 score = 95
-msg = "player $username scored $score points"
+msg = `player {username} scored {score} points`
 print msg
 </code></pre>
-<h2 id="templates-with-function-results"><a class="header" href="#templates-with-function-results">Templates with function results</a></h2>
-<p>Variables set from library functions work in templates too:</p>
-<pre><code class="language-lil">now = &amp;date|minimal
-print "the time is $now"
+<h2 id="mixing-with-library-calls"><a class="header" href="#mixing-with-library-calls">Mixing with library calls</a></h2>
+<pre><code class="language-lil">now = minimal@date
+print `the time is {now}`
 </code></pre>
-<pre><code class="language-lil">rand = &amp;math|random 100
-print "your lucky number is $rand"
+<pre><code class="language-lil">rand = random@math
+print `your lucky number is {rand}`
 </code></pre>
 <h2 id="templates-in-conditions"><a class="header" href="#templates-in-conditions">Templates in conditions</a></h2>
-<pre><code class="language-lil">name = &amp;sys|readln
-if &amp;string|len name &gt; 0 {
-  print "welcome, $name"
+<pre><code class="language-lil">name = read@file "name.txt"
+if len@string name &gt; 0 {
+  print `welcome, {name}`
 }
 </code></pre>
-<h2 id="if-a-variable-doesnt-exist"><a class="header" href="#if-a-variable-doesnt-exist">If a variable doesn’t exist</a></h2>
-<p>If the variable does not exist, its value defaults to <code>0</code>.</p>
-<pre><code class="language-lil">print "value is $undefined_var"   # prints "value is 0"
+<h2 id="what-happens-with-undefined-variables"><a class="header" href="#what-happens-with-undefined-variables">What happens with undefined variables</a></h2>
+<p>If you use a variable name that doesn’t exist in a template, it evaluates to 0 (for numbers) or “” (for strings):</p>
+<pre><code class="language-lil">print `value is {undefined_var}`   # prints "value is 0"
 </code></pre>
 
                     </main>

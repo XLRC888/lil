@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4b387dc0.js";
+            window.path_to_searchindex_js = "searchindex-4e6dddd3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-593fa1f3.js"></script>
+        <script src="toc-76adc0db.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,15 +186,15 @@
 </ol>
 <h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
 <p>Write a script:</p>
-<pre><code class="language-lil">$fib(n) {
+<pre><code class="language-lil">#fib(n) {
   if n &lt;= 2 {
     1
   } else {
-    $fib(n - 1) + $fib(n - 2)
+    fib(n - 1) + fib(n - 2)
   }
 }
 
-result = $fib(35)
+result = fib(35)
 print "fib(35) = " result
 </code></pre>
 <p>Compile and run:</p>
@@ -225,9 +225,9 @@ ssh user@other-machine ./fib    # works without lil
 <pre><code class="language-bash">time lil fib.lil
 time ./fib
 </code></pre>
-<p>Compiled code matches C performance on simple numeric loops. The <code>$fib(35)</code> recursive function runs roughly 10x faster when compiled.</p>
+<p>Compiled code matches C performance on simple numeric loops. The <code>fib(35)</code> recursive function runs roughly 10x faster when compiled.</p>
 <h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
-<p>User-defined functions (<code>$name()</code>) work in compiled mode. Each function becomes a standalone C function with its own local variable scope and type inference. Function calls work inside expressions, control flow, and can be recursive.</p>
+<p>User-defined functions (<code>#name()</code>) work in compiled mode. Each function becomes a standalone C function with its own local variable scope and type inference. Function calls work inside expressions, control flow, and can be recursive.</p>
 <h2 id="what-compiles-and-what-doesnt"><a class="header" href="#what-compiles-and-what-doesnt">What Compiles (and What Doesn’t)</a></h2>
 <p>Simple operations, arithmetic, control flow, user-defined functions, and variable assignments all compile fine:</p>
 <pre><code class="language-lil">x = 42
@@ -235,9 +235,9 @@ y = x + 1
 print y
 </code></pre>
 <p>This WILL compile and run correctly.</p>
-<p>Library calls like <code>&amp;date|full</code> will NOT compile. The compiler generates a stub that returns a default value (0 for numbers, empty string for strings):</p>
-<pre><code class="language-lil">print &amp;date|full          # compiles but prints nothing useful
-print &amp;sys|cmd "ls"       # returns 0 in compiled mode
+<p>Library calls like <code>full@date</code> will NOT compile. The compiler generates a stub that returns a default value (0 for numbers, empty string for strings):</p>
+<pre><code class="language-lil">print full@date          # compiles but prints nothing useful
+print cmd@sys "ls"       # returns 0 in compiled mode
 print "hello"             # this compiles and works fine
 </code></pre>
 <h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
@@ -245,7 +245,7 @@ print "hello"             # this compiles and works fine
 <ul>
 <li>The <code>has</code> operator in conditions</li>
 <li>Templates (template strings)</li>
-<li>Library function calls (<code>&amp;lib|func args</code>)</li>
+<li>Library function calls (<code>func@lib args</code>)</li>
 </ul>
 <p>If your script uses any of these features, compilation will fail and lil will tell you which construct could not be compiled.</p>
 

@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4b387dc0.js";
+            window.path_to_searchindex_js = "searchindex-4e6dddd3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-593fa1f3.js"></script>
+        <script src="toc-76adc0db.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -177,23 +177,23 @@
                         <h1 id="functions"><a class="header" href="#functions">Functions</a></h1>
 <p>lil has two kinds of functions: built-in library functions from the standard libraries, and user-defined functions you write yourself.</p>
 <h2 id="built-in-library-functions"><a class="header" href="#built-in-library-functions">Built-in Library Functions</a></h2>
-<p>These are functions that come with lil, organized by library like <code>math</code>, <code>string</code>, <code>file</code>, <code>sys</code>, and <code>date</code>. You call them with <code>&amp;</code> syntax:</p>
-<pre><code class="language-lil">&amp;math|randint 1 6
+<p>These are functions that come with lil, organized by library like <code>math</code>, <code>string</code>, <code>file</code>, <code>sys</code>, and <code>date</code>. You call them with <code>@</code> syntax:</p>
+<pre><code class="language-lil">randint@math 1 6
 </code></pre>
-<p>In Python, you’d write <code>import random</code> then <code>random.randint(1, 6)</code>. In lil, it’s <code>&amp;math|randint 1 6</code> in one step. The library name comes after <code>&amp;</code>, then <code>|</code>, then the function name, then space-separated arguments.</p>
+<p>The function name comes first, then <code>@</code>, then the library name, then space-separated arguments.</p>
 <pre><code class="language-lil">name = "alice"
-upper = &amp;string|upper $name
-print upper
+upper@string name
+print name
 </code></pre>
 <p>See the <a href="builtins.html">Built-in Libraries</a> page for the full list of available functions.</p>
 <h2 id="user-defined-functions"><a class="header" href="#user-defined-functions">User-defined Functions</a></h2>
-<p>When you need custom logic, define your own functions with <code>$</code> syntax:</p>
-<pre><code class="language-lil">$add(a, b) {
+<p>When you need custom logic, define your own functions with <code>#</code> syntax:</p>
+<pre><code class="language-lil">#add(a, b) {
   a + b
 }
 </code></pre>
-<p>In Python, you’d write <code>def add(a, b): return a + b</code>. In lil, there’s no <code>def</code>, no colon, and no <code>return</code> keyword. The function body is a block in braces, and the last expression’s value is automatically returned.</p>
-<pre><code class="language-lil">result = $add(3, 4)
+<p>There’s no <code>def</code>, no colon, and no <code>return</code> keyword. The function body is a block in braces, and the last expression’s value is automatically returned.</p>
+<pre><code class="language-lil">result = add(3, 4)
 print result
 </code></pre>
 <p>See <a href="user_functions.html">User-defined Functions</a> and <a href="functions_advanced.html">Advanced Functions</a> for details.</p>

@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4b387dc0.js";
+            window.path_to_searchindex_js = "searchindex-4e6dddd3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-593fa1f3.js"></script>
+        <script src="toc-76adc0db.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -177,7 +177,7 @@
                         <h1 id="input-and-output"><a class="header" href="#input-and-output">Input and Output</a></h1>
 <p>lil keeps I/O simpler than Python. No file objects, no context managers, no close() calls. Just print, input, and a few file library functions.</p>
 <h2 id="print"><a class="header" href="#print">Print</a></h2>
-<p>The <code>print</code> statement outputs text. No parentheses unlike Python’s <code>print()</code>:</p>
+<p>The <code>print</code> statement outputs text:</p>
 <pre><code class="language-lil">print "hello world"
 </code></pre>
 <p>Print multiple values separated by commas:</p>
@@ -198,37 +198,37 @@ print "hello", name
 </code></pre>
 <p>In Python, you’d write <code>name = input("enter your name: ")</code>. In lil, <code>input</code> is a statement, not a function call. The variable comes after the optional prompt.</p>
 <pre><code class="language-lil">input "type something: " s
-len = &amp;string|len $s
+len = len@string s
 print "you typed", len, "characters"
 </code></pre>
 <h2 id="file-io"><a class="header" href="#file-io">File I/O</a></h2>
-<p>lil uses the <code>&amp;file|</code> library for file operations. No <code>open()</code> / <code>close()</code> needed:</p>
-<pre><code class="language-lil">data = &amp;file|read "config.txt"
+<p>lil uses the <code>file</code> library for file operations:</p>
+<pre><code class="language-lil">data = read@file "config.txt"
 </code></pre>
 <p>In Python that’s <code>with open("config.txt") as f: data = f.read()</code>. lil does it in one call.</p>
-<pre><code class="language-lil">text = &amp;file|read "notes.txt"
+<pre><code class="language-lil">text = read@file "notes.txt"
 if text == "" {
   print "file is empty or missing"
 }
 </code></pre>
 <p>Writing a file:</p>
-<pre><code class="language-lil">&amp;file|write "output.txt" "hello world"
+<pre><code class="language-lil">write@file "output.txt" "hello world"
 </code></pre>
 <p>You can write the result of an expression directly:</p>
-<pre><code class="language-lil">today = &amp;date|standart
-&amp;file|write "date.txt" $today
+<pre><code class="language-lil">today = standart@date
+write@file "date.txt" today
 </code></pre>
 <p>Appending to a file:</p>
-<pre><code class="language-lil">&amp;file|append "log.txt" "new entry"
+<pre><code class="language-lil">append@file "log.txt" "new entry"
 </code></pre>
 <p>Check if a file exists:</p>
-<pre><code class="language-lil">if &amp;file|exists "data.txt" == 1 {
-  data = &amp;file|read "data.txt"
+<pre><code class="language-lil">if exists@file "data.txt" == 1 {
+  data = read@file "data.txt"
   print data
 }
 </code></pre>
 <p>List directory contents:</p>
-<pre><code class="language-lil">files = &amp;file|list "/home/user"
+<pre><code class="language-lil">files = list@file "/home/user"
 print files
 </code></pre>
 <p>See the <a href="builtins.html">Built-in Libraries</a> page for the full file library reference.</p>

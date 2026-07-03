@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4b387dc0.js";
+            window.path_to_searchindex_js = "searchindex-4e6dddd3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-593fa1f3.js"></script>
+        <script src="toc-76adc0db.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -182,13 +182,13 @@
 }
 </code></pre>
 <p>This checks whether the variable <code>x</code> has been assigned. If the variable was never assigned, this is false.</p>
-<p>A practical use: check if a library call returned something useful:</p>
-<pre><code class="language-lil">content = &amp;file|read "data.txt"
-if has content {
-  print "file read successfully, length=&amp;string|len content"
+<p>A practical use: check if data was read successfully:</p>
+<pre><code class="language-lil">data = read@file "data.txt"
+if has data {
+  print "read succeeded"
 }
 </code></pre>
-<p>The <code>&amp;file|read</code> function returns nothing (unset variable) if the file doesn’t exist. <code>has content</code> tells you if it succeeded.</p>
+<p><code>read@file</code> returns empty string if the file doesn’t exist. <code>has data</code> tells you if data is non-empty.</p>
 <h2 id="substring-search"><a class="header" href="#substring-search">Substring search</a></h2>
 <pre><code class="language-lil">text = "hello world"
 if text has "world" {

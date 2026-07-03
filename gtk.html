@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4b387dc0.js";
+            window.path_to_searchindex_js = "searchindex-4e6dddd3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-593fa1f3.js"></script>
+        <script src="toc-76adc0db.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -175,8 +175,8 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="gtk-gui-library"><a class="header" href="#gtk-gui-library">GTK GUI Library</a></h1>
-<p>lil has a built-in GTK+3 library for graphical user interfaces. Where Python has tkinter (built-in) and PyQt/PySide (external), lil ships GTK support out of the box.</p>
-<p>Widgets are referenced by string names, and events set lil variables that you poll in a loop. No callback functions needed. This is the biggest difference from Python’s signal/slot pattern: in PyQt you write <code>button.clicked.connect(self.on_click)</code>, in lil you check a variable.</p>
+<p>lil has a built-in GTK+3 library for graphical user interfaces.</p>
+<p>Widgets are referenced by string names, and events set lil variables that you poll in a loop. No callback functions needed.</p>
 <h2 id="building-with-gtk"><a class="header" href="#building-with-gtk">Building with GTK</a></h2>
 <p>The default <code>make</code> builds lil without GTK support. Use <code>make gtk</code> to include it:</p>
 <pre><code class="language-sh">make gtk
@@ -184,156 +184,103 @@ make install-gtk    # install the gtk-enabled binary to PATH
 </code></pre>
 <p>This requires <code>libgtk-3-dev</code> (or your distro’s GTK+3 development package).</p>
 <h2 id="widgets"><a class="header" href="#widgets">Widgets</a></h2>
-<p>Create widgets with <code>&amp;gtk|</code> commands. Every widget gets a string name you choose:</p>
-<pre><code class="language-lil">&amp;gtk|window "main" "hello" 400 300    # name, title, width, height
-&amp;gtk|vbox "box" 10                     # vertical box with 10px spacing
-&amp;gtk|hbox "row" 5                      # horizontal box with 5px spacing
-&amp;gtk|button "btn" "click me"           # button with label
-&amp;gtk|label "lbl" "hello world"         # static text label
-&amp;gtk|entry "input" "type here..."      # text entry with placeholder
+<p>Create widgets with <code>func@gtk</code> commands. Every widget gets a string name you choose:</p>
+<pre><code class="language-lil">window@gtk "main" "hello" 400 300    # name, title, width, height
+vbox@gtk "box" 10                     # vertical box with 10px spacing
+hbox@gtk "row" 5                      # horizontal box with 5px spacing
+button@gtk "btn" "click me"           # button with label
+label@gtk "lbl" "hello world"         # static text label
+entry@gtk "input" "type here..."      # text entry with placeholder
 </code></pre>
-<p>Widgets are referred to by string names, not objects. In Python you’d write <code>button.set_label("text")</code>, in lil you write <code>&amp;gtk|set "btn" "label" "text"</code>.</p>
+<p>Widgets are referred to by string names, not objects.</p>
 <h2 id="layout"><a class="header" href="#layout">Layout</a></h2>
 <p>Build a hierarchy by adding children to containers:</p>
-<pre><code class="language-lil">&amp;gtk|add "box" "btn" "lbl" "input"    # add multiple children at once
-&amp;gtk|show "box"                        # show the container and all children
+<pre><code class="language-lil">add@gtk "box" "btn" "lbl" "input"    # add multiple children at once
+show@gtk "box"                        # show the container and all children
 </code></pre>
 <h2 id="properties"><a class="header" href="#properties">Properties</a></h2>
 <p>Set and get widget properties at runtime:</p>
-<pre><code class="language-lil">&amp;gtk|set "lbl" "label" "new text"      # change button/label text
-&amp;gtk|set "input" "text" "hello"        # change entry text
-&amp;gtk|set "main" "title" "my app"       # change window title
-&amp;gtk|set "btn" "sensitive" "false"     # disable a widget
-&amp;gtk|set "btn" "visible" "true"        # show/hide
-&amp;gtk|set "btn" "width" 100             # set size
-&amp;gtk|set "input" "placeholder" "name"  # change placeholder text
+<pre><code class="language-lil">set@gtk "lbl" "label" "new text"      # change button/label text
+set@gtk "input" "text" "hello"        # change entry text
+set@gtk "main" "title" "my app"       # change window title
+set@gtk "btn" "sensitive" "false"     # disable a widget
 </code></pre>
-<p>You can combine GTK with other lil features, like setting a label to a random number:</p>
-<pre><code class="language-lil">r = &amp;math|random
-&amp;gtk|set "lbl" "label" $r
+<p>Get current property values:</p>
+<pre><code class="language-lil">current = get@gtk "lbl" "label"
+print current
 </code></pre>
-<p>Get values back:</p>
-<pre><code class="language-lil">&amp;gtk|get "input" "text"                # returns entry text
-&amp;gtk|get "lbl" "text"                  # returns label text
-&amp;gtk|get "main" "title"                # returns window title
-</code></pre>
-<h2 id="events"><a class="header" href="#events">Events</a></h2>
-<p>Connect signals to lil variables. When the signal fires, the variable is set:</p>
-<pre><code class="language-lil">&amp;gtk|on "btn" "clicked" "clicked_var"
-&amp;gtk|on "input" "changed" "input_text"
-</code></pre>
-<p>The variable starts as <code>""</code> and gets set to <code>"1"</code> for most signals. For entry <code>changed</code> signals, the variable gets the current text of the entry.</p>
-<h2 id="event-loop"><a class="header" href="#event-loop">Event Loop</a></h2>
-<p>Poll for events in a loop using <code>&amp;gtk|wait</code>:</p>
-<pre><code class="language-lil">loop {
-    &amp;gtk|wait
-    if clicked_var != "" {
-        print "button was clicked"
-        clicked_var = ""
-    }
-    if input_text != "" {
-        print "input changed to: " input_text
-        input_text = ""
-    }
-    if __gtk_quit != "" {
-        print "window was closed"
-        stop
-    }
-}
-</code></pre>
-<p><code>&amp;gtk|wait</code> blocks until a signal fires (or the window is closed). Each signal callback sets its variable then returns control to your script.</p>
-<p>The special variable <code>__gtk_quit</code> is set to <code>"1"</code> when the window is destroyed. Check it to exit your loop cleanly.</p>
-<p>After a signal fires, reset the variable back to <code>""</code> so you can detect the next event.</p>
-<h2 id="delaying-between-checks"><a class="header" href="#delaying-between-checks">Delaying Between Checks</a></h2>
-<p>If you need a small delay between event loop iterations (e.g. for smooth animations or to reduce CPU usage):</p>
-<pre><code class="language-lil">loop {
-    &amp;gtk|wait
-    if clicked_var == "1" {
-        print "clicked"
-        clicked_var = ""
-    }
-    &amp;math|sleep 0.05
-}
-</code></pre>
-<p><code>&amp;math|sleep</code> takes seconds (including fractional), so <code>0.05</code> is 50ms. It works in both interpreted and compiled mode.</p>
-<h2 id="complete-example"><a class="header" href="#complete-example">Complete Example</a></h2>
-<p>A window with a button and a counter:</p>
-<pre><code class="language-lil">&amp;gtk|window "win" "counter" 300 150
-&amp;gtk|vbox "box" 10
-&amp;gtk|label "lbl" "0"
-&amp;gtk|button "btn" "increment"
-&amp;gtk|add "box" "lbl" "btn"
-&amp;gtk|show "win"
-
-&amp;gtk|on "btn" "clicked" "click"
-
-n = 0
+<p>Available properties: <code>label</code>, <code>text</code>, <code>title</code>, <code>placeholder</code>, <code>sensitive</code>, <code>visible</code>, <code>width</code>, <code>height</code>.</p>
+<h2 id="events-no-callbacks"><a class="header" href="#events-no-callbacks">Events (no callbacks)</a></h2>
+<p>Instead of callback functions, GTK signals set lil variables. You poll them in a loop:</p>
+<pre><code class="language-lil">on@gtk "btn" "clicked" ev
+on@gtk "main" "destroy" closed
+show@gtk "main"
 
 loop {
-    &amp;gtk|wait
-    if click != "" {
-        n = n + 1
-        &amp;gtk|set "lbl" "label" n
-        click = ""
-    }
-    if __gtk_quit != "" {
-        stop
-    }
+  wait@gtk          # blocks until any registered signal fires
+  if closed == 1 { stop }
+  if ev == 1 {
+    set@gtk "btn" "label" "clicked!"
+    ev = 0
+  }
 }
 </code></pre>
-<h2 id="all-functions"><a class="header" href="#all-functions">All Functions</a></h2>
+<p><code>wait@gtk</code> blocks until a signal fires. Then you check which variable was set and handle it. Set the variable back to 0 after handling it.</p>
+<h3 id="timeout-events"><a class="header" href="#timeout-events">Timeout events</a></h3>
+<p>Fire a signal after a delay:</p>
+<pre><code class="language-lil">timeout@gtk 1000 tick t    # fire 'tick' after 1000ms, sets t
+</code></pre>
+<h2 id="complete-example"><a class="header" href="#complete-example">Complete Example</a></h2>
+<p>A window with a button that counts clicks:</p>
+<pre><code class="language-lil">include gtk
+
+window@gtk win "Counter" 300 200
+vbox@gtk box 10
+button@gtk btn "clicks: 0"
+add@gtk box btn
+add@gtk win box
+on@gtk btn clicked ev
+on@gtk win destroy closed
+show@gtk win
+
+count = 0
+loop {
+  wait@gtk
+  if closed == 1 { stop }
+  if ev == 1 {
+    count = count + 1
+    set@gtk btn label "clicks: {count}"
+    ev = 0
+  }
+}
+</code></pre>
+<h2 id="functions-reference"><a class="header" href="#functions-reference">Functions Reference</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Function</th><th>Arguments</th><th>Description</th></tr>
+<tr><th>Function</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>window</code></td><td>name, title, w, h</td><td>Create a window</td></tr>
-<tr><td><code>vbox</code></td><td>name [, spacing]</td><td>Vertical box layout</td></tr>
-<tr><td><code>hbox</code></td><td>name [, spacing]</td><td>Horizontal box layout</td></tr>
-<tr><td><code>button</code></td><td>name, label</td><td>Clickable button</td></tr>
-<tr><td><code>label</code></td><td>name, text</td><td>Static text label</td></tr>
-<tr><td><code>entry</code></td><td>name [, placeholder]</td><td>Text input field</td></tr>
-<tr><td><code>add</code></td><td>parent, child1 [, child2, …]</td><td>Add children to container</td></tr>
-<tr><td><code>show</code></td><td>name</td><td>Show a widget (calls show_all)</td></tr>
-<tr><td><code>set</code></td><td>name, property, value</td><td>Set a widget property</td></tr>
-<tr><td><code>get</code></td><td>name, property</td><td>Get a widget property (returns string)</td></tr>
-<tr><td><code>on</code></td><td>name, signal, variable</td><td>Connect signal to variable</td></tr>
-<tr><td><code>wait</code></td><td></td><td>Wait for a signal to fire</td></tr>
-<tr><td><code>run</code></td><td></td><td>Start the GTK main loop (blocks until quit)</td></tr>
-<tr><td><code>timeout</code></td><td>ms, signal, variable</td><td>Fire a signal after N milliseconds</td></tr>
-<tr><td><code>quit</code></td><td></td><td>Quit the GTK main loop</td></tr>
-<tr><td><code>destroy</code></td><td>name</td><td>Destroy a widget</td></tr>
-<tr><td><code>init</code></td><td></td><td>Explicitly initialize GTK (auto-called on first window)</td></tr>
+<tr><td><code>window@gtk name title w h</code></td><td>Create window</td></tr>
+<tr><td><code>vbox@gtk name spacing</code></td><td>Vertical box</td></tr>
+<tr><td><code>hbox@gtk name spacing</code></td><td>Horizontal box</td></tr>
+<tr><td><code>button@gtk name label</code></td><td>Button</td></tr>
+<tr><td><code>label@gtk name text</code></td><td>Label</td></tr>
+<tr><td><code>entry@gtk name [placeholder]</code></td><td>Text entry</td></tr>
+<tr><td><code>add@gtk parent child ...</code></td><td>Add children to container</td></tr>
+<tr><td><code>set@gtk widget prop val</code></td><td>Set property</td></tr>
+<tr><td><code>get@gtk widget prop</code></td><td>Get property (returns string)</td></tr>
+<tr><td><code>on@gtk widget signal var</code></td><td>Register event, sets var on trigger</td></tr>
+<tr><td><code>wait@gtk</code></td><td>Block until next signal</td></tr>
+<tr><td><code>run@gtk</code></td><td>Non-blocking signal check</td></tr>
+<tr><td><code>timeout@gtk ms signal var</code></td><td>Fire signal after delay</td></tr>
+<tr><td><code>show@gtk name</code></td><td>Show widget</td></tr>
+<tr><td><code>quit@gtk</code></td><td>Quit GTK main loop</td></tr>
+<tr><td><code>destroy@gtk name</code></td><td>Destroy widget</td></tr>
 </tbody>
 </table>
 </div>
-<h2 id="signal-reference"><a class="header" href="#signal-reference">Signal Reference</a></h2>
-<p>Common signals you can connect with <code>&amp;gtk|on</code>:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Signal</th><th>Fires When</th><th>Variable Value</th></tr>
-</thead>
-<tbody>
-<tr><td><code>clicked</code></td><td>Button is clicked</td><td><code>"1"</code></td></tr>
-<tr><td><code>changed</code></td><td>Entry text changes</td><td>The current entry text</td></tr>
-<tr><td><code>activate</code></td><td>Enter pressed in entry</td><td><code>"1"</code></td></tr>
-<tr><td><code>enter-notify-event</code></td><td>Mouse enters widget</td><td><code>"1"</code></td></tr>
-<tr><td><code>leave-notify-event</code></td><td>Mouse leaves widget</td><td><code>"1"</code></td></tr>
-<tr><td><code>focus-in-event</code></td><td>Widget gains focus</td><td><code>"1"</code></td></tr>
-<tr><td><code>focus-out-event</code></td><td>Widget loses focus</td><td><code>"1"</code></td></tr>
-<tr><td><code>destroy</code></td><td>Widget is being destroyed</td><td><code>"1"</code></td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
-<ul>
-<li>GTK functions only work in interpreted (VM) mode. Compiled mode silently returns 0.</li>
-<li>Widgets are automatically removed from the internal registry when destroyed.</li>
-<li>All event variables are initialized to <code>""</code> when connected, so you can check <code>if varname != ""</code> before any signal fires.</li>
-<li>Use <code>&amp;gtk|run</code> instead of a polling loop if you only need to handle a single event (it blocks until the window is closed).</li>
-</ul>
+<p>Signals: <code>clicked</code>, <code>changed</code>, <code>activate</code>, <code>enter-notify-event</code>, <code>leave-notify-event</code>, <code>focus-in-event</code>, <code>focus-out-event</code>, <code>destroy</code></p>
 
                     </main>
 

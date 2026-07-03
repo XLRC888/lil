@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4b387dc0.js";
+            window.path_to_searchindex_js = "searchindex-4e6dddd3.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-593fa1f3.js"></script>
+        <script src="toc-76adc0db.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,159 +186,231 @@ include list
 </code></pre>
 <p>Libraries can be disabled with <code>uninclude</code>:</p>
 <pre><code class="language-lil">include math
-&amp;math|randint 1 10
+randint@math 1 10
 uninclude math
-&amp;math|randint 1 10    # error: library not imported
+randint@math 1 10    # error: library not imported
 </code></pre>
 <p>If the library wasn’t included, <code>uninclude</code> prints a warning and continues:</p>
 <pre><code class="language-lil">uninclude math          # warning: library 'math' was not included
 </code></pre>
-<p>Libraries are called with <code>&amp;</code> syntax:</p>
-<pre><code class="language-lil">&amp;&lt;library&gt;|&lt;function&gt; &lt;arguments...&gt;
+<p>Libraries are called with <code>@</code> syntax:</p>
+<pre><code class="language-lil">&lt;function&gt;@&lt;library&gt; &lt;arguments...&gt;
 </code></pre>
-<p>Arguments are separated by spaces. Prefix a variable name with <code>$</code> to dereference it. Without <code>$</code>, the argument is treated as a literal string.</p>
+<p>Arguments are separated by spaces. Bare variable names are auto-dereferenced. Use double quotes for literal strings.</p>
 <h2 id="string-library"><a class="header" href="#string-library">string library</a></h2>
-<pre><code class="language-lil">&amp;string|lower $s
-&amp;string|upper $s
-&amp;string|reverse $s
-&amp;string|len $s
-&amp;string|repeat $s 3
-&amp;string|substr $s 1 3
-&amp;string|replace $s "old" "new"
-&amp;string|split $s ","
-&amp;string|join list ","
-&amp;string|contains $s "sub"
-&amp;string|find $s "sub"
+<pre><code class="language-lil">lower@string s
+upper@string s
+reverse@string s
+len@string s
+repeat@string s 3
+substr@string s 1 3
+replace@string s "old" "new"
+split@string s ","
+join@string list ","
+contains@string s "sub"
+find@string s "sub"
+ord@string s
+chr@string 65
+isdigit@string s
+isalpha@string s
+isalnum@string s
+isspace@string s
 </code></pre>
 <p><code>split</code> returns a list of substrings:</p>
 <pre><code class="language-lil">include string
-parts = &amp;string|split "a,b,c" ","
+parts = split@string "a,b,c" ","
 print parts
 </code></pre>
 <p><code>join</code> concatenates list elements with a delimiter:</p>
 <pre><code class="language-lil">include string
-result = &amp;string|join parts "-"
+result = join@string parts "-"
 print result
 </code></pre>
 <p><code>contains</code> returns 1 if the string contains the substring, 0 otherwise:</p>
 <pre><code class="language-lil">include string
-x = &amp;string|contains "hello world" "world"
+x = contains@string "hello world" "world"
 print x
 </code></pre>
 <p><code>find</code> returns the index of the first occurrence, or -1 if not found:</p>
 <pre><code class="language-lil">include string
-idx = &amp;string|find "hello" "ell"
+idx = find@string "hello" "ell"
 print idx
 </code></pre>
-<p>The <code>$</code> prefix tells lil to use the variable’s value:</p>
+<p><code>ord</code> returns the ASCII code of the first character:</p>
+<pre><code class="language-lil">include string
+code = ord@string "A"
+print code
+</code></pre>
+<p><code>chr</code> returns a single-character string from an ASCII code:</p>
+<pre><code class="language-lil">include string
+c = chr@string 65
+print c
+</code></pre>
+<p>Character classifiers check if a string consists entirely of the given character type:</p>
+<pre><code class="language-lil">include string
+print isdigit@string "123"
+print isalpha@string "abc"
+print isalnum@string "a1"
+print isspace@string "  "
+print isdigit@string "12a"
+</code></pre>
+<p>Bare variable names are auto-dereferenced, no <code>$</code> needed:</p>
 <pre><code class="language-lil">name = "alice"
-&amp;string|upper $name
+upper@string name
 print name
 </code></pre>
 <p>Assign the result to a variable:</p>
 <pre><code class="language-lil">name = "alice"
-len = &amp;string|len $name
+len = len@string name
 print len
 </code></pre>
-<pre><code class="language-lil">msg = "hello world"
-upper = &amp;string|upper $msg
-print upper
-</code></pre>
-<pre><code class="language-lil">greeting = "ha"
-repeated = &amp;string|repeat $greeting 3
-print repeated
-</code></pre>
 <h2 id="math-library"><a class="header" href="#math-library">math library</a></h2>
-<pre><code class="language-lil">&amp;math|eval "2 + 3 * 4"
-&amp;math|random
-&amp;math|randint 1 10
-&amp;math|factors 12
-&amp;math|fib 10
-&amp;math|isprime 7
-&amp;math|sleep 0.5
-&amp;math|hasops "2+3"
-&amp;math|choice "a" "b" "c"
+<pre><code class="language-lil">eval@math "2 + 3 * 4"
+random@math
+randint@math 1 10
+factors@math 12
+fib@math 10
+isprime@math 7
+sleep@math 0.5
+hasops@math "2+3"
+choice@math "a" "b" "c"
 </code></pre>
 <p>Assign results to variables:</p>
-<pre><code class="language-lil">roll = &amp;math|randint 1 6
+<pre><code class="language-lil">roll = randint@math 1 6
 print "you rolled", roll
 </code></pre>
-<pre><code class="language-lil">n = &amp;math|random
+<pre><code class="language-lil">n = random@math
 print n
 </code></pre>
-<pre><code class="language-lil">prime = &amp;math|isprime 17
+<pre><code class="language-lil">prime = isprime@math 17
 print prime
 </code></pre>
-<pre><code class="language-lil">dice = &amp;math|choice "fire" "ice" "lightning"
+<pre><code class="language-lil">dice = choice@math "fire" "ice" "lightning"
 print dice
 </code></pre>
 <h2 id="file-library"><a class="header" href="#file-library">file library</a></h2>
-<pre><code class="language-lil">content = &amp;file|read "path"
-&amp;file|write "path" "content"
-&amp;file|append "path" "content"
-&amp;file|delete "path"
-exists = &amp;file|exists "path"
-listing = &amp;file|list "path"
+<pre><code class="language-lil">content = read@file "path"
+write@file "path" "content"
+append@file "path" "content"
+delete@file "path"
+exists = exists@file "path"
+listing = list@file "path"
 </code></pre>
 <p>Most file functions return values you’ll want to capture:</p>
-<pre><code class="language-lil">data = &amp;file|read "config.txt"
+<pre><code class="language-lil">data = read@file "config.txt"
 print data
 </code></pre>
-<pre><code class="language-lil">ok = &amp;file|delete "temp.tmp"
+<pre><code class="language-lil">ok = delete@file "temp.tmp"
 if ok == 1 {
   print "deleted"
 }
 </code></pre>
-<pre><code class="language-lil">files = &amp;file|list "/home/user"
+<pre><code class="language-lil">files = list@file "/home/user"
 print files
 </code></pre>
-<pre><code class="language-lil">cfg = &amp;file|read "settings.cfg"
+<pre><code class="language-lil">cfg = read@file "settings.cfg"
 if cfg == "" {
   print "no config found"
 }
 </code></pre>
 <h2 id="sys-library"><a class="header" href="#sys-library">sys library</a></h2>
-<pre><code class="language-lil">output = &amp;sys|cmd "command"
-value = &amp;sys|env "VARNAME"
+<pre><code class="language-lil">output = cmd@sys "command"
+value = env@sys "VARNAME"
 </code></pre>
 <p>Assign results to check environment variables or capture command output:</p>
-<pre><code class="language-lil">home = &amp;sys|env "HOME"
+<pre><code class="language-lil">home = env@sys "HOME"
 print "home directory:", home
 </code></pre>
-<pre><code class="language-lil">result = &amp;sys|cmd "ls -la"
+<pre><code class="language-lil">result = cmd@sys "ls -la"
 print result
 </code></pre>
-<pre><code class="language-lil">shell = &amp;sys|env "SHELL"
+<pre><code class="language-lil">shell = env@sys "SHELL"
 print "your shell is", shell
 </code></pre>
 <h3 id="debugging"><a class="header" href="#debugging">Debugging</a></h3>
 <pre><code>include sys
-&amp;sys|log "debug message"
+log@sys "debug message"
 </code></pre>
-<p><code>&amp;sys|log</code> prints to stderr. <code>&amp;sys|last_error</code> returns the last error from a failed FFI call (file/read, sys/cmd). <code>&amp;sys|clear_error</code> resets it.</p>
+<p><code>log@sys</code> prints to stderr. <code>last_error@sys</code> returns the last error from a failed FFI call. <code>clear_error@sys</code> resets it.</p>
+<h2 id="list-library"><a class="header" href="#list-library">list library</a></h2>
+<pre><code class="language-lil">x = new@list
+push@list x 1
+push@list x 2
+push@list x 3
+val = pop@list x
+print at@list x 0
+print len@list x
+</code></pre>
+<p>Create a list, add elements, remove and access them:</p>
+<pre><code class="language-lil">include list
+items = new@list
+push@list items "apple"
+push@list items "banana"
+push@list items "cherry"
+print at@list items 1
+</code></pre>
+<p>Push returns 0, pop returns the removed element. <code>len@list</code> returns the count.</p>
+<h3 id="mapfilterreduce"><a class="header" href="#mapfilterreduce">map/filter/reduce</a></h3>
+<p>Higher-order functions that take a user-defined function by name:</p>
+<pre><code class="language-lil">include list
+
+#double(x) { x * 2 }
+
+nums = new@list
+push@list nums 1
+push@list nums 2
+push@list nums 3
+
+doubled = map@list nums double
+print doubled
+</code></pre>
+<pre><code class="language-lil">#isbig(x) { if x &gt; 5 { 1 } else { 0 } }
+
+filtered = filter@list nums isbig
+print filtered
+</code></pre>
+<pre><code class="language-lil">#add(a, b) { a + b }
+
+total = reduce@list nums add 0
+print total
+</code></pre>
+<p><code>map@list</code> returns a new list with the function applied to each element. <code>filter@list</code> keeps elements where the function returns truthy. <code>reduce@list</code> combines all elements with a two-parameter function and an initial value.</p>
+<h2 id="dict-library"><a class="header" href="#dict-library">dict library</a></h2>
+<pre><code class="language-lil">d = new@dict
+set@dict d "name" "alice"
+set@dict d "age" 30
+print get@dict d "name"
+print contains@dict d "age"
+print len@dict d
+print keys@dict d
+</code></pre>
+<p>Dicts store key-value pairs. <code>get@dict</code> returns the value or 0 if missing.</p>
+<pre><code class="language-lil">remove@dict d "age"
+clear@dict d
+</code></pre>
 <h2 id="date-library"><a class="header" href="#date-library">date library</a></h2>
-<pre><code class="language-lil">print &amp;date|minimal
-print &amp;date|standart
-print &amp;date|standartplus
-print &amp;date|full
-print &amp;date|full noseconds
-print &amp;date|full noday
-print &amp;date|fullplus
-&amp;date|format eu
-&amp;date|format us
-print &amp;date|format
+<pre><code class="language-lil">print minimal@date
+print standart@date
+print standartplus@date
+print full@date
+print full@date noseconds
+print full@date noday
+print fullplus@date
+format@date eu
+format@date us
+print format@date
 </code></pre>
 <p>Dates are commonly assigned to variables for later use:</p>
-<pre><code class="language-lil">today = &amp;date|standart
+<pre><code class="language-lil">today = standart@date
 print "date:", today
 </code></pre>
-<pre><code class="language-lil">now = &amp;date|full
+<pre><code class="language-lil">now = full@date
 print now
 </code></pre>
-<pre><code class="language-lil">short = &amp;date|minimal
+<pre><code class="language-lil">short = minimal@date
 print short
 </code></pre>
-<p>Most <code>date</code> functions return the date string. <code>&amp;date|format</code> returns the current mode (“EU”/“US”), and setting the format returns empty.</p>
+<p>Most <code>date</code> functions return the date string. <code>format@date</code> returns the current mode (“EU”/“US”), and setting the format returns empty.</p>
 <h2 id="variable-extraction-get"><a class="header" href="#variable-extraction-get">Variable extraction (get)</a></h2>
 <p>Extract variable values from other <code>.lil</code> files at runtime:</p>
 <pre><code class="language-lil">get "TOKEN" from /path/to/file.lil
