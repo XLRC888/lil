@@ -4,7 +4,7 @@ Modifiers use the `?` prefix to change global behavior. Other features like `get
 
 ## Modifiers
 
-- [Undefined Default](undefined_default.md) — change what undefined variables return
+- [Undefined Default](undefined_default.md)  -  change what undefined variables return
 
 ## Get Statement
 

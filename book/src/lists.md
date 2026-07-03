@@ -49,14 +49,14 @@ val = pop@list x
 ```
 
 ### Functions
-- `new@list` — create empty list
-- `push@list list val` — append value to end
-- `pop@list list` — remove and return last element
-- `at@list list index` — retrieve element without modifying
-- `len@list list` — number of elements
-- `map@list list fn` — apply function to each element, returns new list
-- `filter@list list fn` — keep elements where function returns truthy
-- `reduce@list list fn init` — reduce list to single value
+- `new@list`  -  create empty list
+- `push@list list val`  -  append value to end
+- `pop@list list`  -  remove and return last element
+- `at@list list index`  -  retrieve element without modifying
+- `len@list list`  -  number of elements
+- `map@list list fn`  -  apply function to each element, returns new list
+- `filter@list list fn`  -  keep elements where function returns truthy
+- `reduce@list list fn init`  -  reduce list to single value
 
 ## map/filter/reduce
 

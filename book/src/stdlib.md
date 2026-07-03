@@ -12,9 +12,9 @@ include lib/extra.lil/sum filter
 
 ### extra.lil
 
-- `#sum(list)` — add all elements
-- `#range_list(start end)` — build list of numbers
-- `#range(start end)` — print numbers
+- `#sum(list)`  -  add all elements
+- `#range_list(start end)`  -  build list of numbers
+- `#range(start end)`  -  print numbers
 
 ## Built-in FFI Errors
 
@@ -29,6 +29,6 @@ clear_error@sys
 print last_error@sys
 ```
 
-- `last_error@sys` — returns last error string (empty if none)
-- `clear_error@sys` — resets error state
-- `log@sys "msg"` — prints to stderr for debugging
+- `last_error@sys`  -  returns last error string (empty if none)
+- `clear_error@sys`  -  resets error state
+- `log@sys "msg"`  -  prints to stderr for debugging
