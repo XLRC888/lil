@@ -880,6 +880,37 @@ ASTNode *parse_primary(void) {
         lex_next();
         return ast_templ(r);
     }
+    if (lex_cur.type == TOK_AMPERSAND) {
+        lex_next();
+        if (lex_cur.type != TOK_ID) fatal("line %d: expected library name after '&'", lex_cur.line);
+        char *lib = sdup(lex_cur.val.str);
+        lex_next();
+        if (lex_cur.type != TOK_PIPE) fatal("line %d: expected '|' after library name", lex_cur.line);
+        lex_next();
+        if (lex_cur.type != TOK_ID) fatal("line %d: expected function name after '|'", lex_cur.line);
+        char **args = NULL;
+        int argc = 0, cap = 0;
+        if (argc >= cap) { cap = 4; args = malloc(sizeof(char*) * cap); if (!args) fatal("out of memory"); }
+        args[argc++] = sdup(lex_cur.val.str);
+        lex_next();
+        while (lex_cur.type == TOK_ID || lex_cur.type == TOK_STR || lex_cur.type == TOK_NUM || lex_cur.type == TOK_TEMPLATE) {
+            if (argc >= cap) { cap *= 2; args = realloc(args, sizeof(char*) * cap); if (!args) fatal("out of memory"); }
+            if (lex_cur.type == TOK_NUM) {
+                char tmp[64]; snprintf(tmp, sizeof(tmp), "%.10g", lex_cur.val.num);
+                args[argc++] = sdup(tmp);
+            } else if (lex_cur.type == TOK_ID) {
+                char *prefixed = malloc(strlen(lex_cur.val.str) + 2);
+                if (!prefixed) fatal("out of memory");
+                prefixed[0] = '\1';
+                strcpy(prefixed + 1, lex_cur.val.str);
+                args[argc++] = prefixed;
+            } else {
+                args[argc++] = sdup(lex_cur.val.str);
+            }
+            lex_next();
+        }
+        return ast_function(lib, args, argc);
+    }
     if (lex_cur.type == TOK_HASH_ID) {
         char *fname = sdup(lex_cur.val.str);
         lex_next();
