@@ -21,6 +21,15 @@ print x[1]
 x[2] = 99
 ```
 
+String indexing works the same way. `s[i]` returns a single-character string, and `s[i] = "x"` replaces a character:
+
+```
+s = "hello"
+print s[0]          # "h"
+s[0] = "j"
+print s             # "jello"
+```
+
 Out-of-range access errors at runtime.
 
 ## List Library

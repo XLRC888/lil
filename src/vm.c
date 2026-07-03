@@ -627,6 +627,14 @@ Value eval_expr(ASTNode *n) {
             }
             double di = val_tonum(idx);
             val_free(idx);
+            if (container.type == VAL_STR) {
+                int iidx = (int)di;
+                if (iidx < 0 || iidx >= (int)strlen(container.data.str)) { val_free(container); fatal("line %d: string index out of range", n->line); }
+                char buf[2] = { container.data.str[iidx], 0 };
+                Value result = make_str(buf);
+                val_free(container);
+                return result;
+            }
             if (container.type != VAL_LIST) { val_free(container); fatal("line %d: cannot index non-list", n->line); }
             int iidx = (int)di;
             if (iidx < 0 || iidx >= container.data.list.count) { val_free(container); fatal("line %d: list index out of range", n->line); }
@@ -1143,6 +1151,24 @@ int exec_stmt(ASTNode *n) {
                 } else {
                     val_free(cval);
                 }
+                return 0;
+            }
+            if (cval.type == VAL_STR) {
+                double di = val_tonum(ival);
+                val_free(ival);
+                int iidx = (int)di;
+                if (iidx < 0 || iidx >= (int)strlen(cval.data.str)) { val_free(cval); val_free(vval); fatal("line %d: string index out of range", n->line); }
+                char *vs = val_tostr(vval);
+                val_free(vval);
+                char *newstr = sdup(cval.data.str);
+                newstr[iidx] = vs[0];
+                val_free(cval); free(vs);
+                Value newv = make_str(newstr); free(newstr);
+                if (n->data.idx_set.container->type == NODE_ID) {
+                    int found = var_find(n->data.idx_set.container->data.id);
+                    if (found >= 0) var_set(n->data.idx_set.container->data.id, newv);
+                    else val_free(newv);
+                } else { val_free(newv); }
                 return 0;
             }
             double di = val_tonum(ival);

@@ -401,6 +401,57 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             free(arg); free(sub);
             return make_num(idx);
         }
+        if (!strcmp(fn, "ord")) {
+            if (argc < 2) fatal("line %d: string ord expects a string", line);
+            char *arg = resolve_arg(args[1]);
+            double code = arg[0] ? (double)(unsigned char)arg[0] : 0;
+            free(arg);
+            return make_num(code);
+        }
+        if (!strcmp(fn, "chr")) {
+            if (argc < 2) fatal("line %d: string chr expects a number", line);
+            char *arg = resolve_arg(args[1]);
+            int code = (int)strtod(arg, NULL) & 0xFF;
+            free(arg);
+            char buf[2] = { (char)code, 0 };
+            return make_str(buf);
+        }
+        if (!strcmp(fn, "isdigit")) {
+            if (argc < 2) return make_num(0);
+            char *arg = resolve_arg(args[1]);
+            if (!arg[0]) { free(arg); return make_num(0); }
+            int r = 1;
+            for (char *p = arg; *p; p++) { if (!isdigit((unsigned char)*p)) { r = 0; break; } }
+            free(arg);
+            return make_num(r);
+        }
+        if (!strcmp(fn, "isalpha")) {
+            if (argc < 2) return make_num(0);
+            char *arg = resolve_arg(args[1]);
+            if (!arg[0]) { free(arg); return make_num(0); }
+            int r = 1;
+            for (char *p = arg; *p; p++) { if (!isalpha((unsigned char)*p)) { r = 0; break; } }
+            free(arg);
+            return make_num(r);
+        }
+        if (!strcmp(fn, "isalnum")) {
+            if (argc < 2) return make_num(0);
+            char *arg = resolve_arg(args[1]);
+            if (!arg[0]) { free(arg); return make_num(0); }
+            int r = 1;
+            for (char *p = arg; *p; p++) { if (!isalnum((unsigned char)*p)) { r = 0; break; } }
+            free(arg);
+            return make_num(r);
+        }
+        if (!strcmp(fn, "isspace")) {
+            if (argc < 2) return make_num(0);
+            char *arg = resolve_arg(args[1]);
+            if (!arg[0]) { free(arg); return make_num(0); }
+            int r = 1;
+            for (char *p = arg; *p; p++) { if (!isspace((unsigned char)*p)) { r = 0; break; } }
+            free(arg);
+            return make_num(r);
+        }
         fatal("line %d: unknown string function '%s'", line, fn);
     }
 

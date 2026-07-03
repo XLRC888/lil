@@ -49,6 +49,12 @@ Arguments are separated by spaces. Prefix a variable name with `$` to dereferenc
 &string|join list ","
 &string|contains $s "sub"
 &string|find $s "sub"
+&string|ord $s
+&string|chr 65
+&string|isdigit $s
+&string|isalpha $s
+&string|isalnum $s
+&string|isspace $s
 ```
 
 `split` returns a list of substrings:
@@ -81,6 +87,33 @@ print x
 include string
 idx = &string|find "hello" "ell"
 print idx
+```
+
+`ord` returns the ASCII code of the first character:
+
+```lil
+include string
+code = &string|ord "A"
+print code          # 65
+```
+
+`chr` returns a single-character string from an ASCII code:
+
+```lil
+include string
+c = &string|chr 65
+print c             # "A"
+```
+
+Character classifiers check if a string consists entirely of the given character type:
+
+```lil
+include string
+print &string|isdigit "123"     # 1
+print &string|isalpha "abc"     # 1
+print &string|isalnum "a1"      # 1
+print &string|isspace "  "      # 1
+print &string|isdigit "12a"     # 0
 ```
 
 The `$` prefix tells lil to use the variable's value:
