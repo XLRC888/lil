@@ -1,11 +1,5 @@
 # Comments
 
-lil supports line comments with `#` and `//`:
+lil does not have comments. The `#` character is used for function definitions, not comments.
 
-```lil
-x = 42  # this is a comment
-// this is also a comment
-print x
-```
-
-Comments are ignored by the parser. They are useful for documenting your code.
+Code is self-documenting — short, clear variable names and simple control flow remove the need for comments.

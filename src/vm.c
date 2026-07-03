@@ -41,6 +41,10 @@ int var_find(const char *name) {
 Value var_get(const char *name) {
     int i = var_find(name);
     if (i < 0) return undef_val;
+    if (vars[i].live && vars[i].live_src) {
+        Value sv = var_get(vars[i].live_src);
+        return sv;
+    }
     if (vars[i].val.type == VAL_STR) return make_str(vars[i].val.data.str);
     if (vars[i].val.type == VAL_LIST || vars[i].val.type == VAL_DICT) return copy_val(vars[i].val);
     return make_num(vars[i].val.data.num);
@@ -55,6 +59,8 @@ int var_ensure(const char *name) {
     if (undef_val.type == VAL_STR) vars[var_count].val.data.str = sdup(undef_val.data.str);
     vars[var_count].forced = 0;
     vars[var_count].scope_id = scope_depth;
+    vars[var_count].live = 0;
+    vars[var_count].live_src = NULL;
     return var_count++;
 }
 
@@ -68,6 +74,10 @@ void var_set(const char *name, Value v) {
             if (vars[i].forced_type == FORCE_INT && v.type == VAL_STR) fatal("cannot assign a string to an int-forced variable");
             if (vars[i].forced_type == FORCE_STR && v.type == VAL_NUM) fatal("cannot assign a number to a str-forced variable");
         }
+        if (vars[i].live) {
+            free(vars[i].live_src); vars[i].live_src = NULL;
+            vars[i].live = 0;
+        }
         if (assign_hist_count < MAX_ASSIGN_HISTORY) {
             assign_history[assign_hist_count] = copy_val(vars[i].val);
             assign_var_idx[assign_hist_count] = i;
@@ -80,6 +90,8 @@ void var_set(const char *name, Value v) {
         vars[var_count].name = sdup(name);
         vars[var_count].val = v;
         vars[var_count].scope_id = scope_depth;
+        vars[var_count].live = 0;
+        vars[var_count].live_src = NULL;
         var_count++;
     }
 }
@@ -96,6 +108,8 @@ void var_set_no_scope(const char *name, Value v) {
         vars[var_count].name = sdup(name);
         vars[var_count].val = v;
         vars[var_count].scope_id = scope_depth;
+        vars[var_count].live = 0;
+        vars[var_count].live_src = NULL;
         var_count++;
     }
 }
@@ -107,6 +121,7 @@ void pop_scope(void) {
         if (vars[i].scope_id == scope_depth) {
             val_free(vars[i].val);
             free(vars[i].name);
+            if (vars[i].live_src) free(vars[i].live_src);
         } else {
             if (w != i) vars[w] = vars[i];
             w++;
@@ -1183,6 +1198,21 @@ int exec_stmt(ASTNode *n) {
             else val_free(cval);
             return 0;
         }
+        case NODE_LIVE: {
+            Value v = eval_expr(n->data.assign.value);
+            int vi = var_ensure(n->data.assign.name);
+            val_free(vars[vi].val);
+            if (vars[vi].live_src) free(vars[vi].live_src);
+            vars[vi].val = v;
+            vars[vi].live = 1;
+            if (n->data.assign.value->type == NODE_ID) {
+                vars[vi].live_src = sdup(n->data.assign.value->data.id);
+            } else {
+                vars[vi].live_src = NULL;
+            }
+            _last_expr_val = v;
+            return 0;
+        }
         case NODE_EXIT:
             return 1;
         case NODE_SET_UNDEF: {
@@ -1558,7 +1588,17 @@ OP_VAR_SET: {
     var_set(vname, sv); ip++; goto *dtab[code[ip].op];
 }
 OP_VAR_GET_IDX: {
-    Value v = vars[code[ip].arg].val;
+    int vi = code[ip].arg;
+    if (vars[vi].live && vars[vi].live_src) {
+        int src = var_find(vars[vi].live_src);
+        if (src >= 0) {
+            Value sv = vars[src].val;
+            if (sv.type == VAL_STR) sv.data.str = sdup(sv.data.str);
+            else if (sv.type == VAL_LIST || sv.type == VAL_DICT) sv = copy_val(sv);
+            vm_stack[sp++] = sv; ip++; goto *dtab[code[ip].op];
+        }
+    }
+    Value v = vars[vi].val;
     if (v.type == VAL_STR) v.data.str = sdup(v.data.str);
     else if (v.type == VAL_LIST || v.type == VAL_DICT) v = copy_val(v);
     vm_stack[sp++] = v; ip++; goto *dtab[code[ip].op];

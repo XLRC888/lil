@@ -775,6 +775,12 @@ void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
             }
             break;
         }
+        case NODE_LIVE: {
+            fprintf(f, "val_free(%s); %s = ", n->data.assign.name, n->data.assign.name);
+            cg_expr(f, n->data.assign.value, TY_DYN);
+            fprintf(f, ";\n");
+            break;
+        }
         case NODE_LIST:
         case NODE_DICT:
         case NODE_STRUCT_DEF:

@@ -16,9 +16,9 @@ Libraries can be disabled with `uninclude`:
 
 ```lil
 include math
-&math|randint 1 10
+randint@math 1 10
 uninclude math
-&math|randint 1 10    # error: library not imported
+randint@math 1 10    # error: library not imported
 ```
 
 If the library wasn't included, `uninclude` prints a warning and continues:
@@ -27,41 +27,41 @@ If the library wasn't included, `uninclude` prints a warning and continues:
 uninclude math          # warning: library 'math' was not included
 ```
 
-Libraries are called with `&` syntax:
+Libraries are called with `@` syntax:
 
 ```lil
-&<library>|<function> <arguments...>
+<function>@<library> <arguments...>
 ```
 
-Arguments are separated by spaces. Prefix a variable name with `$` to dereference it. Without `$`, the argument is treated as a literal string.
+Arguments are separated by spaces. Bare variable names are auto-dereferenced. Use double quotes for literal strings.
 
 ## string library
 
 ```lil
-&string|lower $s
-&string|upper $s
-&string|reverse $s
-&string|len $s
-&string|repeat $s 3
-&string|substr $s 1 3
-&string|replace $s "old" "new"
-&string|split $s ","
-&string|join list ","
-&string|contains $s "sub"
-&string|find $s "sub"
-&string|ord $s
-&string|chr 65
-&string|isdigit $s
-&string|isalpha $s
-&string|isalnum $s
-&string|isspace $s
+lower@string s
+upper@string s
+reverse@string s
+len@string s
+repeat@string s 3
+substr@string s 1 3
+replace@string s "old" "new"
+split@string s ","
+join@string list ","
+contains@string s "sub"
+find@string s "sub"
+ord@string s
+chr@string 65
+isdigit@string s
+isalpha@string s
+isalnum@string s
+isspace@string s
 ```
 
 `split` returns a list of substrings:
 
 ```lil
 include string
-parts = &string|split "a,b,c" ","
+parts = split@string "a,b,c" ","
 print parts
 ```
 
@@ -69,7 +69,7 @@ print parts
 
 ```lil
 include string
-result = &string|join parts "-"
+result = join@string parts "-"
 print result
 ```
 
@@ -77,7 +77,7 @@ print result
 
 ```lil
 include string
-x = &string|contains "hello world" "world"
+x = contains@string "hello world" "world"
 print x
 ```
 
@@ -85,7 +85,7 @@ print x
 
 ```lil
 include string
-idx = &string|find "hello" "ell"
+idx = find@string "hello" "ell"
 print idx
 ```
 
@@ -93,34 +93,34 @@ print idx
 
 ```lil
 include string
-code = &string|ord "A"
-print code          # 65
+code = ord@string "A"
+print code
 ```
 
 `chr` returns a single-character string from an ASCII code:
 
 ```lil
 include string
-c = &string|chr 65
-print c             # "A"
+c = chr@string 65
+print c
 ```
 
 Character classifiers check if a string consists entirely of the given character type:
 
 ```lil
 include string
-print &string|isdigit "123"     # 1
-print &string|isalpha "abc"     # 1
-print &string|isalnum "a1"      # 1
-print &string|isspace "  "      # 1
-print &string|isdigit "12a"     # 0
+print isdigit@string "123"
+print isalpha@string "abc"
+print isalnum@string "a1"
+print isspace@string "  "
+print isdigit@string "12a"
 ```
 
-The `$` prefix tells lil to use the variable's value:
+Bare variable names are auto-dereferenced, no `$` needed:
 
 ```lil
 name = "alice"
-&string|upper $name
+upper@string name
 print name
 ```
 
@@ -128,90 +128,78 @@ Assign the result to a variable:
 
 ```lil
 name = "alice"
-len = &string|len $name
+len = len@string name
 print len
-```
-
-```lil
-msg = "hello world"
-upper = &string|upper $msg
-print upper
-```
-
-```lil
-greeting = "ha"
-repeated = &string|repeat $greeting 3
-print repeated
 ```
 
 ## math library
 
 ```lil
-&math|eval "2 + 3 * 4"
-&math|random
-&math|randint 1 10
-&math|factors 12
-&math|fib 10
-&math|isprime 7
-&math|sleep 0.5
-&math|hasops "2+3"
-&math|choice "a" "b" "c"
+eval@math "2 + 3 * 4"
+random@math
+randint@math 1 10
+factors@math 12
+fib@math 10
+isprime@math 7
+sleep@math 0.5
+hasops@math "2+3"
+choice@math "a" "b" "c"
 ```
 
 Assign results to variables:
 
 ```lil
-roll = &math|randint 1 6
+roll = randint@math 1 6
 print "you rolled", roll
 ```
 
 ```lil
-n = &math|random
+n = random@math
 print n
 ```
 
 ```lil
-prime = &math|isprime 17
+prime = isprime@math 17
 print prime
 ```
 
 ```lil
-dice = &math|choice "fire" "ice" "lightning"
+dice = choice@math "fire" "ice" "lightning"
 print dice
 ```
 
 ## file library
 
 ```lil
-content = &file|read "path"
-&file|write "path" "content"
-&file|append "path" "content"
-&file|delete "path"
-exists = &file|exists "path"
-listing = &file|list "path"
+content = read@file "path"
+write@file "path" "content"
+append@file "path" "content"
+delete@file "path"
+exists = exists@file "path"
+listing = list@file "path"
 ```
 
 Most file functions return values you'll want to capture:
 
 ```lil
-data = &file|read "config.txt"
+data = read@file "config.txt"
 print data
 ```
 
 ```lil
-ok = &file|delete "temp.tmp"
+ok = delete@file "temp.tmp"
 if ok == 1 {
   print "deleted"
 }
 ```
 
 ```lil
-files = &file|list "/home/user"
+files = list@file "/home/user"
 print files
 ```
 
 ```lil
-cfg = &file|read "settings.cfg"
+cfg = read@file "settings.cfg"
 if cfg == "" {
   print "no config found"
 }
@@ -220,24 +208,24 @@ if cfg == "" {
 ## sys library
 
 ```lil
-output = &sys|cmd "command"
-value = &sys|env "VARNAME"
+output = cmd@sys "command"
+value = env@sys "VARNAME"
 ```
 
 Assign results to check environment variables or capture command output:
 
 ```lil
-home = &sys|env "HOME"
+home = env@sys "HOME"
 print "home directory:", home
 ```
 
 ```lil
-result = &sys|cmd "ls -la"
+result = cmd@sys "ls -la"
 print result
 ```
 
 ```lil
-shell = &sys|env "SHELL"
+shell = env@sys "SHELL"
 print "your shell is", shell
 ```
 
@@ -245,44 +233,44 @@ print "your shell is", shell
 
 ```
 include sys
-&sys|log "debug message"
+log@sys "debug message"
 ```
 
-`&sys|log` prints to stderr. `&sys|last_error` returns the last error from a failed FFI call (file/read, sys/cmd). `&sys|clear_error` resets it.
+`log@sys` prints to stderr. `last_error@sys` returns the last error from a failed FFI call. `clear_error@sys` resets it.
 
 ## date library
 
 ```lil
-print &date|minimal
-print &date|standart
-print &date|standartplus
-print &date|full
-print &date|full noseconds
-print &date|full noday
-print &date|fullplus
-&date|format eu
-&date|format us
-print &date|format
+print minimal@date
+print standart@date
+print standartplus@date
+print full@date
+print full@date noseconds
+print full@date noday
+print fullplus@date
+format@date eu
+format@date us
+print format@date
 ```
 
 Dates are commonly assigned to variables for later use:
 
 ```lil
-today = &date|standart
+today = standart@date
 print "date:", today
 ```
 
 ```lil
-now = &date|full
+now = full@date
 print now
 ```
 
 ```lil
-short = &date|minimal
+short = minimal@date
 print short
 ```
 
-Most `date` functions return the date string. `&date|format` returns the current mode ("EU"/"US"), and setting the format returns empty.
+Most `date` functions return the date string. `format@date` returns the current mode ("EU"/"US"), and setting the format returns empty.
 
 ## Variable extraction (get)
 

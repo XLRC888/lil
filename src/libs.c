@@ -17,7 +17,7 @@ int lib_idx(const char *name) {
 }
 
 char *resolve_arg(char *arg) {
-    if (arg[0] == '$') {
+    if (arg[0] == '\1') {
         Value v = var_get(arg + 1);
         char *s = val_tostr(v);
         return s;
@@ -357,7 +357,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "join")) {
             if (argc < 3) fatal("line %d: string join expects list and delimiter", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: '%s' is not a list", line, vname);
             char *delim = resolve_arg(args[2]);
@@ -523,7 +523,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "push")) {
             if (argc < 3) fatal("line %d: list push expects list name and value", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0) { var_set(vname, make_list()); vi = var_find(vname); }
             if (vars[vi].val.type != VAL_LIST) fatal("line %d: '%s' is not a list", line, vname);
@@ -532,7 +532,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             double d = strtod(vs, &end);
             Value item;
             if (*end) {
-                if (args[2][0] == '$') {
+                if (args[2][0] == '\1') {
                     int oi = var_find(args[2] + 1);
                     if (oi >= 0) item = copy_val(vars[oi].val);
                     else item = make_str(vs);
@@ -547,7 +547,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "pop")) {
             if (argc < 2) fatal("line %d: list pop expects list name", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
             if (vars[vi].val.data.list.count == 0) return make_num(0);
@@ -557,7 +557,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "len")) {
             if (argc < 2) fatal("line %d: list len expects list name", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0) return make_num(0);
             if (vars[vi].val.type != VAL_LIST) return make_num(0);
@@ -566,7 +566,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "at")) {
             if (argc < 3) fatal("line %d: list get expects list name and index", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
             char *is = resolve_arg(args[2]);
@@ -576,11 +576,11 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "map")) {
             if (argc < 3) fatal("line %d: list map expects list name and function name", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
             char *fname = args[2];
-            if (fname[0] == '$') fname++;
+            if (fname[0] == '\1') fname++;
             int fi = -1;
             for (int i = 0; i < func_count; i++) {
                 if (!strcmp(funcs[i].name, fname)) { fi = i; break; }
@@ -608,11 +608,11 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "filter")) {
             if (argc < 3) fatal("line %d: list filter expects list name and function name", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
             char *fname = args[2];
-            if (fname[0] == '$') fname++;
+            if (fname[0] == '\1') fname++;
             int fi = -1;
             for (int i = 0; i < func_count; i++) {
                 if (!strcmp(funcs[i].name, fname)) { fi = i; break; }
@@ -641,11 +641,11 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "reduce")) {
             if (argc < 4) fatal("line %d: list reduce expects list name, function name, and initial value", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
             char *fname = args[2];
-            if (fname[0] == '$') fname++;
+            if (fname[0] == '\1') fname++;
             int fi = -1;
             for (int i = 0; i < func_count; i++) {
                 if (!strcmp(funcs[i].name, fname)) { fi = i; break; }
@@ -689,7 +689,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "set")) {
             if (argc < 4) fatal("line %d: dict set expects dict name, key, and value", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0) { var_set(vname, make_dict()); vi = var_find(vname); }
             if (vars[vi].val.type != VAL_DICT) fatal("line %d: '%s' is not a dict", line, vname);
@@ -715,7 +715,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "get")) {
             if (argc < 3) fatal("line %d: dict get expects dict name and key", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_DICT) fatal("line %d: dict '%s' not found", line, vname);
             char *key = resolve_arg(args[2]);
@@ -726,7 +726,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "contains")) {
             if (argc < 3) fatal("line %d: dict has expects dict name and key", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_DICT) return make_num(0);
             char *key = resolve_arg(args[2]);
@@ -737,7 +737,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "keys")) {
             if (argc < 2) fatal("line %d: dict keys expects dict name", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_DICT) return make_list();
             return dict_keys(vars[vi].val);
@@ -745,7 +745,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "len")) {
             if (argc < 2) fatal("line %d: dict len expects dict name", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_DICT) return make_num(0);
             return make_num(vars[vi].val.data.dict.count);
@@ -753,7 +753,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "remove")) {
             if (argc < 3) fatal("line %d: dict remove expects dict name and key", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_DICT) return make_num(0);
             char *key = resolve_arg(args[2]);
@@ -764,7 +764,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
         if (!strcmp(fn, "clear")) {
             if (argc < 2) fatal("line %d: dict clear expects dict name", line);
             char *vname = args[1];
-            if (vname[0] == '$') vname++;
+            if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_DICT) return make_num(0);
             dict_clear(&vars[vi].val);

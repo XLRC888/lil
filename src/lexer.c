@@ -16,11 +16,6 @@ static Token lex_scan(void) {
         if (c == ' ' || c == '\t' || c == '\r') { lex_pos++; continue; }
         if (c == '\n') { lex_pos++; lex_line++; t.type = TOK_NEWLINE; return t; }
 
-        if (c == '#') {
-            while (lex_pos < lex_len && lex_src[lex_pos] != '\n' && lex_src[lex_pos] != '\r') lex_pos++;
-            continue;
-        }
-
         if (c == '"') {
             lex_pos++;
             int start = lex_pos;
@@ -104,6 +99,7 @@ static Token lex_scan(void) {
             if (!strcmp(word, "get"))     { free(word); t.type = TOK_GET; return t; }
             if (!strcmp(word, "from"))    { free(word); t.type = TOK_FROM; return t; }
             if (!strcmp(word, "struct"))  { free(word); t.type = TOK_STRUCT; return t; }
+            if (!strcmp(word, "live"))    { free(word); t.type = TOK_LIVE; return t; }
 
             t.type = TOK_ID;
             t.val.str = word;
@@ -116,11 +112,6 @@ static Token lex_scan(void) {
             case '-': t.type = TOK_MINUS; return t;
             case '*': t.type = TOK_STAR; return t;
             case '/':
-                if (lex_pos < lex_len && lex_src[lex_pos] == '/') {
-                    lex_pos++;
-                    while (lex_pos < lex_len && lex_src[lex_pos] != '\n') lex_pos++;
-                    return lex_scan();
-                }
                 t.type = TOK_SLASH; return t;
             case '%': t.type = TOK_MOD; return t;
             case '(': t.type = TOK_LPAREN; return t;
@@ -149,22 +140,20 @@ static Token lex_scan(void) {
             case '|':
                 if (lex_pos < lex_len && lex_src[lex_pos] == '|') { lex_pos++; t.type = TOK_OR; return t; }
                 t.type = TOK_PIPE; return t;
-            case '#':
-                while (lex_pos < lex_len && lex_src[lex_pos] != '\n') lex_pos++;
-                return lex_scan();
             case '@': t.type = TOK_AT; return t;
             case '^': t.type = TOK_CARET; return t;
             case '?': t.type = TOK_QMARK; return t;
             case '.': t.type = TOK_DOT; return t;
-            case ':': t.type = TOK_COLON; return t;            case '$': {
+            case ':': t.type = TOK_COLON; return t;
+            case '#': {
                 if (lex_pos < lex_len && (isalpha(lex_src[lex_pos]) || lex_src[lex_pos] == '_')) {
                     int start = lex_pos;
                     while (lex_pos < lex_len && (isalnum(lex_src[lex_pos]) || lex_src[lex_pos] == '_')) lex_pos++;
-                    t.type = TOK_DOLLAR_ID;
+                    t.type = TOK_HASH_ID;
                     t.val.str = sdupn(lex_src + start, lex_pos - start);
                     return t;
                 }
-                fatal("line %d: '$' must be followed by a variable name", lex_line);
+                fatal("line %d: '#' must be followed by a function name", lex_line);
                 return t;
             }
             default:
