@@ -36,13 +36,12 @@ print x
 
 ## String length
 
-Strings have a length you can store as a number:
+Get the length of a string with `len@string`:
 
 ```lil
 name = "alice"
-len = 5
+len = len@string name
 print name, "has", len, "characters"
-print "length: 5"
 ```
 
 ## Math on numbers

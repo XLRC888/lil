@@ -9,7 +9,16 @@ name = "alice"
 
 Variable names must start with a letter and can contain letters, digits, and underscores.
 
-Variables do not need to be declared before use. The first time you assign to a name, the variable is created. If you use a variable that has not been assigned yet, its value defaults to `0`:
+Variables do not need to be declared before use. The first time you assign to a name, the variable is created. Use `%name` to explicitly declare a variable with value 0:
+
+```lil
+%counter
+print counter     # 0
+counter = 10
+print counter     # 10
+```
+
+If you use a variable that has not been assigned yet, its value defaults to `0`:
 
 ```lil
 print z

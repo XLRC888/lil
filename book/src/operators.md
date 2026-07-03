@@ -37,6 +37,14 @@ if a > 0 || b > 0 {
 }
 ```
 
+## Special syntax
+
+`#` defines a function. `#add(a, b) { a + b }` creates a function named `add`.
+
+`@` makes a library call. `randint@math 1 10` calls `randint` from the `math` library.
+
+`%` declares a variable with value 0. `%x` is the same as `x = 0`.
+
 ## Operator precedence
 
 From lowest to highest:
