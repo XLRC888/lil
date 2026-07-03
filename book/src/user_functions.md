@@ -100,8 +100,6 @@ Two functions with the same parameter name don't interfere with each other:
 }
 
 b(100)
-# prints 101 (from a)
-# prints 100 (from b, unchanged)
 ```
 
 Variables created inside a function are local to that call and cleaned up when the function returns:
@@ -118,7 +116,6 @@ Variables created inside a function are local to that call and cleaned up when t
 }
 
 outer()
-# prints 99 (inner's x didn't leak)
 ```
 
 Variables inside a function create new bindings in the function's scope. They don't modify outer-scope variables of the same name:
@@ -132,7 +129,6 @@ x = 10
 
 set_x(42)
 print x
-# prints 10 (the function created a local x, didn't modify the global)
 ```
 
 ## Include
