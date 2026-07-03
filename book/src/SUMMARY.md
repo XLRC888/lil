@@ -6,7 +6,7 @@
   - [Hello, World](hello_world.md)
 - [Numbers and Strings](numbers_strings.md)
 - [Variables](variables.md)
-- [Comments](comments.md)
+  - [Comments (none)](comments.md)
 - [Operators](operators.md)
 - [Comparison and Logic](comparison_logic.md)
 - [If and Else](if_else.md)

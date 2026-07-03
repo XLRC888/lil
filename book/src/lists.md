@@ -39,24 +39,24 @@ The `list` library provides operations for dynamic list manipulation:
 ```
 include list
 
-x = &list|new
-&list|push x 1
-&list|push x 2
-&list|push x 3
-print &list|len x
-print &list|at x 1
-val = &list|pop x
+x = new@list
+push@list x 1
+push@list x 2
+push@list x 3
+print len@list x
+print at@list x 1
+val = pop@list x
 ```
 
 ### Functions
-- `&list|new` — create empty list
-- `&list|push list val` — append value to end
-- `&list|pop list` — remove and return last element
-- `&list|at list index` — retrieve element without modifying
-- `&list|len list` — number of elements
-- `&list|map list $fn` — apply function to each element, returns new list
-- `&list|filter list $fn` — keep elements where function returns truthy
-- `&list|reduce list $fn init` — reduce list to single value
+- `new@list` — create empty list
+- `push@list list val` — append value to end
+- `pop@list list` — remove and return last element
+- `at@list list index` — retrieve element without modifying
+- `len@list list` — number of elements
+- `map@list list fn` — apply function to each element, returns new list
+- `filter@list list fn` — keep elements where function returns truthy
+- `reduce@list list fn init` — reduce list to single value
 
 ## map/filter/reduce
 
@@ -65,37 +65,37 @@ These higher-order functions take a user-defined function and apply it to each e
 ```lil
 include list
 
-$double(x) {
+#double(x) {
     x * 2
 }
 
-nums = &list|new
-&list|push nums 1
-&list|push nums 2
-&list|push nums 3
+nums = new@list
+push@list nums 1
+push@list nums 2
+push@list nums 3
 
-doubled = &list|map nums $double
+doubled = map@list nums double
 print doubled
 ```
 
 `filter` keeps elements where the function returns truthy:
 
 ```lil
-$isbig(x) {
+#isbig(x) {
     if x > 5 { 1 } else { 0 }
 }
 
-filtered = &list|filter nums $isbig
+filtered = filter@list nums isbig
 print filtered
 ```
 
 `reduce` combines all elements using a two-parameter function and an initial value:
 
 ```lil
-$add(a, b) {
+#add(a, b) {
     a + b
 }
 
-total = &list|reduce nums $add 0
+total = reduce@list nums add 0
 print total
 ```

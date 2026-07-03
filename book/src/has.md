@@ -12,16 +12,16 @@ if has x {
 
 This checks whether the variable `x` has been assigned. If the variable was never assigned, this is false.
 
-A practical use: check if a library call returned something useful:
+A practical use: check if data was read successfully:
 
 ```lil
-content = &file|read "data.txt"
-if has content {
-  print "file read successfully, length=&string|len content"
+data = read@file "data.txt"
+if has data {
+  print "read succeeded"
 }
 ```
 
-The `&file|read` function returns nothing (unset variable) if the file doesn't exist. `has content` tells you if it succeeded.
+`read@file` returns empty string if the file doesn't exist. `has data` tells you if data is non-empty.
 
 ## Substring search
 

@@ -12,11 +12,9 @@ include lib/extra.lil/sum filter
 
 ### extra.lil
 
-- `$sum(list)` — add all elements
-- `$map(list fn)` — apply function to each element
-- `$filter(list fn)` — keep elements where fn returns truthy
-- `$range_list(start end)` — build list of numbers
-- `$range(start end)` — print numbers
+- `#sum(list)` — add all elements
+- `#range_list(start end)` — build list of numbers
+- `#range(start end)` — print numbers
 
 ## Built-in FFI Errors
 
@@ -25,12 +23,12 @@ Functions that fail silently set a last error message:
 ```
 include file
 include sys
-x = &file|read "/nonexistent"
-print &sys|last_error
-&sys|clear_error
-print &sys|last_error
+x = read@file "/nonexistent"
+print last_error@sys
+clear_error@sys
+print last_error@sys
 ```
 
-- `&sys|last_error` — returns last error string (empty if none)
-- `&sys|clear_error` — resets error state
-- `&sys|log "msg"` — prints to stderr for debugging
+- `last_error@sys` — returns last error string (empty if none)
+- `clear_error@sys` — resets error state
+- `log@sys "msg"` — prints to stderr for debugging

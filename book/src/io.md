@@ -4,7 +4,7 @@ lil keeps I/O simpler than Python. No file objects, no context managers, no clos
 
 ## Print
 
-The `print` statement outputs text. No parentheses unlike Python's `print()`:
+The `print` statement outputs text:
 
 ```lil
 print "hello world"
@@ -42,22 +42,22 @@ In Python, you'd write `name = input("enter your name: ")`. In lil, `input` is a
 
 ```lil
 input "type something: " s
-len = &string|len $s
+len = len@string s
 print "you typed", len, "characters"
 ```
 
 ## File I/O
 
-lil uses the `&file|` library for file operations. No `open()` / `close()` needed:
+lil uses the `file` library for file operations:
 
 ```lil
-data = &file|read "config.txt"
+data = read@file "config.txt"
 ```
 
 In Python that's `with open("config.txt") as f: data = f.read()`. lil does it in one call.
 
 ```lil
-text = &file|read "notes.txt"
+text = read@file "notes.txt"
 if text == "" {
   print "file is empty or missing"
 }
@@ -66,27 +66,27 @@ if text == "" {
 Writing a file:
 
 ```lil
-&file|write "output.txt" "hello world"
+write@file "output.txt" "hello world"
 ```
 
 You can write the result of an expression directly:
 
 ```lil
-today = &date|standart
-&file|write "date.txt" $today
+today = standart@date
+write@file "date.txt" today
 ```
 
 Appending to a file:
 
 ```lil
-&file|append "log.txt" "new entry"
+append@file "log.txt" "new entry"
 ```
 
 Check if a file exists:
 
 ```lil
-if &file|exists "data.txt" == 1 {
-  data = &file|read "data.txt"
+if exists@file "data.txt" == 1 {
+  data = read@file "data.txt"
   print data
 }
 ```
@@ -94,7 +94,7 @@ if &file|exists "data.txt" == 1 {
 List directory contents:
 
 ```lil
-files = &file|list "/home/user"
+files = list@file "/home/user"
 print files
 ```
 

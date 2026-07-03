@@ -2,7 +2,7 @@
 
 lil is dynamically typed, just like Python. A variable can hold a number, a string, or anything else, and you can change its type whenever you want.
 
-There is no `def`, no `class`, and no `return` keyword. Functions are defined with `$name` syntax and the last expression in the body is automatically returned.
+There is no `def`, no `class`, and no `return` keyword. Functions are defined with `#name` syntax and the last expression in the body is automatically returned.
 
 All variables are global by default. There is no local scope (except function parameters, which are saved and restored automatically around calls).
 

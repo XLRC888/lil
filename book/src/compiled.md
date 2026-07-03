@@ -16,15 +16,15 @@ When you compile, lil:
 Write a script:
 
 ```lil
-$fib(n) {
+#fib(n) {
   if n <= 2 {
     1
   } else {
-    $fib(n - 1) + $fib(n - 2)
+    fib(n - 1) + fib(n - 2)
   }
 }
 
-result = $fib(35)
+result = fib(35)
 print "fib(35) = " result
 ```
 
@@ -63,11 +63,11 @@ time lil fib.lil
 time ./fib
 ```
 
-Compiled code matches C performance on simple numeric loops. The `$fib(35)` recursive function runs roughly 10x faster when compiled.
+Compiled code matches C performance on simple numeric loops. The `fib(35)` recursive function runs roughly 10x faster when compiled.
 
 ## Functions
 
-User-defined functions (`$name()`) work in compiled mode. Each function becomes a standalone C function with its own local variable scope and type inference. Function calls work inside expressions, control flow, and can be recursive.
+User-defined functions (`#name()`) work in compiled mode. Each function becomes a standalone C function with its own local variable scope and type inference. Function calls work inside expressions, control flow, and can be recursive.
 
 ## What Compiles (and What Doesn't)
 
@@ -81,11 +81,11 @@ print y
 
 This WILL compile and run correctly.
 
-Library calls like `&date|full` will NOT compile. The compiler generates a stub that returns a default value (0 for numbers, empty string for strings):
+Library calls like `full@date` will NOT compile. The compiler generates a stub that returns a default value (0 for numbers, empty string for strings):
 
 ```lil
-print &date|full          # compiles but prints nothing useful
-print &sys|cmd "ls"       # returns 0 in compiled mode
+print full@date          # compiles but prints nothing useful
+print cmd@sys "ls"       # returns 0 in compiled mode
 print "hello"             # this compiles and works fine
 ```
 
@@ -95,6 +95,6 @@ The following features are not available in compiled mode:
 
 - The `has` operator in conditions
 - Templates (template strings)
-- Library function calls (`&lib|func args`)
+- Library function calls (`func@lib args`)
 
 If your script uses any of these features, compilation will fail and lil will tell you which construct could not be compiled.

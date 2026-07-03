@@ -23,13 +23,13 @@ print ""
 Print the result of a library function directly:
 
 ```lil
-print &date|full
+print full@date
 ```
 
 Print multiple results from different functions in one line:
 
 ```lil
-print &date|minimal, &math|random
+print minimal@date, random@math
 ```
 
 Print values alongside variables:

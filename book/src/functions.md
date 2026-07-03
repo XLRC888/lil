@@ -4,36 +4,36 @@ lil has two kinds of functions: built-in library functions from the standard lib
 
 ## Built-in Library Functions
 
-These are functions that come with lil, organized by library like `math`, `string`, `file`, `sys`, and `date`. You call them with `&` syntax:
+These are functions that come with lil, organized by library like `math`, `string`, `file`, `sys`, and `date`. You call them with `@` syntax:
 
 ```lil
-&math|randint 1 6
+randint@math 1 6
 ```
 
-In Python, you'd write `import random` then `random.randint(1, 6)`. In lil, it's `&math|randint 1 6` in one step. The library name comes after `&`, then `|`, then the function name, then space-separated arguments.
+The function name comes first, then `@`, then the library name, then space-separated arguments.
 
 ```lil
 name = "alice"
-upper = &string|upper $name
-print upper
+upper@string name
+print name
 ```
 
 See the [Built-in Libraries](builtins.md) page for the full list of available functions.
 
 ## User-defined Functions
 
-When you need custom logic, define your own functions with `$` syntax:
+When you need custom logic, define your own functions with `#` syntax:
 
 ```lil
-$add(a, b) {
+#add(a, b) {
   a + b
 }
 ```
 
-In Python, you'd write `def add(a, b): return a + b`. In lil, there's no `def`, no colon, and no `return` keyword. The function body is a block in braces, and the last expression's value is automatically returned.
+There's no `def`, no colon, and no `return` keyword. The function body is a block in braces, and the last expression's value is automatically returned.
 
 ```lil
-result = $add(3, 4)
+result = add(3, 4)
 print result
 ```
 

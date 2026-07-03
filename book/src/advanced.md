@@ -13,7 +13,7 @@ This chapter covers the advanced features of lil: templates, the has operator, c
 
 Each topic is self-contained. Jump to whatever you need:
 
-- [Templates](templates.md) - string interpolation with `$varname`
+- [Templates](templates.md) - string interpolation with `{varname}`
 - [Has operator](has.md) - substring matching and variable existence checks
 - [Compiled mode](compiled.md) - AOT compilation for 10x speedup
 - [C extensions](c_ext.md) - low-level memory operations with `@` and `^`

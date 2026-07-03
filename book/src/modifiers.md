@@ -41,4 +41,4 @@ The `include` statement can import specific functions from a file instead of reg
 include dice.lil/roll_dice flip_coin
 ```
 
-Only `$roll_dice` and `$flip_coin` from `dice.lil` are registered. Other functions defined in the file are discarded. This is useful for utility files that define many helpers but you only need a few.
+Only `roll_dice` and `flip_coin` from `dice.lil` are registered. Other functions defined in the file are discarded. This is useful for utility files that define many helpers but you only need a few.

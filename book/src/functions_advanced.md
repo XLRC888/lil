@@ -4,10 +4,10 @@ Functions can take parameters and return values. This page covers practical patt
 
 ## Defining a Function
 
-Use `$name(params)` syntax followed by the function body in braces:
+Use `#name(params)` syntax followed by the function body in braces:
 
 ```lil
-$add(a, b) {
+#add(a, b) {
   a + b
 }
 ```
@@ -15,7 +15,7 @@ $add(a, b) {
 ## Calling a Function
 
 ```lil
-result = $add(3, 4)
+result = add(3, 4)
 print result
 ```
 
@@ -24,16 +24,16 @@ print result
 Functions that return 0 or 1 as boolean results:
 
 ```lil
-$is_even(n) {
+#is_even(n) {
   n % 2 == 0
 }
 
-$is_odd(n) {
-  not $is_even(n)
+#is_odd(n) {
+  not is_even(n)
 }
 
-print $is_even(42)
-print $is_odd(42)
+print is_even(42)
+print is_odd(42)
 ```
 
 ## Using Library Functions Inside User Functions
@@ -41,36 +41,36 @@ print $is_odd(42)
 Built-in library functions work inside your user-defined functions:
 
 ```lil
-$random_in_range(min, max) {
-  &math|randint $min $max
+#random_in_range(min, max) {
+  randint@math min max
 }
 
-r = $random_in_range(5, 10)
+r = random_in_range(5, 10)
 print r
 ```
 
-The `$min` and `$max` prefix tells lil to use the parameter's value instead of the literal string "min".
+Bare variable names are auto-dereferenced in library calls:
 
 ```lil
-$rand_name() {
-  &math|choice "alice" "bob" "charlie"
+#rand_name() {
+  choice@math "alice" "bob" "charlie"
 }
 
-$greet() {
-  name = $rand_name()
+#greet() {
+  name = rand_name()
   print "hello", name
 }
 
-$greet()
+greet()
 ```
 
 ```lil
-$slugify(s) {
-  lower = &string|lower $s
-  &string|replace $lower " " "-"
+#slugify(s) {
+  lower = lower@string s
+  replace@string lower " " "-"
 }
 
-slug = $slugify("Hello World")
+slug = slugify("Hello World")
 print slug
 ```
 
@@ -79,17 +79,17 @@ print slug
 The last expression in the function body is the return value:
 
 ```lil
-$double(x) {
+#double(x) {
   x * 2
 }
 
-print $double(21)
+print double(21)
 ```
 
 If a function ends with an `if` expression, the taken branch's last value is returned:
 
 ```lil
-$sign(n) {
+#sign(n) {
   if n > 0 {
     1
   } elif n < 0 {
@@ -99,17 +99,17 @@ $sign(n) {
   }
 }
 
-print $sign(-5)
+print sign(-5)
 ```
 
 If there's no value-producing expression, it returns 0:
 
 ```lil
-$noop() {
+#noop() {
   print "no return"
 }
 
-x = $noop()
+x = noop()
 print x
 ```
 
@@ -120,12 +120,12 @@ When you call a function, lil saves all current variables before running the fun
 ```lil
 x = "hello"
 
-$test() {
+#test() {
   x = "world"
   print x
 }
 
-$test()
+test()
 print x
 ```
 
@@ -134,27 +134,27 @@ Parameters are always save/restored independently of global variables:
 ```lil
 x = 100
 
-$f(x) {
+#f(x) {
   x = x + 1
   print x
 }
 
-$f(5)
+f(5)
 print x
 ```
 
 ## Recursion
 
 ```lil
-$fib(n) {
+#fib(n) {
   if n <= 2 {
     1
   } else {
-    $fib(n - 1) + $fib(n - 2)
+    fib(n - 1) + fib(n - 2)
   }
 }
 
-print $fib(10)
+print fib(10)
 ```
 
 ## Notes

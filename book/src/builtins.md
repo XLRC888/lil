@@ -238,6 +238,84 @@ log@sys "debug message"
 
 `log@sys` prints to stderr. `last_error@sys` returns the last error from a failed FFI call. `clear_error@sys` resets it.
 
+## list library
+
+```lil
+x = new@list
+push@list x 1
+push@list x 2
+push@list x 3
+val = pop@list x
+print at@list x 0
+print len@list x
+```
+
+Create a list, add elements, remove and access them:
+
+```lil
+include list
+items = new@list
+push@list items "apple"
+push@list items "banana"
+push@list items "cherry"
+print at@list items 1
+```
+
+Push returns 0, pop returns the removed element. `len@list` returns the count.
+
+### map/filter/reduce
+
+Higher-order functions that take a user-defined function by name:
+
+```lil
+include list
+
+#double(x) { x * 2 }
+
+nums = new@list
+push@list nums 1
+push@list nums 2
+push@list nums 3
+
+doubled = map@list nums double
+print doubled
+```
+
+```lil
+#isbig(x) { if x > 5 { 1 } else { 0 } }
+
+filtered = filter@list nums isbig
+print filtered
+```
+
+```lil
+#add(a, b) { a + b }
+
+total = reduce@list nums add 0
+print total
+```
+
+`map@list` returns a new list with the function applied to each element. `filter@list` keeps elements where the function returns truthy. `reduce@list` combines all elements with a two-parameter function and an initial value.
+
+## dict library
+
+```lil
+d = new@dict
+set@dict d "name" "alice"
+set@dict d "age" 30
+print get@dict d "name"
+print contains@dict d "age"
+print len@dict d
+print keys@dict d
+```
+
+Dicts store key-value pairs. `get@dict` returns the value or 0 if missing.
+
+```lil
+remove@dict d "age"
+clear@dict d
+```
+
 ## date library
 
 ```lil

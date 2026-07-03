@@ -1,18 +1,22 @@
 # Dynamic Eval
 
-The `sys` library includes an `eval` function that executes lil code from a string at runtime.
+`eval@sys` lets you execute lil code from a string at runtime:
 
-```
+```lil
 include sys
-&sys|eval "x = 42"
+
+eval@sys "x = 42"
 print x
 ```
 
-The return value of eval is the value of the last expression:
+You can capture the return value:
 
-```
-result = &sys|eval "1 + 2"
+```lil
+include sys
+result = eval@sys "1 + 2"
 print result
 ```
 
-Variables set inside eval are visible to the caller. Errors are caught and return zero.
+Eval uses the same parser and interpreter as normal execution. Variables set inside eval are visible to the caller afterwards.
+
+Errors during eval are caught silently and return 0.

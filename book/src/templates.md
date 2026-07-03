@@ -1,58 +1,65 @@
 # Templates
 
-Template strings let you embed variable values inside a string using `$varname`. In Python this would be an f-string like `f"hello {name}"`. In lil it's `"hello $name"`:
+Template strings let you embed variable values inside a string using `{varname}` with backtick strings. In Python this would be an f-string like `f"hello {name}"`. In lil it's `` `hello {name}` ``:
 
 ```lil
 name = "alice"
 age = 30
-print "my name is $name and i am $age years old"
+print `my name is {name} and i am {age} years old`
 ```
 
-This prints: `my name is alice and i am 30 years old`
+This prints `my name is alice and i am 30 years old`.
 
-## Storing template results
+## Template vs Concatenation
 
-Templates work anywhere a string is expected, including variable assignment:
+Without templates:
 
 ```lil
-greeting = "hello $name"
-print greeting
+greeting = "hello " + name + " you are " + age + " years old"
 ```
+
+With templates:
+
+```lil
+greeting = `hello {name} you are {age} years old`
+```
+
+Templates are cleaner for anything more than a single concatenation.
+
+## Practical example
 
 ```lil
 username = "bob"
 score = 95
-msg = "player $username scored $score points"
+msg = `player {username} scored {score} points`
 print msg
 ```
 
-## Templates with function results
-
-Variables set from library functions work in templates too:
+## Mixing with library calls
 
 ```lil
-now = &date|minimal
-print "the time is $now"
+now = minimal@date
+print `the time is {now}`
 ```
 
 ```lil
-rand = &math|random 100
-print "your lucky number is $rand"
+rand = random@math
+print `your lucky number is {rand}`
 ```
 
 ## Templates in conditions
 
 ```lil
-name = &sys|readln
-if &string|len name > 0 {
-  print "welcome, $name"
+name = read@file "name.txt"
+if len@string name > 0 {
+  print `welcome, {name}`
 }
 ```
 
-## If a variable doesn't exist
+## What happens with undefined variables
 
-If the variable does not exist, its value defaults to `0`.
+If you use a variable name that doesn't exist in a template, it evaluates to 0 (for numbers) or "" (for strings):
 
 ```lil
-print "value is $undefined_var"   # prints "value is 0"
+print `value is {undefined_var}`   # prints "value is 0"
 ```
