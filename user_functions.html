@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4e6dddd3.js";
+            window.path_to_searchindex_js = "searchindex-09e386c8.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-76adc0db.js"></script>
@@ -248,8 +248,6 @@ print a(100)  # 110
 }
 
 b(100)
-# prints 101 (from a)
-# prints 100 (from b, unchanged)
 </code></pre>
 <p>Variables created inside a function are local to that call and cleaned up when the function returns:</p>
 <pre><code class="language-lil">#outer() {
@@ -263,7 +261,6 @@ b(100)
 }
 
 outer()
-# prints 99 (inner's x didn't leak)
 </code></pre>
 <p>Variables inside a function create new bindings in the function’s scope. They don’t modify outer-scope variables of the same name:</p>
 <pre><code class="language-lil">x = 10
@@ -274,7 +271,6 @@ outer()
 
 set_x(42)
 print x
-# prints 10 (the function created a local x, didn't modify the global)
 </code></pre>
 <h2 id="include"><a class="header" href="#include">Include</a></h2>
 <p>Functions defined in other files can be loaded with <code>include</code>:</p>
