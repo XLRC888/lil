@@ -541,7 +541,31 @@ ASTNode *parse_stmt(void) {
         fatal("line %d: expected library name after uninclude", lex_cur.line);
         return ast_alloc(NODE_EMPTY);
     }
-
+    if (lex_cur.type == TOK_STRUCT) {
+        lex_next();
+        if (lex_cur.type != TOK_ID) fatal("line %d: expected struct name", lex_cur.line);
+        ASTNode *n = ast_alloc(NODE_STRUCT_DEF);
+        n->data.struct_def.name = sdup(lex_cur.val.str);
+        lex_next();
+        if (lex_cur.type == TOK_NEWLINE) lex_next();
+        if (lex_cur.type != TOK_LBRACE) fatal("line %d: expected '{' after struct name", lex_cur.line);
+        lex_next();
+        char **fields = NULL;
+        int nf = 0, fcap = 0;
+        while (lex_cur.type != TOK_RBRACE && lex_cur.type != TOK_EOF) {
+            if (lex_cur.type == TOK_NEWLINE) { lex_next(); continue; }
+            if (lex_cur.type != TOK_ID) fatal("line %d: expected field name", lex_cur.line);
+            if (nf >= fcap) { fcap = fcap ? fcap * 2 : 4; fields = realloc(fields, sizeof(char*) * fcap); if (!fields) fatal("out of memory"); }
+            fields[nf++] = sdup(lex_cur.val.str);
+            lex_next();
+            if (lex_cur.type == TOK_COMMA) lex_next();
+        }
+        if (lex_cur.type != TOK_RBRACE) fatal("line %d: expected '}'", lex_cur.line);
+        lex_next();
+        n->data.struct_def.fields = fields;
+        n->data.struct_def.nfields = nf;
+        return n;
+    }
     if (lex_cur.type == TOK_GET) {
         lex_next();
         char **varnames = NULL, **newnames = NULL;
@@ -951,7 +975,17 @@ ASTNode *parse_unary(void) {
 
 ASTNode *parse_postfix(void) {
     ASTNode *e = parse_primary();
-    while (lex_cur.type == TOK_LBRACKET) {
+    while (lex_cur.type == TOK_LBRACKET || lex_cur.type == TOK_DOT) {
+        if (lex_cur.type == TOK_DOT) {
+            lex_next();
+            if (lex_cur.type != TOK_ID) fatal("line %d: expected field name after '.'", lex_cur.line);
+            ASTNode *f = ast_alloc(NODE_INDEX);
+            f->data.idx.container = e;
+            f->data.idx.index = ast_str(lex_cur.val.str);
+            lex_next();
+            e = f;
+            continue;
+        }
         lex_next();
         ASTNode *idx = parse_expr();
         if (lex_cur.type != TOK_RBRACKET) fatal("line %d: expected ']'", lex_cur.line);

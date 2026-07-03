@@ -7,6 +7,8 @@ int compiled_header;
 Var vars[MAX_VARS];
 int var_count;
 jmp_buf error_jmp;
+StructDef structs[MAX_FUNCS];
+int struct_count;
 
 #define MAX_ASSIGN_HISTORY 65536
 Value assign_history[MAX_ASSIGN_HISTORY];
@@ -120,6 +122,8 @@ void state_save(LilState *s) {
     memcpy(s->vars, vars, sizeof(Var) * var_count);
     s->func_count = func_count;
     memcpy(s->funcs, funcs, sizeof(FuncDef) * func_count);
+    s->struct_count = struct_count;
+    memcpy(s->structs, structs, sizeof(StructDef) * struct_count);
     s->assign_hist_count = assign_hist_count;
     memcpy(s->lib_imported, lib_imported, sizeof(lib_imported));
     memcpy(s->error_jmp, error_jmp, sizeof(jmp_buf));
@@ -132,6 +136,8 @@ void state_restore(LilState *s) {
     var_count = s->var_count;
     func_count = s->func_count;
     memcpy(funcs, s->funcs, sizeof(FuncDef) * s->func_count);
+    struct_count = s->struct_count;
+    memcpy(structs, s->structs, sizeof(StructDef) * s->struct_count);
     assign_hist_count = s->assign_hist_count;
     memcpy(lib_imported, s->lib_imported, sizeof(lib_imported));
     scope_depth = s->scope_depth;
@@ -575,6 +581,8 @@ Value eval_expr(ASTNode *n) {
                                 ret = copy_val(_last_expr_val);
                             }
                         }
+                    } else {
+                        ret = copy_val(_last_expr_val);
                     }
                     pop_scope();
                     var_count = saved_count;
@@ -1050,6 +1058,36 @@ int exec_stmt(ASTNode *n) {
                 memcpy(lib_imported, saved.lib_imported, sizeof(lib_imported));
                 scope_depth = saved.scope_depth;
             }
+            return 0;
+        }
+        case NODE_STRUCT_DEF: {
+            if (struct_count >= MAX_FUNCS || func_count >= MAX_FUNCS)
+                fatal("too many structs or functions", n->line);
+            structs[struct_count].name = sdup(n->data.struct_def.name);
+            structs[struct_count].fields = n->data.struct_def.fields;
+            structs[struct_count].nfields = n->data.struct_def.nfields;
+            struct_count++;
+            funcs[func_count].name = sdup(n->data.struct_def.name);
+            funcs[func_count].nparams = n->data.struct_def.nfields;
+            funcs[func_count].params = malloc(sizeof(char*) * n->data.struct_def.nfields);
+            ASTNode **keys = malloc(sizeof(ASTNode*) * n->data.struct_def.nfields);
+            ASTNode **vals = malloc(sizeof(ASTNode*) * n->data.struct_def.nfields);
+            for (int i = 0; i < n->data.struct_def.nfields; i++) {
+                funcs[func_count].params[i] = sdup(n->data.struct_def.fields[i]);
+                ASTNode *kn = safe_alloc(sizeof(ASTNode));
+                kn->type = NODE_STR; kn->data.str = sdup(n->data.struct_def.fields[i]); kn->line = n->line;
+                ASTNode *vn = safe_alloc(sizeof(ASTNode));
+                vn->type = NODE_ID; vn->data.id = sdup(n->data.struct_def.fields[i]); vn->line = n->line;
+                keys[i] = kn;
+                vals[i] = vn;
+            }
+            ASTNode *body = safe_alloc(sizeof(ASTNode));
+            body->type = NODE_DICT; body->line = n->line;
+            body->data.dict.keys = keys;
+            body->data.dict.values = vals;
+            body->data.dict.count = n->data.struct_def.nfields;
+            funcs[func_count].body = body;
+            func_count++;
             return 0;
         }
         case NODE_FUNC_DEF: {

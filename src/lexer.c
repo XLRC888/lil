@@ -103,6 +103,7 @@ static Token lex_scan(void) {
             if (!strcmp(word, "unforce")) { free(word); t.type = TOK_UNFORCE; return t; }
             if (!strcmp(word, "get"))     { free(word); t.type = TOK_GET; return t; }
             if (!strcmp(word, "from"))    { free(word); t.type = TOK_FROM; return t; }
+            if (!strcmp(word, "struct"))  { free(word); t.type = TOK_STRUCT; return t; }
 
             t.type = TOK_ID;
             t.val.str = word;

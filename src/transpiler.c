@@ -95,6 +95,7 @@ void infer_type_stmt(ASTNode *n) {
             break;
         case NODE_LIST: break;
         case NODE_DICT: break;
+        case NODE_STRUCT_DEF: break;
         case NODE_INDEX:
             infer_type_stmt(n->data.idx.container);
             infer_type_stmt(n->data.idx.index);
@@ -237,6 +238,7 @@ void typecheck_stmt(ASTNode *n) {
         case NODE_GET:
         case NODE_INCLUDE:
         case NODE_FUNCTION:
+        case NODE_STRUCT_DEF:
             break;
         default:
             break;
@@ -299,6 +301,7 @@ void cg_collect_vars(ASTNode *n) {
         case NODE_TEMPLATE: break;
         case NODE_LIST: for (int i = 0; i < n->data.list.count; i++) cg_collect_vars(n->data.list.elements[i]); break;
         case NODE_DICT: for (int i = 0; i < n->data.dict.count; i++) { cg_collect_vars(n->data.dict.keys[i]); cg_collect_vars(n->data.dict.values[i]); } break;
+        case NODE_STRUCT_DEF: break;
         case NODE_INDEX: cg_collect_vars(n->data.idx.container); cg_collect_vars(n->data.idx.index); break;
         case NODE_INDEX_SET: cg_collect_vars(n->data.idx_set.container); cg_collect_vars(n->data.idx_set.index); cg_collect_vars(n->data.idx_set.value); break;
         default: break;
@@ -774,6 +777,7 @@ void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
         }
         case NODE_LIST:
         case NODE_DICT:
+        case NODE_STRUCT_DEF:
         case NODE_INDEX:
         case NODE_INDEX_SET: {
             fprintf(f, "/* list ops only available in interpreted mode */\n");
@@ -936,6 +940,15 @@ int generate_c(const char *path, const char *outpath) {
     fprintf(f, "  vars[var_count].forced=0;\n");
     fprintf(f, "  return var_count++;\n");
     fprintf(f, "}\n\n");
+
+    for (int i = 0; i < prog->data.block.count; i++)
+        if (prog->data.block.stmts[i]->type == NODE_STRUCT_DEF) {
+            ASTNode *s = prog->data.block.stmts[i];
+            fprintf(f, "typedef struct {\\n");
+            for (int j = 0; j < s->data.struct_def.nfields; j++)
+                fprintf(f, "  double %s;\\n", s->data.struct_def.fields[j]);
+            fprintf(f, "} %s;\\n\\n", s->data.struct_def.name);
+        }
 
     var_count = 0;
     cg_loop_id = 0;
