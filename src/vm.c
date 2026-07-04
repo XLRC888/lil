@@ -18,6 +18,7 @@ Value _last_expr_val;
 char last_error[256];
 int in_try;
 int scope_depth;
+int anon_counter;
 
 void fatal(const char *fmt, ...) {
     error_occurred = 1;
@@ -171,6 +172,7 @@ void run_file_interpreted(const char *path) {
     src[got] = 0;
     if (setjmp(error_jmp)) { free(src); return; }
     scope_depth = 0;
+    anon_counter = 0;
     lex_init(src);
     lex_next();
     while (lex_cur.type != TOK_EOF) {
@@ -565,6 +567,17 @@ Value eval_expr(ASTNode *n) {
             Value tv = make_str(res);
             free(res);
             return tv;
+        }
+        case NODE_ANON_FUNC: {
+            char aname[64];
+            snprintf(aname, sizeof(aname), "__anon_%d", anon_counter++);
+            if (func_count >= MAX_FUNCS) fatal("too many function definitions");
+            funcs[func_count].name = sdup(aname);
+            funcs[func_count].params = n->data.func_def.params;
+            funcs[func_count].nparams = n->data.func_def.nparams;
+            funcs[func_count].body = n->data.func_def.body;
+            func_count++;
+            return make_str(aname);
         }
         case NODE_FUNC_CALL: {
             for (int i = 0; i < func_count; i++) {

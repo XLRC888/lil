@@ -62,6 +62,7 @@ void run_file(const char *path) {
     lex_init(psrc);
     lex_next();
     scope_depth = 0;
+    anon_counter = 0;
 
     ASTNode *prog = parse_program();
 
@@ -89,6 +90,7 @@ void repl(void) {
         if (setjmp(error_jmp)) continue;
 
         scope_depth = 0;
+        anon_counter = 0;
         lex_init(buf);
         lex_next();
         while (lex_cur.type != TOK_EOF) {

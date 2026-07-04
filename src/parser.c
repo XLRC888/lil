@@ -911,6 +911,31 @@ ASTNode *parse_primary(void) {
         }
         return ast_function(lib, args, argc);
     }
+    if (lex_cur.type == TOK_HASH) {
+        lex_next();
+        if (lex_cur.type != TOK_LPAREN) fatal("line %d: expected '(' after '#'", lex_cur.line);
+        lex_next();
+        char **pnames = NULL;
+        int npnames = 0, acap = 0;
+        while (lex_cur.type != TOK_RPAREN && lex_cur.type != TOK_EOF) {
+            if (npnames >= acap) { acap = acap ? acap * 2 : 4; pnames = realloc(pnames, acap * sizeof(char*)); }
+            if (lex_cur.type != TOK_ID) fatal("line %d: expected parameter name", lex_cur.line);
+            pnames[npnames++] = sdup(lex_cur.val.str);
+            lex_next();
+            if (lex_cur.type == TOK_COMMA) lex_next();
+        }
+        if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
+        lex_next();
+        while (lex_cur.type == TOK_NEWLINE) lex_next();
+        if (lex_cur.type != TOK_LBRACE) fatal("line %d: expected '{' for function body", lex_cur.line);
+        ASTNode *body = parse_block();
+        ASTNode *n = ast_alloc(NODE_ANON_FUNC);
+        n->data.func_def.params = pnames;
+        n->data.func_def.nparams = npnames;
+        n->data.func_def.body = body;
+        n->data.func_def.name = NULL;
+        return n;
+    }
     if (lex_cur.type == TOK_HASH_ID) {
         char *fname = sdup(lex_cur.val.str);
         lex_next();

@@ -25,6 +25,27 @@ char *resolve_arg(char *arg) {
     return sdup(arg);
 }
 
+static int resolve_fn_idx(char *arg, int line) {
+    char *name;
+    if (arg[0] == '\1') {
+        Value v = var_get(arg + 1);
+        if (v.type == VAL_STR) {
+            name = sdup(v.data.str);
+            val_free(v);
+        } else {
+            name = sdup(arg + 1);
+        }
+    } else {
+        name = sdup(arg);
+    }
+    for (int i = 0; i < func_count; i++) {
+        if (!strcmp(funcs[i].name, name)) { free(name); return i; }
+    }
+    free(name);
+    fatal("line %d: function '%s' not found", line, arg);
+    return -1;
+}
+
 static double math_parse_expr(const char **p);
 static double math_parse_term(const char **p);
 static double math_parse_factor(const char **p);
@@ -579,13 +600,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
-            char *fname = args[2];
-            if (fname[0] == '\1') fname++;
-            int fi = -1;
-            for (int i = 0; i < func_count; i++) {
-                if (!strcmp(funcs[i].name, fname)) { fi = i; break; }
-            }
-            if (fi < 0) fatal("line %d: function '%s' not found", line, args[2]);
+            int fi = resolve_fn_idx(args[2], line);
             if (funcs[fi].nparams < 1) fatal("line %d: function '%s' expects at least 1 parameter", line, args[2]);
             Value lst = vars[vi].val;
             Value result = make_list();
@@ -611,13 +626,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
-            char *fname = args[2];
-            if (fname[0] == '\1') fname++;
-            int fi = -1;
-            for (int i = 0; i < func_count; i++) {
-                if (!strcmp(funcs[i].name, fname)) { fi = i; break; }
-            }
-            if (fi < 0) fatal("line %d: function '%s' not found", line, args[2]);
+            int fi = resolve_fn_idx(args[2], line);
             if (funcs[fi].nparams < 1) fatal("line %d: function '%s' expects at least 1 parameter", line, args[2]);
             Value lst = vars[vi].val;
             Value result = make_list();
@@ -644,13 +653,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             if (vname[0] == '\1') vname++;
             int vi = var_find(vname);
             if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
-            char *fname = args[2];
-            if (fname[0] == '\1') fname++;
-            int fi = -1;
-            for (int i = 0; i < func_count; i++) {
-                if (!strcmp(funcs[i].name, fname)) { fi = i; break; }
-            }
-            if (fi < 0) fatal("line %d: function '%s' not found", line, args[2]);
+            int fi = resolve_fn_idx(args[2], line);
             if (funcs[fi].nparams < 2) fatal("line %d: function '%s' expects at least 2 parameters for reduce", line, args[2]);
             Value lst = vars[vi].val;
             char *is = resolve_arg(args[3]);

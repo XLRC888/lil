@@ -153,7 +153,7 @@ static Token lex_scan(void) {
                     t.val.str = sdupn(lex_src + start, lex_pos - start);
                     return t;
                 }
-                fatal("line %d: '#' must be followed by a function name", lex_line);
+                t.type = TOK_HASH;
                 return t;
             }
             default:

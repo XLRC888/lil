@@ -784,8 +784,21 @@ void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
         case NODE_LIST:
         case NODE_DICT:
         case NODE_STRUCT_DEF:
-        case NODE_INDEX:
-        case NODE_INDEX_SET: {
+case NODE_ANON_FUNC: {
+    char aname[64];
+    snprintf(aname, sizeof(aname), "__anon_%d", anon_counter++);
+    fprintf(f, "{ Value _afn = make_str(strdup(\"%s\"));", aname);
+    fprintf(f, "if (func_count < MAX_FUNCS) {");
+    fprintf(f, "funcs[func_count].name=strdup(\"%s\");", aname);
+    fprintf(f, "funcs[func_count].params=malloc(%d*sizeof(char*));", n->data.func_def.nparams);
+    for (int j = 0; j < n->data.func_def.nparams; j++)
+        fprintf(f, "funcs[func_count].params[%d]=strdup(\"%s\");", j, n->data.func_def.params[j]);
+    fprintf(f, "funcs[func_count].nparams=%d;", n->data.func_def.nparams);
+    fprintf(f, "func_count++; } _afn; }");
+    break;
+}
+case NODE_INDEX:
+case NODE_INDEX_SET: {
             fprintf(f, "/* list ops only available in interpreted mode */\n");
             break;
         }
@@ -858,6 +871,7 @@ int generate_c(const char *path, const char *outpath) {
     if (setjmp(error_jmp)) { free(src); src = NULL; if (f) fclose(f); return 1; }
 
     scope_depth = 0;
+    anon_counter = 0;
     lex_init(psrc);
     lex_next();
     ASTNode *prog = parse_program();
