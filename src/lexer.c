@@ -180,6 +180,14 @@ Token lex_peek_next(void) {
     return lex_peek;
 }
 
+void lex_getpos(int *pos, int *line, int *has_peek, Token *cur) {
+    *pos = lex_pos; *line = lex_line; *has_peek = lex_has_peek; *cur = lex_cur;
+}
+
+void lex_setpos(int pos, int line, int has_peek, Token cur) {
+    lex_pos = pos; lex_line = line; lex_has_peek = has_peek; lex_cur = cur;
+}
+
 void lex_init(const char *src) {
     lex_src = src;
     lex_pos = 0;

@@ -1211,6 +1211,16 @@ int exec_stmt(ASTNode *n) {
             else val_free(cval);
             return 0;
         }
+        case NODE_DESTRUCT: {
+            Value src = eval_expr(n->data.destruct.source);
+            if (src.type != VAL_DICT) { val_free(src); fatal("line %d: cannot destructure non-dict", n->line); }
+            for (int i = 0; i < n->data.destruct.nfields; i++) {
+                Value fv = dict_get(src, n->data.destruct.fields[i]);
+                var_set(n->data.destruct.fields[i], fv);
+            }
+            val_free(src);
+            return 0;
+        }
         case NODE_LIVE: {
             Value v = eval_expr(n->data.assign.value);
             int vi = var_ensure(n->data.assign.name);

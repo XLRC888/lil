@@ -105,6 +105,11 @@ void infer_type_stmt(ASTNode *n) {
             infer_type_stmt(n->data.idx_set.index);
             infer_type_stmt(n->data.idx_set.value);
             break;
+        case NODE_DESTRUCT:
+            for (int i = 0; i < n->data.destruct.nfields; i++)
+                var_ensure(n->data.destruct.fields[i]);
+            infer_type_stmt(n->data.destruct.source);
+            break;
         default: break;
     }
 }
@@ -239,6 +244,11 @@ void typecheck_stmt(ASTNode *n) {
         case NODE_INCLUDE:
         case NODE_FUNCTION:
         case NODE_STRUCT_DEF:
+        case NODE_DESTRUCT:
+            for (int i = 0; i < n->data.destruct.nfields; i++)
+                typecheck_stmt(n->data.destruct.source);
+            break;
+        case NODE_ANON_FUNC:
             break;
         default:
             break;
@@ -304,6 +314,10 @@ void cg_collect_vars(ASTNode *n) {
         case NODE_STRUCT_DEF: break;
         case NODE_INDEX: cg_collect_vars(n->data.idx.container); cg_collect_vars(n->data.idx.index); break;
         case NODE_INDEX_SET: cg_collect_vars(n->data.idx_set.container); cg_collect_vars(n->data.idx_set.index); cg_collect_vars(n->data.idx_set.value); break;
+        case NODE_DESTRUCT:
+            for (int i = 0; i < n->data.destruct.nfields; i++) var_ensure(n->data.destruct.fields[i]);
+            cg_collect_vars(n->data.destruct.source);
+            break;
         default: break;
     }
 }
@@ -773,6 +787,17 @@ void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
                     fprintf(f, ";\n");
                 }
             }
+            break;
+        }
+        case NODE_DESTRUCT: {
+            fprintf(f, "{\n  Value _dsrc = ");
+            cg_expr(f, n->data.destruct.source, TY_DYN);
+            fprintf(f, ";\n  if (_dsrc.type == VAL_DICT) {\n");
+            for (int i = 0; i < n->data.destruct.nfields; i++) {
+                fprintf(f, "    val_free(%s); %s = dict_get(_dsrc, \"%s\");\n",
+                    n->data.destruct.fields[i], n->data.destruct.fields[i], n->data.destruct.fields[i]);
+            }
+            fprintf(f, "  }\n  val_free(_dsrc);\n}\n");
             break;
         }
         case NODE_LIVE: {

@@ -73,7 +73,7 @@ typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_GET, NODE_FUNCTION,
     NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE,
     NODE_STRINGIFY, NODE_INTIFY, NODE_TOGGLE, NODE_TRY, NODE_FORCE, NODE_UNFORCE, NODE_SET_UNDEF,
-    NODE_LIST, NODE_INDEX, NODE_INDEX_SET, NODE_DICT, NODE_STRUCT_DEF, NODE_LIVE, NODE_ANON_FUNC } NodeType;
+    NODE_LIST, NODE_INDEX, NODE_INDEX_SET, NODE_DICT, NODE_STRUCT_DEF, NODE_LIVE, NODE_ANON_FUNC, NODE_DESTRUCT } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -106,6 +106,7 @@ typedef struct ASTNode {
         struct { char *name; char **fields; int nfields; } struct_def;
         struct { struct ASTNode *container, *index; } idx;
         struct { struct ASTNode *container, *index, *value; } idx_set;
+        struct { char **fields; int nfields; struct ASTNode *source; } destruct;
         struct { struct ASTNode **stmts; int count, cap; } block;
     } data;
 } ASTNode;
@@ -211,6 +212,8 @@ int val_cmp(Value a, Value b, int op);
 void lex_init(const char *src);
 Token lex_next(void);
 Token lex_peek_next(void);
+void lex_getpos(int *pos, int *line, int *has_peek, Token *cur);
+void lex_setpos(int pos, int line, int has_peek, Token cur);
 
 ASTNode *parse_program(void);
 ASTNode *parse_stmt(void);

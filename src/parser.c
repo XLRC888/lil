@@ -258,7 +258,27 @@ ASTNode *parse_else_chain(void) {
 ASTNode *parse_stmt(void) {
     if (lex_cur.type == TOK_NEWLINE || lex_cur.type == TOK_EOF) return ast_alloc(NODE_EMPTY);
 
-    if (lex_cur.type == TOK_LBRACE) return parse_block();
+    if (lex_cur.type == TOK_LBRACE) {
+        int sp2, sl2, sh2; Token sc2;
+        lex_getpos(&sp2, &sl2, &sh2, &sc2);
+        lex_next();
+        while (lex_cur.type == TOK_ID || lex_cur.type == TOK_STR) {
+            lex_next();
+            if (lex_cur.type == TOK_COMMA) lex_next();
+            else break;
+        }
+        if (lex_cur.type == TOK_RBRACE) {
+            lex_next();
+            if (lex_cur.type == TOK_ASSIGN) {
+                lex_setpos(sp2, sl2, sh2, sc2);
+                ASTNode *de = parse_expr();
+                if (de->type == NODE_DESTRUCT) return de;
+                return de;
+            }
+        }
+        lex_setpos(sp2, sl2, sh2, sc2);
+        return parse_block();
+    }
 
     if (lex_cur.type == TOK_QMARK) {
         lex_next();
@@ -844,6 +864,33 @@ ASTNode *parse_primary(void) {
         return n;
     }
     if (lex_cur.type == TOK_LBRACE) {
+        char *names[64];
+        int nn = 0;
+        int sp, sl, sh; Token sc;
+        lex_getpos(&sp, &sl, &sh, &sc);
+        lex_next();
+        while (lex_cur.type == TOK_ID || lex_cur.type == TOK_STR) {
+            if (nn >= 64) break;
+            names[nn++] = sdup(lex_cur.val.str);
+            lex_next();
+            if (lex_cur.type == TOK_COMMA) lex_next();
+            else break;
+        }
+        if (lex_cur.type == TOK_RBRACE) {
+            lex_next();
+            if (lex_cur.type == TOK_ASSIGN && nn > 0) {
+                char **fields = malloc(nn * sizeof(char*));
+                for (int i = 0; i < nn; i++) fields[i] = names[i];
+                lex_next();
+                ASTNode *n = ast_alloc(NODE_DESTRUCT);
+                n->data.destruct.fields = fields;
+                n->data.destruct.nfields = nn;
+                n->data.destruct.source = parse_expr();
+                return n;
+            }
+        }
+        for (int i = 0; i < nn; i++) free(names[i]);
+        lex_setpos(sp, sl, sh, sc);
         lex_next();
         ASTNode **keys = NULL;
         ASTNode **values = NULL;
