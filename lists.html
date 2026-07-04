@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8c5a1595.js";
+            window.path_to_searchindex_js = "searchindex-6db86042.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-76adc0db.js"></script>
@@ -195,6 +195,20 @@ s[0] = "j"
 print s             # "jello"
 </code></pre>
 <p>Out-of-range access errors at runtime.</p>
+<h2 id="destructuring"><a class="header" href="#destructuring">Destructuring</a></h2>
+<p>Pull multiple fields from a dict or struct in one line with <code>{field1, field2} = expr</code>:</p>
+<pre><code class="language-lil">node = {"type": "num", "value": 42}
+{type, value} = node
+print type
+print value
+</code></pre>
+<p>Works with structs too (structs are dicts underneath):</p>
+<pre><code class="language-lil">struct Point { x, y }
+p = Point(10, 20)
+{x, y} = p
+print x, y
+</code></pre>
+<p>This is shorthand for <code>type = node["type"]; value = node["value"]</code>. Field names become variable names.</p>
 <h2 id="list-library"><a class="header" href="#list-library">List Library</a></h2>
 <p>The <code>list</code> library provides operations for dynamic list manipulation:</p>
 <pre><code>include list

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-8c5a1595.js";
+            window.path_to_searchindex_js = "searchindex-6db86042.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-76adc0db.js"></script>
@@ -195,6 +195,10 @@ print name
 <p>There’s no <code>def</code>, no colon, and no <code>return</code> keyword. The function body is a block in braces, and the last expression’s value is automatically returned.</p>
 <pre><code class="language-lil">result = add(3, 4)
 print result
+</code></pre>
+<p>Functions can also be created without a name (anonymous functions/closures) for inline use:</p>
+<pre><code class="language-lil">double = #(x) { x * 2 }
+print double(5)
 </code></pre>
 <p>See <a href="user_functions.html">User-defined Functions</a> and <a href="functions_advanced.html">Advanced Functions</a> for details.</p>
 <h2 id="choosing-which-to-use"><a class="header" href="#choosing-which-to-use">Choosing Which to Use</a></h2>
