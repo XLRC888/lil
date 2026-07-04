@@ -177,3 +177,37 @@ print fib(10)
 ```
 
 lil's functions work in both interpreted and compiled (AOT) mode.
+
+## Anonymous Functions (Closures)
+
+Functions without a name can be created inline with `#(params) { body }`:
+
+```lil
+double = #(x) { x * 2 }
+print double(5)
+```
+
+The real power is passing them to higher-order library functions:
+
+```lil
+include list
+
+nums = new@list
+push@list nums 1
+push@list nums 2
+push@list nums 3
+
+doubled = map@list nums #(x) { x * 2 }
+print doubled
+```
+
+Anonymous functions see variables from the scope where they're defined:
+
+```lil
+prefix = "> "
+#add_prefix(s) { prefix + s }
+print add_prefix("hello")
+```
+
+The anonymous function creates an internal name, registers in the function table, and returns the name as a string. `map@list` and `filter@list` resolve it automatically.
+

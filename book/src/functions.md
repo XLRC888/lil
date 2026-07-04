@@ -37,6 +37,13 @@ result = add(3, 4)
 print result
 ```
 
+Functions can also be created without a name (anonymous functions/closures) for inline use:
+
+```lil
+double = #(x) { x * 2 }
+print double(5)
+```
+
 See [User-defined Functions](user_functions.md) and [Advanced Functions](functions_advanced.md) for details.
 
 ## Choosing Which to Use

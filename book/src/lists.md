@@ -32,6 +32,29 @@ print s             # "jello"
 
 Out-of-range access errors at runtime.
 
+## Destructuring
+
+Pull multiple fields from a dict or struct in one line with `{field1, field2} = expr`:
+
+```lil
+node = {"type": "num", "value": 42}
+{type, value} = node
+print type
+print value
+```
+
+Works with structs too (structs are dicts underneath):
+
+```lil
+struct Point { x, y }
+p = Point(10, 20)
+{x, y} = p
+print x, y
+```
+
+This is shorthand for `type = node["type"]; value = node["value"]`. Field names become variable names.
+
+
 ## List Library
 
 The `list` library provides operations for dynamic list manipulation:

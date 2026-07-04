@@ -39,7 +39,7 @@ if a > 0 || b > 0 {
 
 ## Special syntax
 
-`#` defines a function. `#add(a, b) { a + b }` creates a function named `add`.
+`#` defines a function. `#add(a, b) { a + b }` creates a function named `add`. `#(x) { x * 2 }` creates an anonymous function (closure) without a name.
 
 `@` makes a library call. `randint@math 1 10` calls `randint` from the `math` library.
 
