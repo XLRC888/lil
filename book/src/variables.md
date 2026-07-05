@@ -85,32 +85,36 @@ unforce x = 56
 
 `unforce` unlocks the variable so it can be changed again.
 
-`force int input` reads input, validates it as a number, and forces the variable:
+`force` with `read()` reads input and forces the variable to a specific type:
 
 ```lil
-force int input "Enter your age: " age
+age = read("Enter your age: ")
+intify age
+force age
 write("next year you will be", age + 1)
 ```
 
-`force str input` reads input as a string and forces it:
+For string input with force:
 
 ```lil
-force str input "Enter your name: " name
+name = read("Enter your name: ")
+force name
 write("hello", name)
 ```
 
 ### Input validation without force
 
-Use `int input` or `str input` to validate the input type without forcing the variable:
+Use `read()` with `intify` to validate the input type without forcing the variable:
 
 ```lil
-int input "Enter a number: " x
+x = read("Enter a number: ")
+intify x
 x = "now im a string"     : allowed (not forced)
-str input "Enter text: " y
+y = read("Enter text: ")
 y = 42                     : allowed (not forced)
 ```
 
-`int input` errors if the input is not a valid number. `str input` accepts anything as a string.
+`intify` errors if the value is not a valid number. `read()` always returns a string.
 
 ## Changing the undefined default
 
