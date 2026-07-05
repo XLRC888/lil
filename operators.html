@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -182,9 +182,12 @@ c = 10 * 3
 d = 10 / 3
 e = 10 % 3
 </code></pre>
+<p>Integer division:</p>
+<pre><code class="language-lil">x = 10 // 3    : 3
+</code></pre>
 <p>Modulo with negative numbers follows the sign of the dividend:</p>
-<pre><code class="language-lil">print -10 % 3
-print 10 % -3
+<pre><code class="language-lil">write(-10 % 3)
+write(10 % -3)
 </code></pre>
 <h2 id="unary-minus"><a class="header" href="#unary-minus">Unary minus</a></h2>
 <pre><code class="language-lil">x = -5
@@ -193,25 +196,42 @@ y = -(x + 3)
 <h2 id="logical-operators"><a class="header" href="#logical-operators">Logical operators</a></h2>
 <p>lil uses <code>and</code>, <code>or</code>, <code>not</code> like Python, but also supports <code>&amp;&amp;</code>, <code>||</code>, <code>!</code> as aliases:</p>
 <pre><code class="language-lil">if a &gt; 0 and b &gt; 0 {
-    print "both positive"
+    write("both positive")
 }
 if a &gt; 0 || b &gt; 0 {
-    print "at least one is positive"
+    write("at least one is positive")
 }
+</code></pre>
+<h2 id="short-circuit-"><a class="header" href="#short-circuit-">Short-circuit &amp;&amp;</a></h2>
+<p><code>&amp;&amp;</code> short-circuits: the right side is only evaluated if the left side is truthy. It returns the actual value, not 0/1:</p>
+<pre><code class="language-lil">x = 0
+result = x &amp;&amp; 5    : returns 0 (x is falsy, 5 never evaluated)
+y = "hello"
+result2 = y &amp;&amp; 42   : returns 42 (y is truthy)
+</code></pre>
+<p>Useful in while conditions:</p>
+<pre><code class="language-lil">while i &lt; 10 &amp;&amp; arr[i] != "" {
+    i = i + 1
+}
+</code></pre>
+<h2 id="statement-separator-"><a class="header" href="#statement-separator-">Statement separator ;</a></h2>
+<p><code>;</code> separates multiple statements on one line. It has the lowest precedence:</p>
+<pre><code class="language-lil">a = 5 ; b = 10 ; write(a + b)
 </code></pre>
 <h2 id="special-syntax"><a class="header" href="#special-syntax">Special syntax</a></h2>
 <p><code>#</code> defines a function. <code>#add(a, b) { a + b }</code> creates a function named <code>add</code>. <code>#(x) { x * 2 }</code> creates an anonymous function (closure) without a name.</p>
-<p><code>@</code> makes a library call. <code>randint@math 1 10</code> calls <code>randint</code> from the <code>math</code> library.</p>
+<p><code>@</code> makes a library call. <code>randint@math(1, 10)</code> calls <code>randint</code> from the <code>math</code> library.</p>
 <p><code>%</code> declares a variable with value 0. <code>%x</code> is the same as <code>x = 0</code>.</p>
 <h2 id="operator-precedence"><a class="header" href="#operator-precedence">Operator precedence</a></h2>
 <p>From lowest to highest:</p>
 <ol>
+<li><code>;</code></li>
 <li><code>or</code></li>
 <li><code>and</code></li>
 <li><code>not</code></li>
 <li><code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code></li>
 <li><code>+</code>, <code>-</code></li>
-<li><code>*</code>, <code>/</code>, <code>%</code></li>
+<li><code>*</code>, <code>/</code>, <code>%</code>, <code>//</code></li>
 <li>unary <code>-</code>, unary <code>not</code></li>
 <li>parentheses <code>()</code></li>
 </ol>
@@ -220,14 +240,14 @@ if a &gt; 0 || b &gt; 0 {
 </code></pre>
 <p>Precedence matters in real calculations:</p>
 <pre><code class="language-lil">x = 10 + 5 * 2
-print x
+write(x)
 y = (10 + 5) * 2
-print y
+write(y)
 </code></pre>
 <h2 id="direct-arithmetic"><a class="header" href="#direct-arithmetic">Direct arithmetic</a></h2>
 <p>lil evaluates math expressions directly:</p>
 <pre><code class="language-lil">result = (10 + 5) * 2
-print result
+write(result)
 </code></pre>
 
                     </main>

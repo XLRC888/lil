@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,7 +184,7 @@
 </code></pre>
 <h2 id="calling-a-function"><a class="header" href="#calling-a-function">Calling a Function</a></h2>
 <pre><code class="language-lil">result = add(3, 4)
-print result
+write(result)
 </code></pre>
 <h2 id="practical-predicate-functions"><a class="header" href="#practical-predicate-functions">Practical Predicate Functions</a></h2>
 <p>Functions that return 0 or 1 as boolean results:</p>
@@ -196,37 +196,37 @@ print result
   not is_even(n)
 }
 
-print is_even(42)
-print is_odd(42)
+write(is_even(42))
+write(is_odd(42))
 </code></pre>
 <h2 id="using-library-functions-inside-user-functions"><a class="header" href="#using-library-functions-inside-user-functions">Using Library Functions Inside User Functions</a></h2>
 <p>Built-in library functions work inside your user-defined functions:</p>
 <pre><code class="language-lil">#random_in_range(min, max) {
-  randint@math min max
+  randint@math(min, max)
 }
 
 r = random_in_range(5, 10)
-print r
+write(r)
 </code></pre>
 <p>Bare variable names are auto-dereferenced in library calls:</p>
 <pre><code class="language-lil">#rand_name() {
-  choice@math "alice" "bob" "charlie"
+  choice@math("alice", "bob", "charlie")
 }
 
 #greet() {
   name = rand_name()
-  print "hello", name
+  write("hello", name)
 }
 
 greet()
 </code></pre>
 <pre><code class="language-lil">#slugify(s) {
-  lower = lower@string s
-  replace@string lower " " "-"
+  lower = lower@string(s)
+  replace@string(lower, " ", "-")
 }
 
 slug = slugify("Hello World")
-print slug
+write(slug)
 </code></pre>
 <h2 id="return-values"><a class="header" href="#return-values">Return Values</a></h2>
 <p>The last expression in the function body is the return value:</p>
@@ -234,28 +234,28 @@ print slug
   x * 2
 }
 
-print double(21)
+write(double(21))
 </code></pre>
 <p>If a function ends with an <code>if</code> expression, the taken branch’s last value is returned:</p>
 <pre><code class="language-lil">#sign(n) {
   if n &gt; 0 {
     1
-  } elif n &lt; 0 {
+  } orif n &lt; 0 {
     -1
   } else {
     0
   }
 }
 
-print sign(-5)
+write(sign(-5))
 </code></pre>
 <p>If there’s no value-producing expression, it returns 0:</p>
 <pre><code class="language-lil">#noop() {
-  print "no return"
+  write("no return")
 }
 
 x = noop()
-print x
+write(x)
 </code></pre>
 <h2 id="variable-saverestore"><a class="header" href="#variable-saverestore">Variable Save/Restore</a></h2>
 <p>When you call a function, lil saves all current variables before running the function body and restores them after. Parameters and any variables changed inside stay contained:</p>
@@ -263,22 +263,22 @@ print x
 
 #test() {
   x = "world"
-  print x
+  write(x)
 }
 
 test()
-print x
+write(x)
 </code></pre>
 <p>Parameters are always save/restored independently of global variables:</p>
 <pre><code class="language-lil">x = 100
 
 #f(x) {
   x = x + 1
-  print x
+  write(x)
 }
 
 f(5)
-print x
+write(x)
 </code></pre>
 <h2 id="recursion"><a class="header" href="#recursion">Recursion</a></h2>
 <pre><code class="language-lil">#fib(n) {
@@ -289,7 +289,7 @@ print x
   }
 }
 
-print fib(10)
+write(fib(10))
 </code></pre>
 <h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
 <p>Function calls work in both interpreted and compiled (AOT) mode. In compiled mode, each function becomes a standalone C function with its own type inference pass.</p>

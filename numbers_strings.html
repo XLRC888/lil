@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -189,25 +189,25 @@ z = -7
 <pre><code class="language-lil">a = "hello "
 b = "world"
 c = a + b
-print c
+write(c)
 </code></pre>
 <p>If you add a string to a number, the number is converted to a string first:</p>
 <pre><code class="language-lil">x = "score: " + 42
-print x
+write(x)
 </code></pre>
 <h2 id="string-length"><a class="header" href="#string-length">String length</a></h2>
 <p>Get the length of a string with <code>len@string</code>:</p>
 <pre><code class="language-lil">name = "alice"
-len = len@string name
-print name, "has", len, "characters"
+len = len@string("hello")
+write(name, "has", len, "characters")
 </code></pre>
 <h2 id="math-on-numbers"><a class="header" href="#math-on-numbers">Math on numbers</a></h2>
 <p>You can write math expressions directly:</p>
 <pre><code class="language-lil">result = 3.14 * 2
-print result
+write(result)
 
 r = 0.5
-print r
+write(r)
 </code></pre>
 <h2 id="type-conversion"><a class="header" href="#type-conversion">Type conversion</a></h2>
 <p>Use <code>stringify</code> and <code>intify</code> to convert between types explicitly.</p>
@@ -219,7 +219,7 @@ stringify x
 <pre><code class="language-lil">x = "42"
 intify x
 x = x + 5
-print x
+write(x)
 
 x = "hello"
 intify x
@@ -232,12 +232,11 @@ intify x octal
 </code></pre>
 <p><code>toggle</code> toggles a variable between number and string. If its a number, it becomes a string. If its a string, it becomes a number:</p>
 <pre><code class="language-lil">x = 42
-stringify x     # now "42"
-toggle x        # back to 42
-toggle x        # back to "42"
-toggle x        # back to 42
+stringify x     : now "42"
+toggle x        : back to 42
+toggle x        : back to "42"
+toggle x        : back to 42
 </code></pre>
-<p>The old names <code>strify</code> and <code>swify</code> still work but are deprecated. Use <code>stringify</code> and <code>toggle</code> instead.</p>
 
                     </main>
 

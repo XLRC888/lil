@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -177,7 +177,7 @@
                         <h1 id="user-defined-functions"><a class="header" href="#user-defined-functions">User-defined Functions</a></h1>
 <p>Define a function with <code>#name(params)</code> syntax followed by a block in braces:</p>
 <pre><code class="language-lil">#greet() {
-  print "hello"
+  write("hello")
 }
 
 greet()
@@ -194,7 +194,7 @@ greet()
 }
 
 result = add(3, 4)
-print result
+write(result)
 </code></pre>
 <h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
 <p>Convert Fahrenheit to Celsius:</p>
@@ -203,15 +203,15 @@ print result
 }
 
 temp = fahr_to_celsius(100)
-print temp
+write(temp)
 </code></pre>
 <p>Roll a die using a library function inside a user function:</p>
 <pre><code class="language-lil">#roll_dice() {
-  randint@math 1 6
+  randint@math(1, 6)
 }
 
 roll = roll_dice()
-print "you rolled", roll
+write("you rolled", roll)
 </code></pre>
 <p>Check if a number is even:</p>
 <pre><code class="language-lil">#is_even(n) {
@@ -219,7 +219,7 @@ print "you rolled", roll
 }
 
 x = is_even(10)
-print x
+write(x)
 </code></pre>
 <h2 id="scope"><a class="header" href="#scope">Scope</a></h2>
 <p>Each function call gets its own scope. Parameters and local variables are isolated to that call and don’t leak:</p>
@@ -233,18 +233,18 @@ print x
   x
 }
 
-print a(5)    # 15
-print b(5)    # 10
-print a(100)  # 110
+write(a(5))    : 15
+write(b(5))    : 10
+write(a(100))  : 110
 </code></pre>
 <p>Two functions with the same parameter name don’t interfere with each other:</p>
 <pre><code class="language-lil">#a(x) {
-  print x
+  write(x)
 }
 
 #b(x) {
   a(x + 1)
-  print x
+  write(x)
 }
 
 b(100)
@@ -253,7 +253,7 @@ b(100)
 <pre><code class="language-lil">#outer() {
   x = 99
   inner()
-  print x
+  write(x)
 }
 
 #inner() {
@@ -270,18 +270,18 @@ outer()
 }
 
 set_x(42)
-print x
+write(x)
 </code></pre>
 <h2 id="include"><a class="header" href="#include">Include</a></h2>
 <p>Functions defined in other files can be loaded with <code>include</code>:</p>
 <pre><code class="language-lil">include dice
 
 roll = roll_dice()
-print roll
+write(roll)
 </code></pre>
 <p>This loads and runs <code>dice.lil</code>, making its functions available. For example, <code>dice.lil</code> might contain:</p>
 <pre><code class="language-lil">#roll_dice() {
-  randint@math 1 6
+  randint@math(1, 6)
 }
 </code></pre>
 <p>Then your main script includes it and uses <code>roll_dice</code> like any local function.</p>
@@ -299,29 +299,29 @@ print roll
   }
 }
 
-print fib(10)
+write(fib(10))
 </code></pre>
 <p>lil’s functions work in both interpreted and compiled (AOT) mode.</p>
 <h2 id="anonymous-functions-closures"><a class="header" href="#anonymous-functions-closures">Anonymous Functions (Closures)</a></h2>
 <p>Functions without a name can be created inline with <code>#(params) { body }</code>:</p>
 <pre><code class="language-lil">double = #(x) { x * 2 }
-print double(5)
+write(double(5))
 </code></pre>
 <p>The real power is passing them to higher-order library functions:</p>
 <pre><code class="language-lil">include list
 
 nums = new@list
-push@list nums 1
-push@list nums 2
-push@list nums 3
+push@list(nums, 1)
+push@list(nums, 2)
+push@list(nums, 3)
 
-doubled = map@list nums #(x) { x * 2 }
-print doubled
+doubled = map@list(nums, #(x) { x * 2 })
+write(doubled)
 </code></pre>
 <p>Anonymous functions see variables from the scope where they’re defined:</p>
 <pre><code class="language-lil">prefix = "&gt; "
 #add_prefix(s) { prefix + s }
-print add_prefix("hello")
+write(add_prefix("hello"))
 </code></pre>
 <p>The anonymous function creates an internal name, registers in the function table, and returns the name as a string. <code>map@list</code> and <code>filter@list</code> resolve it automatically.</p>
 

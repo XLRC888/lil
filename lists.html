@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,29 +184,29 @@ empty = []
 <h2 id="index-access"><a class="header" href="#index-access">Index Access</a></h2>
 <p>Access elements by position (0-indexed):</p>
 <pre><code>x = [10, 20, 30]
-print x[0]
-print x[1]
+write(x[0])
+write(x[1])
 x[2] = 99
 </code></pre>
 <p>String indexing works the same way. <code>s[i]</code> returns a single-character string, and <code>s[i] = "x"</code> replaces a character:</p>
 <pre><code>s = "hello"
-print s[0]          # "h"
+write(s[0])          : "h"
 s[0] = "j"
-print s             # "jello"
+write(s)             : "jello"
 </code></pre>
 <p>Out-of-range access errors at runtime.</p>
 <h2 id="destructuring"><a class="header" href="#destructuring">Destructuring</a></h2>
 <p>Pull multiple fields from a dict or struct in one line with <code>{field1, field2} = expr</code>:</p>
 <pre><code class="language-lil">node = {"type": "num", "value": 42}
 {type, value} = node
-print type
-print value
+write(type)
+write(value)
 </code></pre>
 <p>Works with structs too (structs are dicts underneath):</p>
 <pre><code class="language-lil">struct Point { x, y }
 p = Point(10, 20)
 {x, y} = p
-print x, y
+write(x, y)
 </code></pre>
 <p>This is shorthand for <code>type = node["type"]; value = node["value"]</code>. Field names become variable names.</p>
 <h2 id="list-library"><a class="header" href="#list-library">List Library</a></h2>
@@ -214,24 +214,24 @@ print x, y
 <pre><code>include list
 
 x = new@list
-push@list x 1
-push@list x 2
-push@list x 3
-print len@list x
-print at@list x 1
-val = pop@list x
+push@list(x, 1)
+push@list(x, 2)
+push@list(x, 3)
+write(len@list(x))
+write(x[1])
+val = pop@list(x)
 </code></pre>
 <h3 id="functions"><a class="header" href="#functions">Functions</a></h3>
 <ul>
 <li><code>new@list</code>  -  create empty list</li>
-<li><code>push@list list val</code>  -  append value to end</li>
-<li><code>pop@list list</code>  -  remove and return last element</li>
-<li><code>at@list list index</code>  -  retrieve element without modifying</li>
-<li><code>len@list list</code>  -  number of elements</li>
-<li><code>map@list list fn</code>  -  apply function to each element, returns new list</li>
-<li><code>filter@list list fn</code>  -  keep elements where function returns truthy</li>
-<li><code>reduce@list list fn init</code>  -  reduce list to single value</li>
+<li><code>push@list(list, val)</code>  -  append value to end</li>
+<li><code>pop@list(list)</code>  -  remove and return last element</li>
+<li><code>len@list(list)</code>  -  number of elements</li>
+<li><code>map@list(list, fn)</code>  -  apply function to each element, returns new list</li>
+<li><code>filter@list(list, fn)</code>  -  keep elements where function returns truthy</li>
+<li><code>reduce@list(list, fn, init)</code>  -  reduce list to single value</li>
 </ul>
+<p>Read individual elements with bracket syntax: <code>x[i]</code> returns the value at position <code>i</code> (0-indexed).</p>
 <h2 id="mapfilterreduce"><a class="header" href="#mapfilterreduce">map/filter/reduce</a></h2>
 <p>These higher-order functions take a user-defined function and apply it to each element:</p>
 <pre><code class="language-lil">include list
@@ -241,35 +241,35 @@ val = pop@list x
 }
 
 nums = new@list
-push@list nums 1
-push@list nums 2
-push@list nums 3
+push@list(nums, 1)
+push@list(nums, 2)
+push@list(nums, 3)
 
-doubled = map@list nums double
-print doubled
+doubled = map@list(nums, double)
+write(doubled)
 </code></pre>
 <p><code>filter</code> keeps elements where the function returns truthy:</p>
 <pre><code class="language-lil">#isbig(x) {
     if x &gt; 5 { 1 } else { 0 }
 }
 
-filtered = filter@list nums isbig
-print filtered
+filtered = filter@list(nums, isbig)
+write(filtered)
 </code></pre>
 <p><code>reduce</code> combines all elements using a two-parameter function and an initial value:</p>
 <pre><code class="language-lil">#add(a, b) {
     a + b
 }
 
-total = reduce@list nums add 0
-print total
+total = reduce@list(nums, add, 0)
+write(total)
 </code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="undefined_default.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="live.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -283,7 +283,7 @@ print total
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="undefined_default.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="live.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

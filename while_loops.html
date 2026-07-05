@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -179,7 +179,7 @@
 <p>A while loop runs as long as its condition is truthy:</p>
 <pre><code class="language-lil">i = 0
 while i &lt; 5 {
-  print i
+  write(i)
   i = i + 1
 }
 </code></pre>
@@ -192,7 +192,7 @@ while i &lt;= 100 {
   total = total + i
   i = i + 1
 }
-print total
+write(total)
 </code></pre>
 <p>This sums 1 + 2 + … + 100 and prints 5050.</p>
 <h2 id="random-loop-condition"><a class="header" href="#random-loop-condition">Random loop condition</a></h2>
@@ -203,24 +203,34 @@ while random@math * 100 &gt; 10 {
   count = count + 1
   total = total + random@math * 100
 }
-print "loop ran", count, "times, total=", total
+write("loop ran", count, "times, total=", total)
 </code></pre>
 <p>Each iteration has a 90% chance of continuing.</p>
 <h2 id="infinite-loop-with-break"><a class="header" href="#infinite-loop-with-break">Infinite loop with break</a></h2>
+<p>Use <code>loop</code> for an unconditional infinite loop (prefer this over <code>while 1</code>):</p>
 <pre><code class="language-lil">i = 0
-while 1 {
+loop {
   if i &gt; 5 { break }
-  print i
+  write(i)
   i = i + 1
 }
 </code></pre>
 <p>The <code>break</code> keyword exits the loop immediately. It works in <code>while</code>, <code>for</code>, and <code>loop</code> blocks.</p>
+<h2 id="short-circuit-in-while"><a class="header" href="#short-circuit-in-while">Short-circuit in while</a></h2>
+<p>Use <code>&amp;&amp;</code> to combine conditions safely:</p>
+<pre><code class="language-lil">i = 0
+while i &lt; 10 &amp;&amp; arr[i] != "" {
+  write(arr[i])
+  i = i + 1
+}
+</code></pre>
+<p>The right side is only evaluated if the left side is truthy.</p>
 <h2 id="nested-loops"><a class="header" href="#nested-loops">Nested loops</a></h2>
 <pre><code class="language-lil">i = 1
 while i &lt;= 3 {
   j = 1
   while j &lt;= 3 {
-    print i, j
+    write(i, j)
     j = j + 1
   }
   i = i + 1

@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,170 +184,178 @@ include sys
 include gtk
 include list
 </code></pre>
-<p>Libraries can be disabled with <code>uninclude</code>:</p>
+<p>Libraries can be disabled with <code>drop</code>:</p>
 <pre><code class="language-lil">include math
-randint@math 1 10
-uninclude math
-randint@math 1 10    # error: library not imported
+randint@math(1, 10)
+drop math
+randint@math(1, 10)    : error: library not imported
 </code></pre>
-<p>If the library wasn’t included, <code>uninclude</code> prints a warning and continues:</p>
-<pre><code class="language-lil">uninclude math          # warning: library 'math' was not included
+<p>If the library wasn’t included, <code>drop</code> prints a warning and continues:</p>
+<pre><code class="language-lil">drop math          : warning: library 'math' was not included
 </code></pre>
-<p>Libraries are called with <code>@</code> syntax:</p>
-<pre><code class="language-lil">&lt;function&gt;@&lt;library&gt; &lt;arguments...&gt;
+<p>Libraries are called with <code>func(args)@lib</code> syntax:</p>
+<pre><code class="language-lil">&lt;function&gt;@&lt;library&gt;(&lt;arguments...&gt;)
 </code></pre>
-<p>Arguments are separated by spaces. Bare variable names are auto-dereferenced. Use double quotes for literal strings.</p>
+<p>Arguments are comma-separated in parentheses. Bare variable names are auto-dereferenced. Use double quotes for literal strings.</p>
 <h2 id="string-library"><a class="header" href="#string-library">string library</a></h2>
-<pre><code class="language-lil">lower@string s
-upper@string s
-reverse@string s
-len@string s
-repeat@string s 3
-substr@string s 1 3
-replace@string s "old" "new"
-split@string s ","
-join@string list ","
-contains@string s "sub"
-find@string s "sub"
-ord@string s
-chr@string 65
-isdigit@string s
-isalpha@string s
-isalnum@string s
-isspace@string s
+<pre><code class="language-lil">lower@string(s)
+upper@string(s)
+reverse@string(s)
+len@string(s)
+repeat@string(s, 3)
+substr@string(s, 1, 3)
+replace@string(s, "old", "new")
+split@string(s, ",")
+join@string(list, ",")
+contains@string(s, "sub")
+find@string(s, "sub")
+ord@string(s)
+chr@string(65)
+isdigit@string(s)
+isalpha@string(s)
+isalnum@string(s)
+isspace@string(s)
 </code></pre>
 <p><code>split</code> returns a list of substrings:</p>
 <pre><code class="language-lil">include string
-parts = split@string "a,b,c" ","
-print parts
+parts = split@string("a,b,c", ",")
+write(parts)
 </code></pre>
 <p><code>join</code> concatenates list elements with a delimiter:</p>
 <pre><code class="language-lil">include string
-result = join@string parts "-"
-print result
+result = join@string(parts, "-")
+write(result)
 </code></pre>
 <p><code>contains</code> returns 1 if the string contains the substring, 0 otherwise:</p>
 <pre><code class="language-lil">include string
-x = contains@string "hello world" "world"
-print x
+x = contains@string("hello world", "world")
+write(x)
 </code></pre>
 <p><code>find</code> returns the index of the first occurrence, or -1 if not found:</p>
 <pre><code class="language-lil">include string
-idx = find@string "hello" "ell"
-print idx
+idx = find@string("hello", "ell")
+write(idx)
 </code></pre>
 <p><code>ord</code> returns the ASCII code of the first character:</p>
 <pre><code class="language-lil">include string
-code = ord@string "A"
-print code
+code = ord@string("A")
+write(code)
 </code></pre>
 <p><code>chr</code> returns a single-character string from an ASCII code:</p>
 <pre><code class="language-lil">include string
-c = chr@string 65
-print c
+c = chr@string(65)
+write(c)
 </code></pre>
 <p>Character classifiers check if a string consists entirely of the given character type:</p>
 <pre><code class="language-lil">include string
-print isdigit@string "123"
-print isalpha@string "abc"
-print isalnum@string "a1"
-print isspace@string "  "
-print isdigit@string "12a"
+write(isdigit@string("123"))
+write(isalpha@string("abc"))
+write(isalnum@string("a1"))
+write(isspace@string("  "))
+write(isdigit@string("12a"))
 </code></pre>
-<p>Bare variable names are auto-dereferenced, no <code>$</code> needed:</p>
+<p>Bare variable names are auto-referenced, no <code>$</code> needed:</p>
 <pre><code class="language-lil">name = "alice"
-upper@string name
-print name
+upper@string(name)
+write(name)
 </code></pre>
 <p>Assign the result to a variable:</p>
 <pre><code class="language-lil">name = "alice"
-len = len@string name
-print len
+len = len@string(name)
+write(len)
+</code></pre>
+<p>Method chaining works on values:</p>
+<pre><code class="language-lil">name = "HELLO"
+lower_name = name.lower()@string
+write(lower_name)
+
+clean = "  HELLO  ".replace(" ", "")@string.lower()@string
+write(clean)
 </code></pre>
 <h2 id="math-library"><a class="header" href="#math-library">math library</a></h2>
-<pre><code class="language-lil">eval@math "2 + 3 * 4"
-random@math
-randint@math 1 10
-factors@math 12
-fib@math 10
-isprime@math 7
-sleep@math 0.5
-hasops@math "2+3"
-choice@math "a" "b" "c"
+<pre><code class="language-lil">calc@math("2 + 3 * 4")
+random@math()
+randint@math(1, 10)
+factors@math(12)
+fib@math(10)
+isprime@math(7)
+sleep@math(0.5)
+hasops@math("2+3")
+choice@math("a", "b", "c")
 </code></pre>
 <p>Assign results to variables:</p>
-<pre><code class="language-lil">roll = randint@math 1 6
-print "you rolled", roll
+<pre><code class="language-lil">roll = randint@math(1, 6)
+write("you rolled", roll)
 </code></pre>
-<pre><code class="language-lil">n = random@math
-print n
+<pre><code class="language-lil">n = random@math()
+write(n)
 </code></pre>
-<pre><code class="language-lil">prime = isprime@math 17
-print prime
+<pre><code class="language-lil">prime = isprime@math(17)
+write(prime)
 </code></pre>
-<pre><code class="language-lil">dice = choice@math "fire" "ice" "lightning"
-print dice
+<pre><code class="language-lil">dice = choice@math("fire", "ice", "lightning")
+write(dice)
 </code></pre>
 <h2 id="file-library"><a class="header" href="#file-library">file library</a></h2>
-<pre><code class="language-lil">content = read@file "path"
-write@file "path" "content"
-append@file "path" "content"
-delete@file "path"
-exists = exists@file "path"
-listing = list@file "path"
+<pre><code class="language-lil">content = read@file("path")
+write@file("path", "content")
+append@file("path", "content")
+delete@file("path")
+exists = exists@file("path")
+listing = list@file("path")
 </code></pre>
 <p>Most file functions return values you’ll want to capture:</p>
-<pre><code class="language-lil">data = read@file "config.txt"
-print data
+<pre><code class="language-lil">data = read@file("config.txt")
+write(data)
 </code></pre>
-<pre><code class="language-lil">ok = delete@file "temp.tmp"
+<pre><code class="language-lil">ok = delete@file("temp.tmp")
 if ok == 1 {
-  print "deleted"
+  write("deleted")
 }
 </code></pre>
-<pre><code class="language-lil">files = list@file "/home/user"
-print files
+<pre><code class="language-lil">files = list@file("/home/user")
+write(files)
 </code></pre>
-<pre><code class="language-lil">cfg = read@file "settings.cfg"
+<pre><code class="language-lil">cfg = read@file("settings.cfg")
 if cfg == "" {
-  print "no config found"
+  write("no config found")
 }
 </code></pre>
 <h2 id="sys-library"><a class="header" href="#sys-library">sys library</a></h2>
-<pre><code class="language-lil">output = cmd@sys "command"
-value = env@sys "VARNAME"
+<pre><code class="language-lil">output = cmd@sys("command")
+value = env@sys("VARNAME")
 </code></pre>
 <p>Assign results to check environment variables or capture command output:</p>
-<pre><code class="language-lil">home = env@sys "HOME"
-print "home directory:", home
+<pre><code class="language-lil">home = env@sys("HOME")
+write("home directory:", home)
 </code></pre>
-<pre><code class="language-lil">result = cmd@sys "ls -la"
-print result
+<pre><code class="language-lil">result = cmd@sys("ls -la")
+write(result)
 </code></pre>
-<pre><code class="language-lil">shell = env@sys "SHELL"
-print "your shell is", shell
+<pre><code class="language-lil">shell = env@sys("SHELL")
+write("your shell is", shell)
 </code></pre>
 <h3 id="debugging"><a class="header" href="#debugging">Debugging</a></h3>
 <pre><code>include sys
-log@sys "debug message"
+log@sys("debug message")
 </code></pre>
 <p><code>log@sys</code> prints to stderr. <code>last_error@sys</code> returns the last error from a failed FFI call. <code>clear_error@sys</code> resets it.</p>
 <h2 id="list-library"><a class="header" href="#list-library">list library</a></h2>
 <pre><code class="language-lil">x = new@list
-push@list x 1
-push@list x 2
-push@list x 3
-val = pop@list x
-print at@list x 0
-print len@list x
+push@list(x, 1)
+push@list(x, 2)
+push@list(x, 3)
+val = pop@list(x)
+write(x[0])
+write(len@list(x))
 </code></pre>
-<p>Create a list, add elements, remove and access them:</p>
+<p>Create a list, add elements, remove and access them. Read elements with bracket syntax <code>x[i]</code>:</p>
 <pre><code class="language-lil">include list
 items = new@list
-push@list items "apple"
-push@list items "banana"
-push@list items "cherry"
-print at@list items 1
+push@list(items, "apple")
+push@list(items, "banana")
+push@list(items, "cherry")
+write(items[1])
 </code></pre>
 <p>Push returns 0, pop returns the removed element. <code>len@list</code> returns the count.</p>
 <h3 id="mapfilterreduce"><a class="header" href="#mapfilterreduce">map/filter/reduce</a></h3>
@@ -357,71 +365,71 @@ print at@list items 1
 #double(x) { x * 2 }
 
 nums = new@list
-push@list nums 1
-push@list nums 2
-push@list nums 3
+push@list(nums, 1)
+push@list(nums, 2)
+push@list(nums, 3)
 
-doubled = map@list nums double
-print doubled
+doubled = map@list(nums, double)
+write(doubled)
 </code></pre>
 <pre><code class="language-lil">#isbig(x) { if x &gt; 5 { 1 } else { 0 } }
 
-filtered = filter@list nums isbig
-print filtered
+filtered = filter@list(nums, isbig)
+write(filtered)
 </code></pre>
 <pre><code class="language-lil">#add(a, b) { a + b }
 
-total = reduce@list nums add 0
-print total
+total = reduce@list(nums, add, 0)
+write(total)
 </code></pre>
 <p><code>map@list</code> returns a new list with the function applied to each element. <code>filter@list</code> keeps elements where the function returns truthy. <code>reduce@list</code> combines all elements with a two-parameter function and an initial value.</p>
 <h2 id="dict-library"><a class="header" href="#dict-library">dict library</a></h2>
 <pre><code class="language-lil">d = new@dict
-set@dict d "name" "alice"
-set@dict d "age" 30
-print get@dict d "name"
-print contains@dict d "age"
-print len@dict d
-print keys@dict d
+set@dict(d, "name", "alice")
+set@dict(d, "age", 30)
+write(get@dict(d, "name"))
+write(contains@dict(d, "age"))
+write(len@dict(d))
+write(keys@dict(d))
 </code></pre>
 <p>Dicts store key-value pairs. <code>get@dict</code> returns the value or 0 if missing.</p>
-<pre><code class="language-lil">remove@dict d "age"
-clear@dict d
+<pre><code class="language-lil">remove@dict(d, "age")
+clear@dict(d)
 </code></pre>
 <h2 id="date-library"><a class="header" href="#date-library">date library</a></h2>
-<pre><code class="language-lil">print minimal@date
-print standart@date
-print standartplus@date
-print full@date
-print full@date noseconds
-print full@date noday
-print fullplus@date
-format@date eu
-format@date us
-print format@date
+<pre><code class="language-lil">write(minimal@date)
+write(standart@date)
+write(standartplus@date)
+write(full@date)
+write(full@date, noseconds)
+write(full@date, noday)
+write(fullplus@date)
+format@date(eu)
+format@date(us)
+write(format@date)
 </code></pre>
 <p>Dates are commonly assigned to variables for later use:</p>
 <pre><code class="language-lil">today = standart@date
-print "date:", today
+write("date:", today)
 </code></pre>
 <pre><code class="language-lil">now = full@date
-print now
+write(now)
 </code></pre>
 <pre><code class="language-lil">short = minimal@date
-print short
+write(short)
 </code></pre>
 <p>Most <code>date</code> functions return the date string. <code>format@date</code> returns the current mode (“EU”/“US”), and setting the format returns empty.</p>
 <h2 id="variable-extraction-get"><a class="header" href="#variable-extraction-get">Variable extraction (get)</a></h2>
 <p>Extract variable values from other <code>.lil</code> files at runtime:</p>
 <pre><code class="language-lil">get "TOKEN" from /path/to/file.lil
-get "TOKEN" from file.lil              # relative path
-get "TOKEN" from /path/to/file         # .lil added automatically
+get "TOKEN" from file.lil              : relative path
+get "TOKEN" from /path/to/file         : .lil added automatically
 </code></pre>
 <p><strong>Selective extraction</strong> with assignment index:</p>
-<pre><code class="language-lil">get "x"(2) from /tmp/data.lil          # 2nd-to-last assignment of x
+<pre><code class="language-lil">get "x"(2) from /tmp/data.lil          : 2nd-to-last assignment of x
 </code></pre>
 <p><strong>Renaming</strong> on import:</p>
-<pre><code class="language-lil">get "TOKEN"="api_key" from auth.lil     # saves as api_key instead of TOKEN
+<pre><code class="language-lil">get "TOKEN"="api_key" from auth.lil     : saves as api_key instead of TOKEN
 </code></pre>
 <p><strong>Multiple variables</strong> in one call:</p>
 <pre><code class="language-lil">get "x", "y", "name" from data.lil

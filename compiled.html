@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -195,7 +195,7 @@
 }
 
 result = fib(35)
-print "fib(35) = " result
+write("fib(35) = ", result)
 </code></pre>
 <p>Compile and run:</p>
 <pre><code class="language-bash">lil -c fib.lil -o fib
@@ -205,7 +205,7 @@ print "fib(35) = " result
 <h2 id="standalone-binary"><a class="header" href="#standalone-binary">Standalone Binary</a></h2>
 <p>The compiled binary is self-contained. Copy it to another machine (same architecture) and it runs without lil installed:</p>
 <pre><code class="language-bash">scp fib user@other-machine:~
-ssh user@other-machine ./fib    # works without lil
+ssh user@other-machine ./fib    : works without lil
 </code></pre>
 <h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
 <p>Compiled mode is significantly faster than interpreted mode, especially for numeric code. The type inference pass eliminates the overhead of dynamic type checks for variables that are proven to always hold numbers.</p>
@@ -232,22 +232,26 @@ time ./fib
 <p>Simple operations, arithmetic, control flow, user-defined functions, and variable assignments all compile fine:</p>
 <pre><code class="language-lil">x = 42
 y = x + 1
-print y
+write(y)
 </code></pre>
 <p>This WILL compile and run correctly.</p>
 <p>Library calls like <code>full@date</code> will NOT compile. The compiler generates a stub that returns a default value (0 for numbers, empty string for strings):</p>
-<pre><code class="language-lil">print full@date          # compiles but prints nothing useful
-print cmd@sys "ls"       # returns 0 in compiled mode
-print "hello"             # this compiles and works fine
+<pre><code class="language-lil">write(full@date)          : compiles but prints nothing useful
+write(cmd@sys("ls"))      : returns 0 in compiled mode
+write("hello")             : this compiles and works fine
 </code></pre>
 <h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
 <p>The following features are not available in compiled mode:</p>
 <ul>
 <li>The <code>has</code> operator in conditions</li>
 <li>Templates (template strings)</li>
-<li>Library function calls (<code>func@lib args</code>)</li>
+<li>Library function calls (<code>func(args)@lib</code>)</li>
 </ul>
 <p>If your script uses any of these features, compilation will fail and lil will tell you which construct could not be compiled.</p>
+<h2 id="short-circuit--and--in-compiled-mode"><a class="header" href="#short-circuit--and--in-compiled-mode">Short-circuit &amp;&amp; and ; in compiled mode</a></h2>
+<p><code>&amp;&amp;</code> and <code>;</code> work in compiled mode but fall back to the interpreter for execution. They work correctly but don’t get the full AOT optimization.</p>
+<h2 id="modifiers-in-aot"><a class="header" href="#modifiers-in-aot">Modifiers in AOT</a></h2>
+<p><code>force</code> and <code>unforce</code> still parse and run in compiled mode, but the locking concept does not apply. Variables in the generated C are statically typed, so <code>force x = 42</code> simply becomes <code>double x = 42;</code> (or the inferred type) with no lock attached. A later <code>x = 30</code> in the same compiled script will not be rejected the way it would in the interpreter. <code>unforce x</code> compiles to a no-op.</p>
 
                     </main>
 

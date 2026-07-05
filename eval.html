@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -178,13 +178,13 @@
 <p><code>eval@sys</code> lets you execute lil code from a string at runtime:</p>
 <pre><code class="language-lil">include sys
 
-eval@sys "x = 42"
-print x
+eval@sys("x = 42")
+write(x)
 </code></pre>
 <p>You can capture the return value:</p>
 <pre><code class="language-lil">include sys
-result = eval@sys "1 + 2"
-print result
+result = eval@sys("1 + 2")
+write(result)
 </code></pre>
 <p>Eval uses the same parser and interpreter as normal execution. Variables set inside eval are visible to the caller afterwards.</p>
 <p>Errors during eval are caught silently and return 0.</p>

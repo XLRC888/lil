@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -176,23 +176,23 @@
                     <main>
                         <h1 id="hello-world"><a class="header" href="#hello-world">Hello, World</a></h1>
 <p>Create a file called <code>hello.lil</code>:</p>
-<pre><code class="language-lil">print "hello, world"
+<pre><code class="language-lil">write("hello, world")
 </code></pre>
 <p>Run it:</p>
 <pre><code class="language-bash">lil hello.lil
 </code></pre>
-<p>In Python you write <code>print("hello")</code> with parentheses. In lil, just <code>print "hello"</code>. No parens, no commas between the keyword and its arguments.</p>
-<p>The <code>print</code> statement outputs text to stdout and appends a newline:</p>
-<pre><code class="language-lil">print 42
-print "hello"
+<p>In Python you write <code>print("hello")</code> with parentheses. In lil, <code>write("hello")</code> is a function call with parentheses.</p>
+<p>The <code>write()</code> function outputs text to stdout and appends a newline:</p>
+<pre><code class="language-lil">write(42)
+write("hello")
 </code></pre>
-<p>You can print multiple values by separating them with commas:</p>
-<pre><code class="language-lil">print "the answer is", 42
+<p>You can write multiple values by separating them with commas:</p>
+<pre><code class="language-lil">write("the answer is", 42)
 </code></pre>
 <p>This prints: <code>the answer is 42</code></p>
-<p>Print with a variable:</p>
+<p>Write with a variable:</p>
 <pre><code class="language-lil">name = "alice"
-print "hello", name
+write("hello", name)
 </code></pre>
 
                     </main>

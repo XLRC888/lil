@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -190,15 +190,15 @@
 <p>Functions that fail silently set a last error message:</p>
 <pre><code>include file
 include sys
-x = read@file "/nonexistent"
-print last_error@sys
+x = read@file("/nonexistent")
+write(last_error@sys)
 clear_error@sys
-print last_error@sys
+write(last_error@sys)
 </code></pre>
 <ul>
 <li><code>last_error@sys</code>  -  returns last error string (empty if none)</li>
 <li><code>clear_error@sys</code>  -  resets error state</li>
-<li><code>log@sys "msg"</code>  -  prints to stderr for debugging</li>
+<li><code>log@sys("msg")</code>  -  prints to stderr for debugging</li>
 </ul>
 
                     </main>

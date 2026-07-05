@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -177,59 +177,65 @@
                         <h1 id="comparison-and-logic"><a class="header" href="#comparison-and-logic">Comparison and Logic</a></h1>
 <h2 id="comparisons"><a class="header" href="#comparisons">Comparisons</a></h2>
 <p>Comparisons return <code>1</code> (true) or <code>0</code> (false). The operators are the same as Python:</p>
-<pre><code class="language-lil">x = 5 == 5    # 1 (true)
-y = 5 != 5    # 0 (false)
-z = 5 &lt; 10    # 1
-w = 5 &gt;= 10   # 0
+<pre><code class="language-lil">x = 5 == 5    : 1 (true)
+y = 5 != 5    : 0 (false)
+z = 5 &lt; 10    : 1
+w = 5 &gt;= 10   : 0
 </code></pre>
 <p>Full list: <code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code></p>
 <p>You can compare strings lexicographically, same as Python:</p>
-<pre><code class="language-lil">print "apple" &lt; "banana"   # 1
-print "abc" == "abc"        # 1
+<pre><code class="language-lil">write("apple" &lt; "banana")   : 1
+write("abc" == "abc")        : 1
 </code></pre>
 <h2 id="complex-conditions"><a class="header" href="#complex-conditions">Complex conditions</a></h2>
 <p>Combine comparisons with <code>and</code>, <code>or</code>, <code>not</code>:</p>
 <pre><code class="language-lil">x = 7
 if x &gt; 0 and x &lt; 10 {
-  print "in range"
+  write("in range")
 }
 </code></pre>
 <p>Store the result of a complex condition:</p>
 <pre><code class="language-lil">in_range = x &gt; 0 and x &lt; 10
 if in_range {
-  print "x is between 1 and 9"
+  write("x is between 1 and 9")
 }
 </code></pre>
 <h2 id="using-not-for-negation"><a class="header" href="#using-not-for-negation">Using not for negation</a></h2>
 <pre><code class="language-lil">logged_in = 0
 if not logged_in {
-  print "please log in"
+  write("please log in")
 }
 </code></pre>
 <h2 id="comparison-with-variables"><a class="header" href="#comparison-with-variables">Comparison with variables</a></h2>
 <p>Compare a variable to a value:</p>
 <pre><code class="language-lil">len = 10
 if len &gt; 5 {
-  print "long name"
+  write("long name")
 }
 </code></pre>
 <p>Store and use multiple comparisons:</p>
 <pre><code class="language-lil">len = 10
 if len &gt; 2 and len &lt; 10 {
-  print "name length is reasonable"
+  write("name length is reasonable")
 }
 </code></pre>
 <h2 id="logical-operators"><a class="header" href="#logical-operators">Logical operators</a></h2>
-<pre><code class="language-lil">a = 1 and 0    # 0 (false)
-b = 1 or 0     # 1 (true)
-c = not 1      # 0 (false)
+<pre><code class="language-lil">a = 1 and 0    : 0 (false)
+b = 1 or 0     : 1 (true)
+c = not 1      : 0 (false)
 </code></pre>
 <p><code>and</code> and <code>or</code> short-circuit. If the left operand determines the result, the right operand is never evaluated.</p>
+<p><code>&amp;&amp;</code> also short-circuits and returns the actual value, not 0/1:</p>
+<pre><code class="language-lil">x = 0
+result = x &amp;&amp; 5    : returns 0 (x is falsy)
+y = "hello"
+result2 = y &amp;&amp; 42   : returns 42 (y is truthy)
+</code></pre>
 <h2 id="truthiness"><a class="header" href="#truthiness">Truthiness</a></h2>
 <p>For conditions, a value is considered true if it is a non-zero number or a non-empty string:</p>
-<pre><code class="language-lil">if "hello" { print "yes" }   # prints "yes" (non-empty string is truthy)
-if 0 { print "no" }          # prints nothing (zero is falsy)
-if "" { print "no" }         # prints nothing (empty string is falsy)
+<pre><code class="language-lil">if "hello" { write("yes") }   : prints "yes" (non-empty string is truthy)
+if 0 { write("no") }          : prints nothing (zero is falsy)
+if "" { write("no") }         : prints nothing (empty string is falsy)
 </code></pre>
 
                     </main>

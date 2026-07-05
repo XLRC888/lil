@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -181,33 +181,33 @@
 <p>The <code>@</code> operator returns the memory address of a variable as a number:</p>
 <pre><code class="language-lil">x = 42
 addr = @x
-print addr
+write(addr)
 </code></pre>
 <p>The address will be different every time you run the program (ASLR). One run might print <code>140732789041152</code>, the next <code>140732789041184</code>.</p>
 <p>You can also get addresses of string variables:</p>
 <pre><code class="language-lil">msg = "hello"
 msg_addr = @msg
-print msg_addr
+write(msg_addr)
 </code></pre>
 <h2 id="dereference-"><a class="header" href="#dereference-">Dereference (^)</a></h2>
 <p>The <code>^</code> operator reads a value from a memory address:</p>
 <pre><code class="language-lil">x = 42
 addr = @x
 value = ^addr
-print value    # prints 42
+write(value)    : prints 42
 </code></pre>
 <p>This round-trips through a pointer: write a value, take its address, then dereference it back.</p>
 <h2 id="practical-example"><a class="header" href="#practical-example">Practical Example</a></h2>
 <pre><code class="language-lil">x = 42
 x_addr = @x
 x_val = ^x_addr
-print "address: " x_addr
-print "value: " x_val
+write("address: ", x_addr)
+write("value: ", x_val)
 </code></pre>
 <p>Each run will show a different address but always the same value.</p>
 <h2 id="safety-warning"><a class="header" href="#safety-warning">Safety Warning</a></h2>
 <p>Dereferencing an invalid address will crash your program with a segfault, just like Python’s <code>ctypes.string_at(bad_address)</code>:</p>
-<pre><code class="language-lil">value = ^9999999    # almost certainly a segfault
+<pre><code class="language-lil">value = ^9999999    : almost certainly a segfault
 </code></pre>
 <p>These operators are useful for low-level programming and interfacing with hardware at specific memory addresses (MMIO). Use them carefully.</p>
 <p>In the interpreter (<code>lil file.lil</code>), both operators produce an error.</p>

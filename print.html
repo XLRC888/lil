@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -247,23 +247,23 @@ usage: lil [options] [file.lil]
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="hello-world"><a class="header" href="#hello-world">Hello, World</a></h1>
 <p>Create a file called <code>hello.lil</code>:</p>
-<pre><code class="language-lil">print "hello, world"
+<pre><code class="language-lil">write("hello, world")
 </code></pre>
 <p>Run it:</p>
 <pre><code class="language-bash">lil hello.lil
 </code></pre>
-<p>In Python you write <code>print("hello")</code> with parentheses. In lil, just <code>print "hello"</code>. No parens, no commas between the keyword and its arguments.</p>
-<p>The <code>print</code> statement outputs text to stdout and appends a newline:</p>
-<pre><code class="language-lil">print 42
-print "hello"
+<p>In Python you write <code>print("hello")</code> with parentheses. In lil, <code>write("hello")</code> is a function call with parentheses.</p>
+<p>The <code>write()</code> function outputs text to stdout and appends a newline:</p>
+<pre><code class="language-lil">write(42)
+write("hello")
 </code></pre>
-<p>You can print multiple values by separating them with commas:</p>
-<pre><code class="language-lil">print "the answer is", 42
+<p>You can write multiple values by separating them with commas:</p>
+<pre><code class="language-lil">write("the answer is", 42)
 </code></pre>
 <p>This prints: <code>the answer is 42</code></p>
-<p>Print with a variable:</p>
+<p>Write with a variable:</p>
 <pre><code class="language-lil">name = "alice"
-print "hello", name
+write("hello", name)
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="numbers-and-strings"><a class="header" href="#numbers-and-strings">Numbers and Strings</a></h1>
@@ -281,25 +281,25 @@ z = -7
 <pre><code class="language-lil">a = "hello "
 b = "world"
 c = a + b
-print c
+write(c)
 </code></pre>
 <p>If you add a string to a number, the number is converted to a string first:</p>
 <pre><code class="language-lil">x = "score: " + 42
-print x
+write(x)
 </code></pre>
 <h2 id="string-length"><a class="header" href="#string-length">String length</a></h2>
 <p>Get the length of a string with <code>len@string</code>:</p>
 <pre><code class="language-lil">name = "alice"
-len = len@string name
-print name, "has", len, "characters"
+len = len@string("hello")
+write(name, "has", len, "characters")
 </code></pre>
 <h2 id="math-on-numbers"><a class="header" href="#math-on-numbers">Math on numbers</a></h2>
 <p>You can write math expressions directly:</p>
 <pre><code class="language-lil">result = 3.14 * 2
-print result
+write(result)
 
 r = 0.5
-print r
+write(r)
 </code></pre>
 <h2 id="type-conversion"><a class="header" href="#type-conversion">Type conversion</a></h2>
 <p>Use <code>stringify</code> and <code>intify</code> to convert between types explicitly.</p>
@@ -311,7 +311,7 @@ stringify x
 <pre><code class="language-lil">x = "42"
 intify x
 x = x + 5
-print x
+write(x)
 
 x = "hello"
 intify x
@@ -324,12 +324,11 @@ intify x octal
 </code></pre>
 <p><code>toggle</code> toggles a variable between number and string. If its a number, it becomes a string. If its a string, it becomes a number:</p>
 <pre><code class="language-lil">x = 42
-stringify x     # now "42"
-toggle x        # back to 42
-toggle x        # back to "42"
-toggle x        # back to 42
+stringify x     : now "42"
+toggle x        : back to 42
+toggle x        : back to "42"
+toggle x        : back to 42
 </code></pre>
-<p>The old names <code>strify</code> and <code>swify</code> still work but are deprecated. Use <code>stringify</code> and <code>toggle</code> instead.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="variables"><a class="header" href="#variables">Variables</a></h1>
 <p>Variables hold values. You assign them with <code>=</code>:</p>
@@ -339,19 +338,19 @@ name = "alice"
 <p>Variable names must start with a letter and can contain letters, digits, and underscores.</p>
 <p>Variables do not need to be declared before use. The first time you assign to a name, the variable is created. Use <code>%name</code> to explicitly declare a variable with value 0:</p>
 <pre><code class="language-lil">%counter
-print counter     # 0
+write(counter)     : 0
 counter = 10
-print counter     # 10
+write(counter)     : 10
 </code></pre>
 <p>If you use a variable that has not been assigned yet, its value defaults to <code>0</code>:</p>
-<pre><code class="language-lil">print z
+<pre><code class="language-lil">write(z)
 </code></pre>
 <p>In Python, an undefined variable raises <code>NameError</code>. In lil, you get <code>0</code>. This is useful for counters and accumulators that start at zero implicitly.</p>
 <p>Counting up works naturally:</p>
 <pre><code class="language-lil">count = 0
 count = count + 1
 count = count + 1
-print count
+write(count)
 </code></pre>
 <p>You can reassign variables to values of any type:</p>
 <pre><code class="language-lil">x = 42
@@ -363,20 +362,20 @@ x = 99
 </code></pre>
 <p>Assign a number to a variable:</p>
 <pre><code class="language-lil">n = 10
-print "number:", n
+write("number:", n)
 </code></pre>
 <p>Store the result of a math expression:</p>
 <pre><code class="language-lil">area = 3.14 * 5 * 5
-print "area is", area
+write("area is", area)
 </code></pre>
 <h2 id="forcing-variable-types"><a class="header" href="#forcing-variable-types">Forcing variable types</a></h2>
 <p><code>force</code> locks a variable completely. Once forced, you cannot change it with <code>stringify</code>, <code>intify</code>, <code>toggle</code>, or regular assignment:</p>
 <pre><code class="language-lil">x = 42
 force x
-x = 30        # ERROR: cannot assign to a forced variable
-stringify x   # ERROR: cannot stringify a forced variable
-unforce x     # unlock it
-x = 30        # works again
+x = 30        : ERROR: cannot assign to a forced variable
+stringify x   : ERROR: cannot stringify a forced variable
+unforce x     : unlock it
+x = 30        : works again
 </code></pre>
 <p>Combined assignment and force:</p>
 <pre><code class="language-lil">force x = 42
@@ -385,33 +384,49 @@ unforce x = 56
 <p><code>unforce</code> unlocks the variable so it can be changed again.</p>
 <p><code>force int input</code> reads input, validates it as a number, and forces the variable:</p>
 <pre><code class="language-lil">force int input "Enter your age: " age
-print "next year you will be", age + 1
+write("next year you will be", age + 1)
 </code></pre>
 <p><code>force str input</code> reads input as a string and forces it:</p>
 <pre><code class="language-lil">force str input "Enter your name: " name
-print "hello", name
+write("hello", name)
 </code></pre>
 <h3 id="input-validation-without-force"><a class="header" href="#input-validation-without-force">Input validation without force</a></h3>
 <p>Use <code>int input</code> or <code>str input</code> to validate the input type without forcing the variable:</p>
 <pre><code class="language-lil">int input "Enter a number: " x
-x = "now im a string"     # allowed (not forced)
+x = "now im a string"     : allowed (not forced)
 str input "Enter text: " y
-y = 42                     # allowed (not forced)
+y = 42                     : allowed (not forced)
 </code></pre>
 <p><code>int input</code> errors if the input is not a valid number. <code>str input</code> accepts anything as a string.</p>
 <h2 id="changing-the-undefined-default"><a class="header" href="#changing-the-undefined-default">Changing the undefined default</a></h2>
-<p>By default, reading an undefined variable returns <code>0</code>. Use <code>?undef = value</code> to change this:</p>
-<pre><code class="language-lil">?undefinedVariableBecomes = "Undefined"
-print someVar     # prints "Undefined"
+<p>By default, reading an undefined variable returns <code>0</code>. Use <code>?default = value</code> to change this:</p>
+<pre><code class="language-lil">?default = "Undefined"
+write(someVar)     : prints "Undefined"
 
-?x = 0
-print anotherVar  # prints 0
+?default = 0
+write(anotherVar)  : prints 0
 </code></pre>
-<p>The name after <code>?</code> is descriptive and ignored. Only one value is stored globally. Once set, all undefined variables will return that value until changed.</p>
+<p>The name after <code>?</code> is descriptive only and is ignored by the runtime. Only one value is stored globally. Once set, all undefined variables will return that value until changed.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="comments"><a class="header" href="#comments">Comments</a></h1>
-<p>lil does not have comments. The <code>#</code> character is used for function definitions, not comments.</p>
-<p>Code is self-documenting  -  short, clear variable names and simple control flow remove the need for comments.</p>
+<p><code>:</code> starts a single-line comment. Everything after <code>:</code> on that line is ignored:</p>
+<pre><code class="language-lil">: this is a comment
+x = 42
+</code></pre>
+<p><code>::</code> starts a block comment. Everything between <code>::</code> and the next <code>::</code> is ignored:</p>
+<pre><code class="language-lil">:: this is a
+block comment ::
+x = 10
+</code></pre>
+<p>Block comments can span multiple lines:</p>
+<pre><code class="language-lil">::
+this is
+a multi-line
+comment
+::
+</code></pre>
+<p><code>#</code> is for function definitions, not comments: <code>#add(a, b) { a + b }</code>.</p>
+<p><code>//</code> is integer division, not a comment: <code>10 // 3 = 3</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="operators"><a class="header" href="#operators">Operators</a></h1>
 <h2 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h2>
@@ -421,9 +436,12 @@ c = 10 * 3
 d = 10 / 3
 e = 10 % 3
 </code></pre>
+<p>Integer division:</p>
+<pre><code class="language-lil">x = 10 // 3    : 3
+</code></pre>
 <p>Modulo with negative numbers follows the sign of the dividend:</p>
-<pre><code class="language-lil">print -10 % 3
-print 10 % -3
+<pre><code class="language-lil">write(-10 % 3)
+write(10 % -3)
 </code></pre>
 <h2 id="unary-minus"><a class="header" href="#unary-minus">Unary minus</a></h2>
 <pre><code class="language-lil">x = -5
@@ -432,25 +450,42 @@ y = -(x + 3)
 <h2 id="logical-operators"><a class="header" href="#logical-operators">Logical operators</a></h2>
 <p>lil uses <code>and</code>, <code>or</code>, <code>not</code> like Python, but also supports <code>&amp;&amp;</code>, <code>||</code>, <code>!</code> as aliases:</p>
 <pre><code class="language-lil">if a &gt; 0 and b &gt; 0 {
-    print "both positive"
+    write("both positive")
 }
 if a &gt; 0 || b &gt; 0 {
-    print "at least one is positive"
+    write("at least one is positive")
 }
+</code></pre>
+<h2 id="short-circuit-"><a class="header" href="#short-circuit-">Short-circuit &amp;&amp;</a></h2>
+<p><code>&amp;&amp;</code> short-circuits: the right side is only evaluated if the left side is truthy. It returns the actual value, not 0/1:</p>
+<pre><code class="language-lil">x = 0
+result = x &amp;&amp; 5    : returns 0 (x is falsy, 5 never evaluated)
+y = "hello"
+result2 = y &amp;&amp; 42   : returns 42 (y is truthy)
+</code></pre>
+<p>Useful in while conditions:</p>
+<pre><code class="language-lil">while i &lt; 10 &amp;&amp; arr[i] != "" {
+    i = i + 1
+}
+</code></pre>
+<h2 id="statement-separator-"><a class="header" href="#statement-separator-">Statement separator ;</a></h2>
+<p><code>;</code> separates multiple statements on one line. It has the lowest precedence:</p>
+<pre><code class="language-lil">a = 5 ; b = 10 ; write(a + b)
 </code></pre>
 <h2 id="special-syntax"><a class="header" href="#special-syntax">Special syntax</a></h2>
 <p><code>#</code> defines a function. <code>#add(a, b) { a + b }</code> creates a function named <code>add</code>. <code>#(x) { x * 2 }</code> creates an anonymous function (closure) without a name.</p>
-<p><code>@</code> makes a library call. <code>randint@math 1 10</code> calls <code>randint</code> from the <code>math</code> library.</p>
+<p><code>@</code> makes a library call. <code>randint@math(1, 10)</code> calls <code>randint</code> from the <code>math</code> library.</p>
 <p><code>%</code> declares a variable with value 0. <code>%x</code> is the same as <code>x = 0</code>.</p>
 <h2 id="operator-precedence"><a class="header" href="#operator-precedence">Operator precedence</a></h2>
 <p>From lowest to highest:</p>
 <ol>
+<li><code>;</code></li>
 <li><code>or</code></li>
 <li><code>and</code></li>
 <li><code>not</code></li>
 <li><code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code></li>
 <li><code>+</code>, <code>-</code></li>
-<li><code>*</code>, <code>/</code>, <code>%</code></li>
+<li><code>*</code>, <code>/</code>, <code>%</code>, <code>//</code></li>
 <li>unary <code>-</code>, unary <code>not</code></li>
 <li>parentheses <code>()</code></li>
 </ol>
@@ -459,136 +494,142 @@ if a &gt; 0 || b &gt; 0 {
 </code></pre>
 <p>Precedence matters in real calculations:</p>
 <pre><code class="language-lil">x = 10 + 5 * 2
-print x
+write(x)
 y = (10 + 5) * 2
-print y
+write(y)
 </code></pre>
 <h2 id="direct-arithmetic"><a class="header" href="#direct-arithmetic">Direct arithmetic</a></h2>
 <p>lil evaluates math expressions directly:</p>
 <pre><code class="language-lil">result = (10 + 5) * 2
-print result
+write(result)
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="comparison-and-logic"><a class="header" href="#comparison-and-logic">Comparison and Logic</a></h1>
 <h2 id="comparisons"><a class="header" href="#comparisons">Comparisons</a></h2>
 <p>Comparisons return <code>1</code> (true) or <code>0</code> (false). The operators are the same as Python:</p>
-<pre><code class="language-lil">x = 5 == 5    # 1 (true)
-y = 5 != 5    # 0 (false)
-z = 5 &lt; 10    # 1
-w = 5 &gt;= 10   # 0
+<pre><code class="language-lil">x = 5 == 5    : 1 (true)
+y = 5 != 5    : 0 (false)
+z = 5 &lt; 10    : 1
+w = 5 &gt;= 10   : 0
 </code></pre>
 <p>Full list: <code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code></p>
 <p>You can compare strings lexicographically, same as Python:</p>
-<pre><code class="language-lil">print "apple" &lt; "banana"   # 1
-print "abc" == "abc"        # 1
+<pre><code class="language-lil">write("apple" &lt; "banana")   : 1
+write("abc" == "abc")        : 1
 </code></pre>
 <h2 id="complex-conditions"><a class="header" href="#complex-conditions">Complex conditions</a></h2>
 <p>Combine comparisons with <code>and</code>, <code>or</code>, <code>not</code>:</p>
 <pre><code class="language-lil">x = 7
 if x &gt; 0 and x &lt; 10 {
-  print "in range"
+  write("in range")
 }
 </code></pre>
 <p>Store the result of a complex condition:</p>
 <pre><code class="language-lil">in_range = x &gt; 0 and x &lt; 10
 if in_range {
-  print "x is between 1 and 9"
+  write("x is between 1 and 9")
 }
 </code></pre>
 <h2 id="using-not-for-negation"><a class="header" href="#using-not-for-negation">Using not for negation</a></h2>
 <pre><code class="language-lil">logged_in = 0
 if not logged_in {
-  print "please log in"
+  write("please log in")
 }
 </code></pre>
 <h2 id="comparison-with-variables"><a class="header" href="#comparison-with-variables">Comparison with variables</a></h2>
 <p>Compare a variable to a value:</p>
 <pre><code class="language-lil">len = 10
 if len &gt; 5 {
-  print "long name"
+  write("long name")
 }
 </code></pre>
 <p>Store and use multiple comparisons:</p>
 <pre><code class="language-lil">len = 10
 if len &gt; 2 and len &lt; 10 {
-  print "name length is reasonable"
+  write("name length is reasonable")
 }
 </code></pre>
 <h2 id="logical-operators-1"><a class="header" href="#logical-operators-1">Logical operators</a></h2>
-<pre><code class="language-lil">a = 1 and 0    # 0 (false)
-b = 1 or 0     # 1 (true)
-c = not 1      # 0 (false)
+<pre><code class="language-lil">a = 1 and 0    : 0 (false)
+b = 1 or 0     : 1 (true)
+c = not 1      : 0 (false)
 </code></pre>
 <p><code>and</code> and <code>or</code> short-circuit. If the left operand determines the result, the right operand is never evaluated.</p>
+<p><code>&amp;&amp;</code> also short-circuits and returns the actual value, not 0/1:</p>
+<pre><code class="language-lil">x = 0
+result = x &amp;&amp; 5    : returns 0 (x is falsy)
+y = "hello"
+result2 = y &amp;&amp; 42   : returns 42 (y is truthy)
+</code></pre>
 <h2 id="truthiness"><a class="header" href="#truthiness">Truthiness</a></h2>
 <p>For conditions, a value is considered true if it is a non-zero number or a non-empty string:</p>
-<pre><code class="language-lil">if "hello" { print "yes" }   # prints "yes" (non-empty string is truthy)
-if 0 { print "no" }          # prints nothing (zero is falsy)
-if "" { print "no" }         # prints nothing (empty string is falsy)
+<pre><code class="language-lil">if "hello" { write("yes") }   : prints "yes" (non-empty string is truthy)
+if 0 { write("no") }          : prints nothing (zero is falsy)
+if "" { write("no") }         : prints nothing (empty string is falsy)
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="if-and-else"><a class="header" href="#if-and-else">If and Else</a></h1>
 <h2 id="basic-if"><a class="header" href="#basic-if">Basic if</a></h2>
 <pre><code class="language-lil">x = 10
 if x &gt; 5 {
-  print "big"
+  write("big")
 }
 </code></pre>
 <h2 id="ifelse"><a class="header" href="#ifelse">If/else</a></h2>
 <pre><code class="language-lil">x = 2
 if x &gt; 5 {
-  print "big"
+  write("big")
 } else {
-  print "small"
+  write("small")
 }
 </code></pre>
-<h2 id="ifelifelse"><a class="header" href="#ifelifelse">If/elif/else</a></h2>
+<h2 id="iforifelse"><a class="header" href="#iforifelse">If/orif/else</a></h2>
 <pre><code class="language-lil">x = 5
 if x &gt; 10 {
-  print "big"
-} elif x &gt; 3 {
-  print "medium"
+  write("big")
+} orif x &gt; 3 {
+  write("medium")
 } else {
-  print "small"
+  write("small")
 }
 </code></pre>
-<p>You can chain as many <code>elif</code> blocks as you need.</p>
+<p>You can chain as many <code>orif</code> blocks as you need. <code>elif</code> still works as an alias.</p>
 <h2 id="inline-conditions"><a class="header" href="#inline-conditions">Inline conditions</a></h2>
 <p>You can put small blocks on one line:</p>
-<pre><code class="language-lil">if x &gt; 5 { print "big" } else { print "small" }
+<pre><code class="language-lil">if x &gt; 5 { write("big") } else { write("small") }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="the-has-operator"><a class="header" href="#the-has-operator">The Has Operator</a></h1>
 <p>The <code>has</code> operator checks if a variable exists or if a string contains a substring. It can only be used inside <code>if</code> conditions.</p>
 <h2 id="variable-existence"><a class="header" href="#variable-existence">Variable existence</a></h2>
 <pre><code class="language-lil">if has x {
-  print "x exists"
+  write("x exists")
 }
 </code></pre>
 <p>This checks whether the variable <code>x</code> has been assigned. If the variable was never assigned, this is false.</p>
 <p>A practical use: check if data was read successfully:</p>
-<pre><code class="language-lil">data = read@file "data.txt"
+<pre><code class="language-lil">data = read@file("data.txt")
 if has data {
-  print "read succeeded"
+  write("read succeeded")
 }
 </code></pre>
 <p><code>read@file</code> returns empty string if the file doesn’t exist. <code>has data</code> tells you if data is non-empty.</p>
 <h2 id="substring-search"><a class="header" href="#substring-search">Substring search</a></h2>
 <pre><code class="language-lil">text = "hello world"
 if text has "world" {
-  print "found"
+  write("found")
 }
 </code></pre>
 <p>Check if a URL contains a protocol:</p>
 <pre><code class="language-lil">url = "https://example.com"
 if url has "https" {
-  print "secure connection"
+  write("secure connection")
 }
 </code></pre>
 <h2 id="multiple-has-conditions-combined"><a class="header" href="#multiple-has-conditions-combined">Multiple has conditions combined</a></h2>
 <p>You can chain <code>not</code> with <code>has</code>:</p>
 <pre><code class="language-lil">if has result and result has "error" {
-  print "got an error response"
+  write("got an error response")
 }
 </code></pre>
 <p>If <code>result</code> was never set, the first <code>has</code> is false and the substring check is never evaluated. This is a safe way to check both existence and content.</p>
@@ -606,40 +647,40 @@ if url has "https" {
 </table>
 </div>
 <pre><code class="language-lil">if text has nocase "WORLD" {
-  print "found case insensitive"
+  write("found case insensitive")
 }
 
 if text has word "world" {
-  print "found as whole word"
+  write("found as whole word")
 }
 </code></pre>
 <p>You can combine flags:</p>
 <pre><code class="language-lil">if text has nocase anywhere "WORLD" {
-  print "found"
+  write("found")
 }
 </code></pre>
 <h2 id="has-vs-regular-comparison"><a class="header" href="#has-vs-regular-comparison">Has vs regular comparison</a></h2>
 <p><code>has</code> checks existence, not value. Use <code>==</code> to check a value:</p>
 <pre><code class="language-lil">x = 0
-if has x { print "x exists" }   # prints (x was assigned)
-if x == 0 { print "x is zero" } # also prints
+if has x { write("x exists") }   : prints (x was assigned)
+if x == 0 { write("x is zero") } : also prints
 
 y = ""
-if has y { print "y exists" }   # prints (y was assigned, even empty)
-if y == "" { print "y is empty" } # also prints
+if has y { write("y exists") }   : prints (y was assigned, even empty)
+if y == "" { write("y is empty") } : also prints
 </code></pre>
 <p>A variable can exist but hold a falsy value. Use <code>has</code> when you care whether it was assigned at all, not what it holds.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="functions"><a class="header" href="#functions">Functions</a></h1>
 <p>lil has two kinds of functions: built-in library functions from the standard libraries, and user-defined functions you write yourself.</p>
 <h2 id="built-in-library-functions"><a class="header" href="#built-in-library-functions">Built-in Library Functions</a></h2>
-<p>These are functions that come with lil, organized by library like <code>math</code>, <code>string</code>, <code>file</code>, <code>sys</code>, and <code>date</code>. You call them with <code>@</code> syntax:</p>
-<pre><code class="language-lil">randint@math 1 6
+<p>These are functions that come with lil, organized by library like <code>math</code>, <code>string</code>, <code>file</code>, <code>sys</code>, and <code>date</code>. You call them with <code>func(args)@lib</code> syntax:</p>
+<pre><code class="language-lil">randint@math(1, 6)
 </code></pre>
-<p>The function name comes first, then <code>@</code>, then the library name, then space-separated arguments.</p>
+<p>The function name comes first, then <code>@</code>, then the library name, then arguments in parentheses.</p>
 <pre><code class="language-lil">name = "alice"
-upper@string name
-print name
+upper@string(name)
+write(name)
 </code></pre>
 <p>See the <a href="#built-in-libraries">Built-in Libraries</a> page for the full list of available functions.</p>
 <h2 id="user-defined-functions"><a class="header" href="#user-defined-functions">User-defined Functions</a></h2>
@@ -650,11 +691,11 @@ print name
 </code></pre>
 <p>There’s no <code>def</code>, no colon, and no <code>return</code> keyword. The function body is a block in braces, and the last expression’s value is automatically returned.</p>
 <pre><code class="language-lil">result = add(3, 4)
-print result
+write(result)
 </code></pre>
 <p>Functions can also be created without a name (anonymous functions/closures) for inline use:</p>
 <pre><code class="language-lil">double = #(x) { x * 2 }
-print double(5)
+write(double(5))
 </code></pre>
 <p>See <a href="#user-defined-functions-1">User-defined Functions</a> and <a href="#functions-with-parameters">Advanced Functions</a> for details.</p>
 <h2 id="choosing-which-to-use"><a class="header" href="#choosing-which-to-use">Choosing Which to Use</a></h2>
@@ -670,170 +711,178 @@ include sys
 include gtk
 include list
 </code></pre>
-<p>Libraries can be disabled with <code>uninclude</code>:</p>
+<p>Libraries can be disabled with <code>drop</code>:</p>
 <pre><code class="language-lil">include math
-randint@math 1 10
-uninclude math
-randint@math 1 10    # error: library not imported
+randint@math(1, 10)
+drop math
+randint@math(1, 10)    : error: library not imported
 </code></pre>
-<p>If the library wasn’t included, <code>uninclude</code> prints a warning and continues:</p>
-<pre><code class="language-lil">uninclude math          # warning: library 'math' was not included
+<p>If the library wasn’t included, <code>drop</code> prints a warning and continues:</p>
+<pre><code class="language-lil">drop math          : warning: library 'math' was not included
 </code></pre>
-<p>Libraries are called with <code>@</code> syntax:</p>
-<pre><code class="language-lil">&lt;function&gt;@&lt;library&gt; &lt;arguments...&gt;
+<p>Libraries are called with <code>func(args)@lib</code> syntax:</p>
+<pre><code class="language-lil">&lt;function&gt;@&lt;library&gt;(&lt;arguments...&gt;)
 </code></pre>
-<p>Arguments are separated by spaces. Bare variable names are auto-dereferenced. Use double quotes for literal strings.</p>
+<p>Arguments are comma-separated in parentheses. Bare variable names are auto-dereferenced. Use double quotes for literal strings.</p>
 <h2 id="string-library"><a class="header" href="#string-library">string library</a></h2>
-<pre><code class="language-lil">lower@string s
-upper@string s
-reverse@string s
-len@string s
-repeat@string s 3
-substr@string s 1 3
-replace@string s "old" "new"
-split@string s ","
-join@string list ","
-contains@string s "sub"
-find@string s "sub"
-ord@string s
-chr@string 65
-isdigit@string s
-isalpha@string s
-isalnum@string s
-isspace@string s
+<pre><code class="language-lil">lower@string(s)
+upper@string(s)
+reverse@string(s)
+len@string(s)
+repeat@string(s, 3)
+substr@string(s, 1, 3)
+replace@string(s, "old", "new")
+split@string(s, ",")
+join@string(list, ",")
+contains@string(s, "sub")
+find@string(s, "sub")
+ord@string(s)
+chr@string(65)
+isdigit@string(s)
+isalpha@string(s)
+isalnum@string(s)
+isspace@string(s)
 </code></pre>
 <p><code>split</code> returns a list of substrings:</p>
 <pre><code class="language-lil">include string
-parts = split@string "a,b,c" ","
-print parts
+parts = split@string("a,b,c", ",")
+write(parts)
 </code></pre>
 <p><code>join</code> concatenates list elements with a delimiter:</p>
 <pre><code class="language-lil">include string
-result = join@string parts "-"
-print result
+result = join@string(parts, "-")
+write(result)
 </code></pre>
 <p><code>contains</code> returns 1 if the string contains the substring, 0 otherwise:</p>
 <pre><code class="language-lil">include string
-x = contains@string "hello world" "world"
-print x
+x = contains@string("hello world", "world")
+write(x)
 </code></pre>
 <p><code>find</code> returns the index of the first occurrence, or -1 if not found:</p>
 <pre><code class="language-lil">include string
-idx = find@string "hello" "ell"
-print idx
+idx = find@string("hello", "ell")
+write(idx)
 </code></pre>
 <p><code>ord</code> returns the ASCII code of the first character:</p>
 <pre><code class="language-lil">include string
-code = ord@string "A"
-print code
+code = ord@string("A")
+write(code)
 </code></pre>
 <p><code>chr</code> returns a single-character string from an ASCII code:</p>
 <pre><code class="language-lil">include string
-c = chr@string 65
-print c
+c = chr@string(65)
+write(c)
 </code></pre>
 <p>Character classifiers check if a string consists entirely of the given character type:</p>
 <pre><code class="language-lil">include string
-print isdigit@string "123"
-print isalpha@string "abc"
-print isalnum@string "a1"
-print isspace@string "  "
-print isdigit@string "12a"
+write(isdigit@string("123"))
+write(isalpha@string("abc"))
+write(isalnum@string("a1"))
+write(isspace@string("  "))
+write(isdigit@string("12a"))
 </code></pre>
-<p>Bare variable names are auto-dereferenced, no <code>$</code> needed:</p>
+<p>Bare variable names are auto-referenced, no <code>$</code> needed:</p>
 <pre><code class="language-lil">name = "alice"
-upper@string name
-print name
+upper@string(name)
+write(name)
 </code></pre>
 <p>Assign the result to a variable:</p>
 <pre><code class="language-lil">name = "alice"
-len = len@string name
-print len
+len = len@string(name)
+write(len)
+</code></pre>
+<p>Method chaining works on values:</p>
+<pre><code class="language-lil">name = "HELLO"
+lower_name = name.lower()@string
+write(lower_name)
+
+clean = "  HELLO  ".replace(" ", "")@string.lower()@string
+write(clean)
 </code></pre>
 <h2 id="math-library"><a class="header" href="#math-library">math library</a></h2>
-<pre><code class="language-lil">eval@math "2 + 3 * 4"
-random@math
-randint@math 1 10
-factors@math 12
-fib@math 10
-isprime@math 7
-sleep@math 0.5
-hasops@math "2+3"
-choice@math "a" "b" "c"
+<pre><code class="language-lil">calc@math("2 + 3 * 4")
+random@math()
+randint@math(1, 10)
+factors@math(12)
+fib@math(10)
+isprime@math(7)
+sleep@math(0.5)
+hasops@math("2+3")
+choice@math("a", "b", "c")
 </code></pre>
 <p>Assign results to variables:</p>
-<pre><code class="language-lil">roll = randint@math 1 6
-print "you rolled", roll
+<pre><code class="language-lil">roll = randint@math(1, 6)
+write("you rolled", roll)
 </code></pre>
-<pre><code class="language-lil">n = random@math
-print n
+<pre><code class="language-lil">n = random@math()
+write(n)
 </code></pre>
-<pre><code class="language-lil">prime = isprime@math 17
-print prime
+<pre><code class="language-lil">prime = isprime@math(17)
+write(prime)
 </code></pre>
-<pre><code class="language-lil">dice = choice@math "fire" "ice" "lightning"
-print dice
+<pre><code class="language-lil">dice = choice@math("fire", "ice", "lightning")
+write(dice)
 </code></pre>
 <h2 id="file-library"><a class="header" href="#file-library">file library</a></h2>
-<pre><code class="language-lil">content = read@file "path"
-write@file "path" "content"
-append@file "path" "content"
-delete@file "path"
-exists = exists@file "path"
-listing = list@file "path"
+<pre><code class="language-lil">content = read@file("path")
+write@file("path", "content")
+append@file("path", "content")
+delete@file("path")
+exists = exists@file("path")
+listing = list@file("path")
 </code></pre>
 <p>Most file functions return values you’ll want to capture:</p>
-<pre><code class="language-lil">data = read@file "config.txt"
-print data
+<pre><code class="language-lil">data = read@file("config.txt")
+write(data)
 </code></pre>
-<pre><code class="language-lil">ok = delete@file "temp.tmp"
+<pre><code class="language-lil">ok = delete@file("temp.tmp")
 if ok == 1 {
-  print "deleted"
+  write("deleted")
 }
 </code></pre>
-<pre><code class="language-lil">files = list@file "/home/user"
-print files
+<pre><code class="language-lil">files = list@file("/home/user")
+write(files)
 </code></pre>
-<pre><code class="language-lil">cfg = read@file "settings.cfg"
+<pre><code class="language-lil">cfg = read@file("settings.cfg")
 if cfg == "" {
-  print "no config found"
+  write("no config found")
 }
 </code></pre>
 <h2 id="sys-library"><a class="header" href="#sys-library">sys library</a></h2>
-<pre><code class="language-lil">output = cmd@sys "command"
-value = env@sys "VARNAME"
+<pre><code class="language-lil">output = cmd@sys("command")
+value = env@sys("VARNAME")
 </code></pre>
 <p>Assign results to check environment variables or capture command output:</p>
-<pre><code class="language-lil">home = env@sys "HOME"
-print "home directory:", home
+<pre><code class="language-lil">home = env@sys("HOME")
+write("home directory:", home)
 </code></pre>
-<pre><code class="language-lil">result = cmd@sys "ls -la"
-print result
+<pre><code class="language-lil">result = cmd@sys("ls -la")
+write(result)
 </code></pre>
-<pre><code class="language-lil">shell = env@sys "SHELL"
-print "your shell is", shell
+<pre><code class="language-lil">shell = env@sys("SHELL")
+write("your shell is", shell)
 </code></pre>
 <h3 id="debugging"><a class="header" href="#debugging">Debugging</a></h3>
 <pre><code>include sys
-log@sys "debug message"
+log@sys("debug message")
 </code></pre>
 <p><code>log@sys</code> prints to stderr. <code>last_error@sys</code> returns the last error from a failed FFI call. <code>clear_error@sys</code> resets it.</p>
 <h2 id="list-library"><a class="header" href="#list-library">list library</a></h2>
 <pre><code class="language-lil">x = new@list
-push@list x 1
-push@list x 2
-push@list x 3
-val = pop@list x
-print at@list x 0
-print len@list x
+push@list(x, 1)
+push@list(x, 2)
+push@list(x, 3)
+val = pop@list(x)
+write(x[0])
+write(len@list(x))
 </code></pre>
-<p>Create a list, add elements, remove and access them:</p>
+<p>Create a list, add elements, remove and access them. Read elements with bracket syntax <code>x[i]</code>:</p>
 <pre><code class="language-lil">include list
 items = new@list
-push@list items "apple"
-push@list items "banana"
-push@list items "cherry"
-print at@list items 1
+push@list(items, "apple")
+push@list(items, "banana")
+push@list(items, "cherry")
+write(items[1])
 </code></pre>
 <p>Push returns 0, pop returns the removed element. <code>len@list</code> returns the count.</p>
 <h3 id="mapfilterreduce"><a class="header" href="#mapfilterreduce">map/filter/reduce</a></h3>
@@ -843,71 +892,71 @@ print at@list items 1
 #double(x) { x * 2 }
 
 nums = new@list
-push@list nums 1
-push@list nums 2
-push@list nums 3
+push@list(nums, 1)
+push@list(nums, 2)
+push@list(nums, 3)
 
-doubled = map@list nums double
-print doubled
+doubled = map@list(nums, double)
+write(doubled)
 </code></pre>
 <pre><code class="language-lil">#isbig(x) { if x &gt; 5 { 1 } else { 0 } }
 
-filtered = filter@list nums isbig
-print filtered
+filtered = filter@list(nums, isbig)
+write(filtered)
 </code></pre>
 <pre><code class="language-lil">#add(a, b) { a + b }
 
-total = reduce@list nums add 0
-print total
+total = reduce@list(nums, add, 0)
+write(total)
 </code></pre>
 <p><code>map@list</code> returns a new list with the function applied to each element. <code>filter@list</code> keeps elements where the function returns truthy. <code>reduce@list</code> combines all elements with a two-parameter function and an initial value.</p>
 <h2 id="dict-library"><a class="header" href="#dict-library">dict library</a></h2>
 <pre><code class="language-lil">d = new@dict
-set@dict d "name" "alice"
-set@dict d "age" 30
-print get@dict d "name"
-print contains@dict d "age"
-print len@dict d
-print keys@dict d
+set@dict(d, "name", "alice")
+set@dict(d, "age", 30)
+write(get@dict(d, "name"))
+write(contains@dict(d, "age"))
+write(len@dict(d))
+write(keys@dict(d))
 </code></pre>
 <p>Dicts store key-value pairs. <code>get@dict</code> returns the value or 0 if missing.</p>
-<pre><code class="language-lil">remove@dict d "age"
-clear@dict d
+<pre><code class="language-lil">remove@dict(d, "age")
+clear@dict(d)
 </code></pre>
 <h2 id="date-library"><a class="header" href="#date-library">date library</a></h2>
-<pre><code class="language-lil">print minimal@date
-print standart@date
-print standartplus@date
-print full@date
-print full@date noseconds
-print full@date noday
-print fullplus@date
-format@date eu
-format@date us
-print format@date
+<pre><code class="language-lil">write(minimal@date)
+write(standart@date)
+write(standartplus@date)
+write(full@date)
+write(full@date, noseconds)
+write(full@date, noday)
+write(fullplus@date)
+format@date(eu)
+format@date(us)
+write(format@date)
 </code></pre>
 <p>Dates are commonly assigned to variables for later use:</p>
 <pre><code class="language-lil">today = standart@date
-print "date:", today
+write("date:", today)
 </code></pre>
 <pre><code class="language-lil">now = full@date
-print now
+write(now)
 </code></pre>
 <pre><code class="language-lil">short = minimal@date
-print short
+write(short)
 </code></pre>
 <p>Most <code>date</code> functions return the date string. <code>format@date</code> returns the current mode (“EU”/“US”), and setting the format returns empty.</p>
 <h2 id="variable-extraction-get"><a class="header" href="#variable-extraction-get">Variable extraction (get)</a></h2>
 <p>Extract variable values from other <code>.lil</code> files at runtime:</p>
 <pre><code class="language-lil">get "TOKEN" from /path/to/file.lil
-get "TOKEN" from file.lil              # relative path
-get "TOKEN" from /path/to/file         # .lil added automatically
+get "TOKEN" from file.lil              : relative path
+get "TOKEN" from /path/to/file         : .lil added automatically
 </code></pre>
 <p><strong>Selective extraction</strong> with assignment index:</p>
-<pre><code class="language-lil">get "x"(2) from /tmp/data.lil          # 2nd-to-last assignment of x
+<pre><code class="language-lil">get "x"(2) from /tmp/data.lil          : 2nd-to-last assignment of x
 </code></pre>
 <p><strong>Renaming</strong> on import:</p>
-<pre><code class="language-lil">get "TOKEN"="api_key" from auth.lil     # saves as api_key instead of TOKEN
+<pre><code class="language-lil">get "TOKEN"="api_key" from auth.lil     : saves as api_key instead of TOKEN
 </code></pre>
 <p><strong>Multiple variables</strong> in one call:</p>
 <pre><code class="language-lil">get "x", "y", "name" from data.lil
@@ -918,7 +967,7 @@ get "TOKEN" from /path/to/file         # .lil added automatically
 <p>Template strings let you embed variable values inside a string using <code>{varname}</code> with backtick strings. In Python this would be an f-string like <code>f"hello {name}"</code>. In lil it’s <code>`hello {name}`</code>:</p>
 <pre><code class="language-lil">name = "alice"
 age = 30
-print `my name is {name} and i am {age} years old`
+write(`my name is {name} and i am {age} years old`)
 </code></pre>
 <p>This prints <code>my name is alice and i am 30 years old</code>.</p>
 <h2 id="template-vs-concatenation"><a class="header" href="#template-vs-concatenation">Template vs Concatenation</a></h2>
@@ -933,30 +982,30 @@ print `my name is {name} and i am {age} years old`
 <pre><code class="language-lil">username = "bob"
 score = 95
 msg = `player {username} scored {score} points`
-print msg
+write(msg)
 </code></pre>
 <h2 id="mixing-with-library-calls"><a class="header" href="#mixing-with-library-calls">Mixing with library calls</a></h2>
 <pre><code class="language-lil">now = minimal@date
-print `the time is {now}`
+write(`the time is {now}`)
 </code></pre>
-<pre><code class="language-lil">rand = random@math
-print `your lucky number is {rand}`
+<pre><code class="language-lil">rand = random@math()
+write(`your lucky number is {rand}`)
 </code></pre>
 <h2 id="templates-in-conditions"><a class="header" href="#templates-in-conditions">Templates in conditions</a></h2>
-<pre><code class="language-lil">name = read@file "name.txt"
-if len@string name &gt; 0 {
-  print `welcome, {name}`
+<pre><code class="language-lil">name = read@file("name.txt")
+if len@string(name) &gt; 0 {
+  write(`welcome, {name}`)
 }
 </code></pre>
 <h2 id="what-happens-with-undefined-variables"><a class="header" href="#what-happens-with-undefined-variables">What happens with undefined variables</a></h2>
 <p>If you use a variable name that doesn’t exist in a template, it evaluates to 0 (for numbers) or “” (for strings):</p>
-<pre><code class="language-lil">print `value is {undefined_var}`   # prints "value is 0"
+<pre><code class="language-lil">write(`value is {undefined_var}`)   : prints "value is 0"
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="control-flow"><a class="header" href="#control-flow">Control Flow</a></h1>
-<p>This chapter covers all the ways to control what your program does next: if/elif/else conditions, while loops, for loops, and the loop/stop/break/continue keywords.</p>
-<h2 id="ifelifelse-1"><a class="header" href="#ifelifelse-1">If/elif/else</a></h2>
-<p>lil’s if/elif/else works like Python but without colons or parentheses. In Python you write:</p>
+<p>This chapter covers all the ways to control what your program does next: if/orif/else conditions, while loops, for loops, and the loop/break/continue keywords.</p>
+<h2 id="iforifelse-1"><a class="header" href="#iforifelse-1">If/orif/else</a></h2>
+<p>lil’s if/orif/else works like Python but without colons or parentheses. In Python you write:</p>
 <pre><code class="language-python">if x &gt; 5:
     print("big")
 elif x &gt; 0:
@@ -966,39 +1015,50 @@ else:
 </code></pre>
 <p>In lil the same logic looks like:</p>
 <pre><code class="language-lil">if x &gt; 5 {
-  print "big"
-} elif x &gt; 0 {
-  print "small"
+  write("big")
+} orif x &gt; 0 {
+  write("small")
 } else {
-  print "zero or negative"
+  write("zero or negative")
 }
 </code></pre>
-<p>Conditions don’t need parentheses around them. Just write the expression directly after <code>if</code> or <code>elif</code>. The braces are required even for single-line bodies.</p>
+<p>Conditions don’t need parentheses around them. Just write the expression directly after <code>if</code> or <code>orif</code>. The braces are required even for single-line bodies.</p>
+<p><code>elif</code> still works as an alias for <code>orif</code>.</p>
 <p>You can store condition results in variables:</p>
 <pre><code class="language-lil">is_positive = x &gt; 0
 if is_positive {
-  print "x is positive"
+  write("x is positive")
 }
 </code></pre>
 <p>Since conditions return 1 (true) or 0 (false), you can use them in arithmetic:</p>
 <pre><code class="language-lil">count = (x &gt; 10) + (y &gt; 10) + (z &gt; 10)
-print "variables over 10:", count
+write("variables over 10:", count)
 </code></pre>
 <h2 id="loop-types"><a class="header" href="#loop-types">Loop types</a></h2>
 <p>lil has three kinds of loops covered on their own pages:</p>
 <ul>
 <li><a href="#while-loops">While loops</a> - loop while a condition holds</li>
 <li><a href="#for-loops">For loops</a> - iterate over a numeric range</li>
-<li><a href="#loop-stop-and-break">Loop blocks</a> - infinite loop with explicit exit</li>
+<li><a href="#loop-and-break">Loop blocks</a> - infinite loop with explicit exit</li>
 </ul>
-<p>All three support <code>break</code>, <code>stop</code>, and <code>continue</code>.</p>
+<p>All three support <code>break</code> and <code>continue</code>. (<code>stop</code> is a kept alias of <code>break</code>.)</p>
+<h2 id="short-circuit--1"><a class="header" href="#short-circuit--1">Short-circuit &amp;&amp;</a></h2>
+<p><code>&amp;&amp;</code> evaluates the right side only if the left side is truthy:</p>
+<pre><code class="language-lil">while i &lt; 10 &amp;&amp; arr[i] != "" {
+    i = i + 1
+}
+</code></pre>
+<h2 id="statement-separator--1"><a class="header" href="#statement-separator--1">Statement separator ;</a></h2>
+<p>Multiple statements on one line with <code>;</code>:</p>
+<pre><code class="language-lil">a = 5 ; b = 10 ; write(a + b)
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="while-loops"><a class="header" href="#while-loops">While Loops</a></h1>
 <h2 id="basic-while"><a class="header" href="#basic-while">Basic while</a></h2>
 <p>A while loop runs as long as its condition is truthy:</p>
 <pre><code class="language-lil">i = 0
 while i &lt; 5 {
-  print i
+  write(i)
   i = i + 1
 }
 </code></pre>
@@ -1011,7 +1071,7 @@ while i &lt;= 100 {
   total = total + i
   i = i + 1
 }
-print total
+write(total)
 </code></pre>
 <p>This sums 1 + 2 + … + 100 and prints 5050.</p>
 <h2 id="random-loop-condition"><a class="header" href="#random-loop-condition">Random loop condition</a></h2>
@@ -1022,24 +1082,34 @@ while random@math * 100 &gt; 10 {
   count = count + 1
   total = total + random@math * 100
 }
-print "loop ran", count, "times, total=", total
+write("loop ran", count, "times, total=", total)
 </code></pre>
 <p>Each iteration has a 90% chance of continuing.</p>
 <h2 id="infinite-loop-with-break"><a class="header" href="#infinite-loop-with-break">Infinite loop with break</a></h2>
+<p>Use <code>loop</code> for an unconditional infinite loop (prefer this over <code>while 1</code>):</p>
 <pre><code class="language-lil">i = 0
-while 1 {
+loop {
   if i &gt; 5 { break }
-  print i
+  write(i)
   i = i + 1
 }
 </code></pre>
 <p>The <code>break</code> keyword exits the loop immediately. It works in <code>while</code>, <code>for</code>, and <code>loop</code> blocks.</p>
+<h2 id="short-circuit-in-while"><a class="header" href="#short-circuit-in-while">Short-circuit in while</a></h2>
+<p>Use <code>&amp;&amp;</code> to combine conditions safely:</p>
+<pre><code class="language-lil">i = 0
+while i &lt; 10 &amp;&amp; arr[i] != "" {
+  write(arr[i])
+  i = i + 1
+}
+</code></pre>
+<p>The right side is only evaluated if the left side is truthy.</p>
 <h2 id="nested-loops"><a class="header" href="#nested-loops">Nested loops</a></h2>
 <pre><code class="language-lil">i = 1
 while i &lt;= 3 {
   j = 1
   while j &lt;= 3 {
-    print i, j
+    write(i, j)
     j = j + 1
   }
   i = i + 1
@@ -1049,14 +1119,14 @@ while i &lt;= 3 {
 <h1 id="for-loops"><a class="header" href="#for-loops">For Loops</a></h1>
 <p>The <code>for</code> loop iterates over a range of numbers. In Python you’d write <code>for i in range(1, 6):</code>. In lil it’s <code>for i = 1 to 5 {</code>:</p>
 <pre><code class="language-lil">for i = 1 to 5 {
-  print i
+  write(i)
 }
 </code></pre>
-<p>This prints 1 through 5. The loop variable (<code>i</code>) starts at the first value and increments by 1 each iteration until it exceeds the second value.</p>
+<p>This prints 1 through 5. The loop variable (<code>i</code>) starts at the first value and increments by 1 each iteration until it exceeds the second value. The end value is inclusive: <code>for i = 1 to 5</code> iterates 1, 2, 3, 4, 5.</p>
 <p>Python’s <code>range(1, 6)</code> includes 1 but excludes 6. lil’s <code>1 to 5</code> includes both ends.</p>
 <h2 id="using-the-loop-variable-in-calculations"><a class="header" href="#using-the-loop-variable-in-calculations">Using the loop variable in calculations</a></h2>
 <pre><code class="language-lil">for i = 1 to 10 {
-  print i * i
+  write(i * i)
 }
 </code></pre>
 <p>Prints 1, 4, 9, 16, 25, 36, 49, 64, 81, 100. The loop variable is just a regular variable you can use in any expression.</p>
@@ -1065,7 +1135,7 @@ while i &lt;= 3 {
 for i = 1 to 10 {
   squares = squares + i * i
 }
-print squares
+write(squares)
 </code></pre>
 <p>This sums the squares of 1 through 10.</p>
 <h2 id="expressions-for-range-bounds"><a class="header" href="#expressions-for-range-bounds">Expressions for range bounds</a></h2>
@@ -1073,14 +1143,14 @@ print squares
 <pre><code class="language-lil">start = 2
 end = 10
 for i = start to end {
-  print i
+  write(i)
 }
 </code></pre>
 <h2 id="no-counting-down"><a class="header" href="#no-counting-down">No counting down</a></h2>
 <p>lil’s <code>for</code> only counts up. To count down, use a while loop:</p>
 <pre><code class="language-lil">i = 10
 while i &gt;= 1 {
-  print i
+  write(i)
   i = i - 1
 }
 </code></pre>
@@ -1090,43 +1160,44 @@ while i &gt;= 1 {
   for col = 1 to 5 {
     line = line + " " + row * col
   }
-  print line
+  write(line)
 }
 </code></pre>
 <p>Prints a 5x5 multiplication table. Each row builds up a string as the inner loop runs.</p>
 <h2 id="break-in-for-loops"><a class="header" href="#break-in-for-loops">Break in for loops</a></h2>
 <pre><code class="language-lil">for i = 1 to 100 {
   if i &gt; 3 { break }
-  print i
+  write(i)
 }
 </code></pre>
 <p>This prints 1, 2, 3.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="loop-stop-and-break"><a class="header" href="#loop-stop-and-break">Loop, Stop, and Break</a></h1>
+<h1 id="loop-and-break"><a class="header" href="#loop-and-break">Loop and Break</a></h1>
 <h2 id="loop"><a class="header" href="#loop">Loop</a></h2>
-<p><code>loop</code> creates an infinite loop with no condition. Use <code>stop</code> or <code>break</code> to exit:</p>
+<p><code>loop</code> creates an infinite loop with no condition. Use <code>break</code> to exit:</p>
 <pre><code class="language-lil">loop {
-  if condition { stop }
+  if condition { break }
 }
 </code></pre>
 <p>This is equivalent to <code>while 1</code> but reads more naturally for “do until done” patterns.</p>
-<h2 id="stop-vs-break"><a class="header" href="#stop-vs-break">Stop vs Break</a></h2>
-<p><code>stop</code> and <code>break</code> both exit a loop. They work in <code>loop</code>, <code>while</code>, and <code>for</code> blocks. There is no difference between them.</p>
+<h2 id="break"><a class="header" href="#break">Break</a></h2>
+<p><code>break</code> exits a loop. It works in <code>loop</code>, <code>while</code>, and <code>for</code> blocks.</p>
 <pre><code class="language-lil">i = 0
 loop {
-  print i
+  write(i)
   i = i + 1
-  if i &gt; 5 { stop }
+  if i &gt; 5 { break }
 }
 </code></pre>
+<p><code>stop</code> is kept as an alias for backward compatibility, but <code>break</code> is the preferred keyword.</p>
 <h2 id="practical-example-1"><a class="header" href="#practical-example-1">Practical example</a></h2>
-<p>A common pattern: run an event loop that stops when a flag is set:</p>
+<p>A common pattern: run an event loop that breaks when a flag is set:</p>
 <pre><code class="language-lil">running = 1
 loop {
-  input cmd
+  cmd = read()
   if cmd == "quit" { running = 0 }
-  if cmd == "help" { print "commands: quit, help" }
-  if not running { stop }
+  if cmd == "help" { write("commands: quit, help") }
+  if not running { break }
 }
 </code></pre>
 <p>The flag <code>running</code> starts as 1 (true). When the user types “quit”, the flag goes to 0 and the loop exits on the next iteration.</p>
@@ -1134,9 +1205,9 @@ loop {
 <p>Using <code>sleep@math</code> to run something every 2 seconds:</p>
 <pre><code class="language-lil">count = 0
 loop {
-  print "tick", count
+  write("tick", count)
   count = count + 1
-  sleep@math 2
+  sleep@math(2)
   if count &gt;= 5 { break }
 }
 </code></pre>
@@ -1148,16 +1219,16 @@ loop {
 while i &lt; 10 {
   i = i + 1
   if i % 2 == 0 { continue }
-  print i
+  write(i)
 }
 </code></pre>
 <p>This prints odd numbers 1, 3, 5, 7, 9. When <code>i</code> is even, <code>continue</code> jumps back to the condition check, skipping the print.</p>
-<p><code>continue</code> only skips the rest of the current iteration, it does not exit the loop. For that, use <code>break</code> or <code>stop</code>.</p>
+<p><code>continue</code> only skips the rest of the current iteration, it does not exit the loop. For that, use <code>break</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="user-defined-functions-1"><a class="header" href="#user-defined-functions-1">User-defined Functions</a></h1>
 <p>Define a function with <code>#name(params)</code> syntax followed by a block in braces:</p>
 <pre><code class="language-lil">#greet() {
-  print "hello"
+  write("hello")
 }
 
 greet()
@@ -1174,7 +1245,7 @@ greet()
 }
 
 result = add(3, 4)
-print result
+write(result)
 </code></pre>
 <h2 id="practical-examples"><a class="header" href="#practical-examples">Practical Examples</a></h2>
 <p>Convert Fahrenheit to Celsius:</p>
@@ -1183,15 +1254,15 @@ print result
 }
 
 temp = fahr_to_celsius(100)
-print temp
+write(temp)
 </code></pre>
 <p>Roll a die using a library function inside a user function:</p>
 <pre><code class="language-lil">#roll_dice() {
-  randint@math 1 6
+  randint@math(1, 6)
 }
 
 roll = roll_dice()
-print "you rolled", roll
+write("you rolled", roll)
 </code></pre>
 <p>Check if a number is even:</p>
 <pre><code class="language-lil">#is_even(n) {
@@ -1199,7 +1270,7 @@ print "you rolled", roll
 }
 
 x = is_even(10)
-print x
+write(x)
 </code></pre>
 <h2 id="scope"><a class="header" href="#scope">Scope</a></h2>
 <p>Each function call gets its own scope. Parameters and local variables are isolated to that call and don’t leak:</p>
@@ -1213,18 +1284,18 @@ print x
   x
 }
 
-print a(5)    # 15
-print b(5)    # 10
-print a(100)  # 110
+write(a(5))    : 15
+write(b(5))    : 10
+write(a(100))  : 110
 </code></pre>
 <p>Two functions with the same parameter name don’t interfere with each other:</p>
 <pre><code class="language-lil">#a(x) {
-  print x
+  write(x)
 }
 
 #b(x) {
   a(x + 1)
-  print x
+  write(x)
 }
 
 b(100)
@@ -1233,7 +1304,7 @@ b(100)
 <pre><code class="language-lil">#outer() {
   x = 99
   inner()
-  print x
+  write(x)
 }
 
 #inner() {
@@ -1250,18 +1321,18 @@ outer()
 }
 
 set_x(42)
-print x
+write(x)
 </code></pre>
 <h2 id="include"><a class="header" href="#include">Include</a></h2>
 <p>Functions defined in other files can be loaded with <code>include</code>:</p>
 <pre><code class="language-lil">include dice
 
 roll = roll_dice()
-print roll
+write(roll)
 </code></pre>
 <p>This loads and runs <code>dice.lil</code>, making its functions available. For example, <code>dice.lil</code> might contain:</p>
 <pre><code class="language-lil">#roll_dice() {
-  randint@math 1 6
+  randint@math(1, 6)
 }
 </code></pre>
 <p>Then your main script includes it and uses <code>roll_dice</code> like any local function.</p>
@@ -1279,29 +1350,29 @@ print roll
   }
 }
 
-print fib(10)
+write(fib(10))
 </code></pre>
 <p>lil’s functions work in both interpreted and compiled (AOT) mode.</p>
 <h2 id="anonymous-functions-closures"><a class="header" href="#anonymous-functions-closures">Anonymous Functions (Closures)</a></h2>
 <p>Functions without a name can be created inline with <code>#(params) { body }</code>:</p>
 <pre><code class="language-lil">double = #(x) { x * 2 }
-print double(5)
+write(double(5))
 </code></pre>
 <p>The real power is passing them to higher-order library functions:</p>
 <pre><code class="language-lil">include list
 
 nums = new@list
-push@list nums 1
-push@list nums 2
-push@list nums 3
+push@list(nums, 1)
+push@list(nums, 2)
+push@list(nums, 3)
 
-doubled = map@list nums #(x) { x * 2 }
-print doubled
+doubled = map@list(nums, #(x) { x * 2 })
+write(doubled)
 </code></pre>
 <p>Anonymous functions see variables from the scope where they’re defined:</p>
 <pre><code class="language-lil">prefix = "&gt; "
 #add_prefix(s) { prefix + s }
-print add_prefix("hello")
+write(add_prefix("hello"))
 </code></pre>
 <p>The anonymous function creates an internal name, registers in the function table, and returns the name as a string. <code>map@list</code> and <code>filter@list</code> resolve it automatically.</p>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -1315,7 +1386,7 @@ print add_prefix("hello")
 </code></pre>
 <h2 id="calling-a-function"><a class="header" href="#calling-a-function">Calling a Function</a></h2>
 <pre><code class="language-lil">result = add(3, 4)
-print result
+write(result)
 </code></pre>
 <h2 id="practical-predicate-functions"><a class="header" href="#practical-predicate-functions">Practical Predicate Functions</a></h2>
 <p>Functions that return 0 or 1 as boolean results:</p>
@@ -1327,37 +1398,37 @@ print result
   not is_even(n)
 }
 
-print is_even(42)
-print is_odd(42)
+write(is_even(42))
+write(is_odd(42))
 </code></pre>
 <h2 id="using-library-functions-inside-user-functions"><a class="header" href="#using-library-functions-inside-user-functions">Using Library Functions Inside User Functions</a></h2>
 <p>Built-in library functions work inside your user-defined functions:</p>
 <pre><code class="language-lil">#random_in_range(min, max) {
-  randint@math min max
+  randint@math(min, max)
 }
 
 r = random_in_range(5, 10)
-print r
+write(r)
 </code></pre>
 <p>Bare variable names are auto-dereferenced in library calls:</p>
 <pre><code class="language-lil">#rand_name() {
-  choice@math "alice" "bob" "charlie"
+  choice@math("alice", "bob", "charlie")
 }
 
 #greet() {
   name = rand_name()
-  print "hello", name
+  write("hello", name)
 }
 
 greet()
 </code></pre>
 <pre><code class="language-lil">#slugify(s) {
-  lower = lower@string s
-  replace@string lower " " "-"
+  lower = lower@string(s)
+  replace@string(lower, " ", "-")
 }
 
 slug = slugify("Hello World")
-print slug
+write(slug)
 </code></pre>
 <h2 id="return-values"><a class="header" href="#return-values">Return Values</a></h2>
 <p>The last expression in the function body is the return value:</p>
@@ -1365,28 +1436,28 @@ print slug
   x * 2
 }
 
-print double(21)
+write(double(21))
 </code></pre>
 <p>If a function ends with an <code>if</code> expression, the taken branch’s last value is returned:</p>
 <pre><code class="language-lil">#sign(n) {
   if n &gt; 0 {
     1
-  } elif n &lt; 0 {
+  } orif n &lt; 0 {
     -1
   } else {
     0
   }
 }
 
-print sign(-5)
+write(sign(-5))
 </code></pre>
 <p>If there’s no value-producing expression, it returns 0:</p>
 <pre><code class="language-lil">#noop() {
-  print "no return"
+  write("no return")
 }
 
 x = noop()
-print x
+write(x)
 </code></pre>
 <h2 id="variable-saverestore"><a class="header" href="#variable-saverestore">Variable Save/Restore</a></h2>
 <p>When you call a function, lil saves all current variables before running the function body and restores them after. Parameters and any variables changed inside stay contained:</p>
@@ -1394,22 +1465,22 @@ print x
 
 #test() {
   x = "world"
-  print x
+  write(x)
 }
 
 test()
-print x
+write(x)
 </code></pre>
 <p>Parameters are always save/restored independently of global variables:</p>
 <pre><code class="language-lil">x = 100
 
 #f(x) {
   x = x + 1
-  print x
+  write(x)
 }
 
 f(5)
-print x
+write(x)
 </code></pre>
 <h2 id="recursion-1"><a class="header" href="#recursion-1">Recursion</a></h2>
 <pre><code class="language-lil">#fib(n) {
@@ -1420,115 +1491,136 @@ print x
   }
 }
 
-print fib(10)
+write(fib(10))
 </code></pre>
 <h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
 <p>Function calls work in both interpreted and compiled (AOT) mode. In compiled mode, each function becomes a standalone C function with its own type inference pass.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="input-and-output"><a class="header" href="#input-and-output">Input and Output</a></h1>
-<p>lil keeps I/O simpler than Python. No file objects, no context managers, no close() calls. Just print, input, and a few file library functions.</p>
-<h2 id="print"><a class="header" href="#print">Print</a></h2>
-<p>The <code>print</code> statement outputs text:</p>
-<pre><code class="language-lil">print "hello world"
+<p>lil keeps I/O simpler than Python. No file objects, no context managers, no close() calls. Just read, write, and a few file library functions.</p>
+<h2 id="write"><a class="header" href="#write">Write</a></h2>
+<p>The <code>write()</code> function outputs text:</p>
+<pre><code class="language-lil">write("hello world")
 </code></pre>
-<p>Print multiple values separated by commas:</p>
+<p>Write multiple values separated by commas:</p>
 <pre><code class="language-lil">name = "alice"
-print "hello", name
+write("hello", name)
 </code></pre>
 <pre><code class="language-lil">x = 42
-print "the answer is", x
+write("the answer is", x)
 </code></pre>
-<h2 id="input"><a class="header" href="#input">Input</a></h2>
-<p>The <code>input</code> statement reads a line from stdin and stores it in a variable:</p>
-<pre><code class="language-lil">input name
-print "hello", name
+<h2 id="read"><a class="header" href="#read">Read</a></h2>
+<p>The <code>read()</code> function reads a line from stdin and returns it as a string:</p>
+<pre><code class="language-lil">name = read()
+write("hello", name)
 </code></pre>
 <p>Show a prompt string:</p>
-<pre><code class="language-lil">input "enter your name: " name
-print "hello", name
+<pre><code class="language-lil">name = read("enter your name: ")
+write("hello", name)
 </code></pre>
-<p>In Python, you’d write <code>name = input("enter your name: ")</code>. In lil, <code>input</code> is a statement, not a function call. The variable comes after the optional prompt.</p>
-<pre><code class="language-lil">input "type something: " s
-len = len@string s
-print "you typed", len, "characters"
+<p>In Python, you’d write <code>name = input("enter your name: ")</code>. In lil, <code>read()</code> is a function that returns a string.</p>
+<pre><code class="language-lil">s = read("type something: ")
+len = len@string(s)
+write("you typed", len, "characters")
 </code></pre>
 <h2 id="file-io"><a class="header" href="#file-io">File I/O</a></h2>
 <p>lil uses the <code>file</code> library for file operations:</p>
-<pre><code class="language-lil">data = read@file "config.txt"
+<pre><code class="language-lil">data = read@file("config.txt")
 </code></pre>
 <p>In Python that’s <code>with open("config.txt") as f: data = f.read()</code>. lil does it in one call.</p>
-<pre><code class="language-lil">text = read@file "notes.txt"
+<pre><code class="language-lil">text = read@file("notes.txt")
 if text == "" {
-  print "file is empty or missing"
+  write("file is empty or missing")
 }
 </code></pre>
 <p>Writing a file:</p>
-<pre><code class="language-lil">write@file "output.txt" "hello world"
+<pre><code class="language-lil">write@file("output.txt", "hello world")
 </code></pre>
 <p>You can write the result of an expression directly:</p>
 <pre><code class="language-lil">today = standart@date
-write@file "date.txt" today
+write@file("date.txt", today)
 </code></pre>
 <p>Appending to a file:</p>
-<pre><code class="language-lil">append@file "log.txt" "new entry"
+<pre><code class="language-lil">append@file("log.txt", "new entry")
 </code></pre>
 <p>Check if a file exists:</p>
-<pre><code class="language-lil">if exists@file "data.txt" == 1 {
-  data = read@file "data.txt"
-  print data
+<pre><code class="language-lil">if exists@file("data.txt") == 1 {
+  data = read@file("data.txt")
+  write(data)
 }
 </code></pre>
 <p>List directory contents:</p>
-<pre><code class="language-lil">files = list@file "/home/user"
-print files
+<pre><code class="language-lil">files = list@file("/home/user")
+write(files)
 </code></pre>
 <p>See the <a href="#built-in-libraries">Built-in Libraries</a> page for the full file library reference.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="print-1"><a class="header" href="#print-1">Print</a></h1>
-<p>The <code>print</code> statement outputs values to stdout.</p>
-<pre><code class="language-lil">print "hello"
-print 42
-print 3.14
+<h1 id="write-output"><a class="header" href="#write-output">Write (Output)</a></h1>
+<p>The <code>write()</code> function outputs values to stdout.</p>
+<pre><code class="language-lil">write("hello")
+write(42)
+write(3.14)
 </code></pre>
-<p>Multiple values separated by commas are printed with spaces between them:</p>
-<pre><code class="language-lil">print "the answer is", 42
+<p>Multiple arguments are printed with spaces between them, followed by a newline:</p>
+<pre><code class="language-lil">write("the answer is", 42)
 </code></pre>
-<p>Print with no arguments is a syntax error. To print a blank line, print an empty string:</p>
-<pre><code class="language-lil">print ""
+<p>Write with no arguments prints a blank line:</p>
+<pre><code class="language-lil">write("")
 </code></pre>
-<p>Print the result of a library function directly:</p>
-<pre><code class="language-lil">print full@date
+<p>Write the result of a library function directly:</p>
+<pre><code class="language-lil">write(full@date)
 </code></pre>
-<p>Print multiple results from different functions in one line:</p>
-<pre><code class="language-lil">print minimal@date, random@math
+<p>Write multiple results from different functions in one line:</p>
+<pre><code class="language-lil">write(minimal@date, random@math)
 </code></pre>
-<p>Print values alongside variables:</p>
+<p>Write values alongside variables:</p>
 <pre><code class="language-lil">name = "bob"
 score = 95
-print "player", name, "scored", score
+write("player", name, "scored", score)
 </code></pre>
+<h2 id="statement-separator"><a class="header" href="#statement-separator">Statement separator</a></h2>
+<p>Multiple statements can go on one line with <code>;</code>:</p>
+<pre><code class="language-lil">write("a") ; write("b")
+</code></pre>
+<h2 id="comments-1"><a class="header" href="#comments-1">Comments</a></h2>
+<p><code>:</code> starts a single-line comment. <code>::</code> starts a block comment that ends with <code>::</code>:</p>
+<pre><code class="language-lil">: this is a comment
+write("hello")
+
+:: this is a
+block comment ::
+write("world")
+</code></pre>
+<p><code>//</code> is integer division, not a comment: <code>10 // 3 = 3</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="input-1"><a class="header" href="#input-1">Input</a></h1>
-<p>The <code>input</code> statement reads a line from stdin and stores it in a variable as a string.</p>
-<pre><code class="language-lil">input name
-print "hello", name
+<h1 id="read-input"><a class="header" href="#read-input">Read (Input)</a></h1>
+<p>The <code>read()</code> function reads a line from stdin and returns it as a string.</p>
+<pre><code class="language-lil">name = read()
+write("hello", name)
 </code></pre>
 <p>You can provide a prompt string:</p>
-<pre><code class="language-lil">input "what is your name? " name
-print "nice to meet you,", name
+<pre><code class="language-lil">name = read("what is your name? ")
+write("nice to meet you,", name)
 </code></pre>
-<p>If the user does not enter anything (EOF), the variable is set to an empty string:</p>
-<pre><code class="language-lil">input "press enter to continue" x
-print "ok, continuing"
+<p>If the user does not enter anything (EOF), the result is an empty string:</p>
+<pre><code class="language-lil">x = read("press enter to continue")
+write("ok, continuing")
 </code></pre>
 <p>Force input as a number and do a calculation:</p>
-<pre><code class="language-lil">force int input "age: " age
-print "next year youll be", age + 1
+<pre><code class="language-lil">age = read("age: ")
+intify age
+write("next year youll be", age + 1)
 </code></pre>
 <p>Read a number input and use it in an expression directly after:</p>
-<pre><code class="language-lil">force int input "enter a number: " n
+<pre><code class="language-lil">n = read("enter a number: ")
+intify n
 result = n * 2
-print "doubled:", result
+write("doubled:", result)
+</code></pre>
+<h2 id="legacy-syntax"><a class="header" href="#legacy-syntax">Legacy syntax</a></h2>
+<p>The old <code>input</code> statement still works but <code>read()</code> is preferred:</p>
+<pre><code class="language-lil">input name
+input "what is your name? " name
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h1>
@@ -1537,7 +1629,7 @@ print "doubled:", result
 <pre><code class="language-lil">try {
   risky_stuff()
 } catch {
-  print "something went wrong"
+  write("something went wrong")
 }
 </code></pre>
 <p>If the code inside <code>try</code> triggers an error, execution jumps to <code>catch</code> immediately.</p>
@@ -1545,11 +1637,11 @@ print "doubled:", result
 <p>Reading a file that might not exist:</p>
 <pre><code class="language-lil">data = ""
 try {
-  data = read@file "maybe.tmp"
+  data = read@file("maybe.tmp")
 } catch {
-  print "could not read file"
+  write("could not read file")
 }
-print data
+write(data)
 </code></pre>
 <h2 id="what-gets-caught"><a class="header" href="#what-gets-caught">What gets caught</a></h2>
 <p>Runtime errors, type errors, out-of-bounds access, division by zero, and undefined function calls are all caught. Parse errors happen before the code runs and can’t be caught.</p>
@@ -1560,6 +1652,7 @@ print data
 <h2 id="modifiers-1"><a class="header" href="#modifiers-1">Modifiers</a></h2>
 <ul>
 <li><a href="#undefined-default">Undefined Default</a>  -  change what undefined variables return</li>
+<li><a href="#live-bindings">Live Bindings</a>  -  link one variable to another with <code>live x = y</code></li>
 </ul>
 <h2 id="get-statement"><a class="header" href="#get-statement">Get Statement</a></h2>
 <p>The <code>get</code> statement extracts variable values from an external file without leaking its variables into your scope:</p>
@@ -1567,8 +1660,8 @@ print data
 </code></pre>
 <p>This runs <code>data.lil</code> in a sandbox, snapshots the values of <code>x</code> and <code>y</code>, then copies them into your script. The file’s own variables are discarded.</p>
 <p><strong>Indexed access</strong>: retrieve historical (previous) assignment values:</p>
-<pre><code class="language-lil">get "x"(1) from data.lil    # 1st previous value of x
-get "x"(2) from data.lil    # 2nd previous value
+<pre><code class="language-lil">get "x"(1) from data.lil    : 1st previous value of x
+get "x"(2) from data.lil    : 2nd previous value
 </code></pre>
 <p>Index 0 (or no index) returns the current value. Uses the assignment history tracking in the VM.</p>
 <p><strong>Rename on import</strong>: map the file’s variable to a different name:</p>
@@ -1582,14 +1675,36 @@ get "x"(2) from data.lil    # 2nd previous value
 <p>Only <code>roll_dice</code> and <code>flip_coin</code> from <code>dice.lil</code> are registered. Other functions defined in the file are discarded. This is useful for utility files that define many helpers but you only need a few.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="undefined-default"><a class="header" href="#undefined-default">Undefined Default</a></h1>
-<p>By default, reading an undefined variable returns <code>0</code>. Use <code>?undef = value</code> to change this:</p>
-<pre><code class="language-lil">?undef = "hello"
-print x       # prints "hello"
+<p>By default, reading an undefined variable returns <code>0</code>. Use <code>?default = value</code> to change this:</p>
+<pre><code class="language-lil">?default = "hello"
+write(x)       : prints "hello"
 
-?undef = 99
-print y       # prints 99
+?default = 99
+write(y)       : prints 99
 </code></pre>
-<p>The name after <code>?</code> is descriptive and ignored. Only one global default exists. Once set, every undefined variable will return that value until you change it again.</p>
+<p>The name after <code>?</code> is descriptive only and is ignored by the runtime. Only one global default exists. Once set, every undefined variable will return that value until you change it again.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="live-bindings"><a class="header" href="#live-bindings">Live Bindings</a></h1>
+<p>A <code>live</code> binding links one variable to another so that reads of the bound variable always reflect the current value of its source.</p>
+<h2 id="syntax"><a class="header" href="#syntax">Syntax</a></h2>
+<pre><code class="language-lil">y = 1
+live x = y
+y = 42
+write(x)
+</code></pre>
+<p>This prints <code>42</code>. After <code>live x = y</code>, every read of <code>x</code> follows the link back to <code>y</code> and returns whatever <code>y</code> currently holds. You do not need to reassign <code>x</code> when <code>y</code> changes.</p>
+<h2 id="what-gets-bound"><a class="header" href="#what-gets-bound">What gets bound</a></h2>
+<p><code>live</code> records the source variable by name. Reads dereference that name at lookup time, so later assignments to the source propagate automatically:</p>
+<pre><code class="language-lil">a = 10
+live b = a
+a = 20
+write(b)
+</code></pre>
+<p>Prints <code>20</code>.</p>
+<h2 id="reassigning-the-bound-variable"><a class="header" href="#reassigning-the-bound-variable">Reassigning the bound variable</a></h2>
+<p>Assigning directly to <code>x</code> overwrites the binding with the new value and clears the live link. <code>live x = y</code> followed by <code>x = 5</code> leaves <code>x</code> holding <code>5</code> as an ordinary variable, no longer tracking <code>y</code>.</p>
+<h2 id="when-to-use-it"><a class="header" href="#when-to-use-it">When to use it</a></h2>
+<p>Live bindings are useful for aliases that should track a changing source: a display variable that mirrors a counter, a cached view of a value that must stay in sync. For a one-time copy, use plain assignment (<code>x = y</code>).</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="lists"><a class="header" href="#lists">Lists</a></h1>
 <p>Lists are ordered collections of values. They are created with square bracket syntax and support index access.</p>
@@ -1601,29 +1716,29 @@ empty = []
 <h2 id="index-access"><a class="header" href="#index-access">Index Access</a></h2>
 <p>Access elements by position (0-indexed):</p>
 <pre><code>x = [10, 20, 30]
-print x[0]
-print x[1]
+write(x[0])
+write(x[1])
 x[2] = 99
 </code></pre>
 <p>String indexing works the same way. <code>s[i]</code> returns a single-character string, and <code>s[i] = "x"</code> replaces a character:</p>
 <pre><code>s = "hello"
-print s[0]          # "h"
+write(s[0])          : "h"
 s[0] = "j"
-print s             # "jello"
+write(s)             : "jello"
 </code></pre>
 <p>Out-of-range access errors at runtime.</p>
 <h2 id="destructuring"><a class="header" href="#destructuring">Destructuring</a></h2>
 <p>Pull multiple fields from a dict or struct in one line with <code>{field1, field2} = expr</code>:</p>
 <pre><code class="language-lil">node = {"type": "num", "value": 42}
 {type, value} = node
-print type
-print value
+write(type)
+write(value)
 </code></pre>
 <p>Works with structs too (structs are dicts underneath):</p>
 <pre><code class="language-lil">struct Point { x, y }
 p = Point(10, 20)
 {x, y} = p
-print x, y
+write(x, y)
 </code></pre>
 <p>This is shorthand for <code>type = node["type"]; value = node["value"]</code>. Field names become variable names.</p>
 <h2 id="list-library-1"><a class="header" href="#list-library-1">List Library</a></h2>
@@ -1631,24 +1746,24 @@ print x, y
 <pre><code>include list
 
 x = new@list
-push@list x 1
-push@list x 2
-push@list x 3
-print len@list x
-print at@list x 1
-val = pop@list x
+push@list(x, 1)
+push@list(x, 2)
+push@list(x, 3)
+write(len@list(x))
+write(x[1])
+val = pop@list(x)
 </code></pre>
 <h3 id="functions-1"><a class="header" href="#functions-1">Functions</a></h3>
 <ul>
 <li><code>new@list</code>  -  create empty list</li>
-<li><code>push@list list val</code>  -  append value to end</li>
-<li><code>pop@list list</code>  -  remove and return last element</li>
-<li><code>at@list list index</code>  -  retrieve element without modifying</li>
-<li><code>len@list list</code>  -  number of elements</li>
-<li><code>map@list list fn</code>  -  apply function to each element, returns new list</li>
-<li><code>filter@list list fn</code>  -  keep elements where function returns truthy</li>
-<li><code>reduce@list list fn init</code>  -  reduce list to single value</li>
+<li><code>push@list(list, val)</code>  -  append value to end</li>
+<li><code>pop@list(list)</code>  -  remove and return last element</li>
+<li><code>len@list(list)</code>  -  number of elements</li>
+<li><code>map@list(list, fn)</code>  -  apply function to each element, returns new list</li>
+<li><code>filter@list(list, fn)</code>  -  keep elements where function returns truthy</li>
+<li><code>reduce@list(list, fn, init)</code>  -  reduce list to single value</li>
 </ul>
+<p>Read individual elements with bracket syntax: <code>x[i]</code> returns the value at position <code>i</code> (0-indexed).</p>
 <h2 id="mapfilterreduce-1"><a class="header" href="#mapfilterreduce-1">map/filter/reduce</a></h2>
 <p>These higher-order functions take a user-defined function and apply it to each element:</p>
 <pre><code class="language-lil">include list
@@ -1658,28 +1773,28 @@ val = pop@list x
 }
 
 nums = new@list
-push@list nums 1
-push@list nums 2
-push@list nums 3
+push@list(nums, 1)
+push@list(nums, 2)
+push@list(nums, 3)
 
-doubled = map@list nums double
-print doubled
+doubled = map@list(nums, double)
+write(doubled)
 </code></pre>
 <p><code>filter</code> keeps elements where the function returns truthy:</p>
 <pre><code class="language-lil">#isbig(x) {
     if x &gt; 5 { 1 } else { 0 }
 }
 
-filtered = filter@list nums isbig
-print filtered
+filtered = filter@list(nums, isbig)
+write(filtered)
 </code></pre>
 <p><code>reduce</code> combines all elements using a two-parameter function and an initial value:</p>
 <pre><code class="language-lil">#add(a, b) {
     a + b
 }
 
-total = reduce@list nums add 0
-print total
+total = reduce@list(nums, add, 0)
+write(total)
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="advanced-features"><a class="header" href="#advanced-features">Advanced Features</a></h1>
@@ -1734,7 +1849,7 @@ print total
 }
 
 result = fib(35)
-print "fib(35) = " result
+write("fib(35) = ", result)
 </code></pre>
 <p>Compile and run:</p>
 <pre><code class="language-bash">lil -c fib.lil -o fib
@@ -1744,7 +1859,7 @@ print "fib(35) = " result
 <h2 id="standalone-binary"><a class="header" href="#standalone-binary">Standalone Binary</a></h2>
 <p>The compiled binary is self-contained. Copy it to another machine (same architecture) and it runs without lil installed:</p>
 <pre><code class="language-bash">scp fib user@other-machine:~
-ssh user@other-machine ./fib    # works without lil
+ssh user@other-machine ./fib    : works without lil
 </code></pre>
 <h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
 <p>Compiled mode is significantly faster than interpreted mode, especially for numeric code. The type inference pass eliminates the overhead of dynamic type checks for variables that are proven to always hold numbers.</p>
@@ -1771,22 +1886,26 @@ time ./fib
 <p>Simple operations, arithmetic, control flow, user-defined functions, and variable assignments all compile fine:</p>
 <pre><code class="language-lil">x = 42
 y = x + 1
-print y
+write(y)
 </code></pre>
 <p>This WILL compile and run correctly.</p>
 <p>Library calls like <code>full@date</code> will NOT compile. The compiler generates a stub that returns a default value (0 for numbers, empty string for strings):</p>
-<pre><code class="language-lil">print full@date          # compiles but prints nothing useful
-print cmd@sys "ls"       # returns 0 in compiled mode
-print "hello"             # this compiles and works fine
+<pre><code class="language-lil">write(full@date)          : compiles but prints nothing useful
+write(cmd@sys("ls"))      : returns 0 in compiled mode
+write("hello")             : this compiles and works fine
 </code></pre>
 <h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
 <p>The following features are not available in compiled mode:</p>
 <ul>
 <li>The <code>has</code> operator in conditions</li>
 <li>Templates (template strings)</li>
-<li>Library function calls (<code>func@lib args</code>)</li>
+<li>Library function calls (<code>func(args)@lib</code>)</li>
 </ul>
 <p>If your script uses any of these features, compilation will fail and lil will tell you which construct could not be compiled.</p>
+<h2 id="short-circuit--and--in-compiled-mode"><a class="header" href="#short-circuit--and--in-compiled-mode">Short-circuit &amp;&amp; and ; in compiled mode</a></h2>
+<p><code>&amp;&amp;</code> and <code>;</code> work in compiled mode but fall back to the interpreter for execution. They work correctly but don’t get the full AOT optimization.</p>
+<h2 id="modifiers-in-aot"><a class="header" href="#modifiers-in-aot">Modifiers in AOT</a></h2>
+<p><code>force</code> and <code>unforce</code> still parse and run in compiled mode, but the locking concept does not apply. Variables in the generated C are statically typed, so <code>force x = 42</code> simply becomes <code>double x = 42;</code> (or the inferred type) with no lock attached. A later <code>x = 30</code> in the same compiled script will not be rejected the way it would in the interpreter. <code>unforce x</code> compiles to a no-op.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="c-extensions"><a class="header" href="#c-extensions">C Extensions</a></h1>
 <p>lil provides two operators that give you direct access to memory. These only work when compiling with <code>lil -c</code>. Running them with the interpreter produces an error.</p>
@@ -1795,33 +1914,33 @@ print "hello"             # this compiles and works fine
 <p>The <code>@</code> operator returns the memory address of a variable as a number:</p>
 <pre><code class="language-lil">x = 42
 addr = @x
-print addr
+write(addr)
 </code></pre>
 <p>The address will be different every time you run the program (ASLR). One run might print <code>140732789041152</code>, the next <code>140732789041184</code>.</p>
 <p>You can also get addresses of string variables:</p>
 <pre><code class="language-lil">msg = "hello"
 msg_addr = @msg
-print msg_addr
+write(msg_addr)
 </code></pre>
 <h2 id="dereference-"><a class="header" href="#dereference-">Dereference (^)</a></h2>
 <p>The <code>^</code> operator reads a value from a memory address:</p>
 <pre><code class="language-lil">x = 42
 addr = @x
 value = ^addr
-print value    # prints 42
+write(value)    : prints 42
 </code></pre>
 <p>This round-trips through a pointer: write a value, take its address, then dereference it back.</p>
 <h2 id="practical-example-3"><a class="header" href="#practical-example-3">Practical Example</a></h2>
 <pre><code class="language-lil">x = 42
 x_addr = @x
 x_val = ^x_addr
-print "address: " x_addr
-print "value: " x_val
+write("address: ", x_addr)
+write("value: ", x_val)
 </code></pre>
 <p>Each run will show a different address but always the same value.</p>
 <h2 id="safety-warning"><a class="header" href="#safety-warning">Safety Warning</a></h2>
 <p>Dereferencing an invalid address will crash your program with a segfault, just like Python’s <code>ctypes.string_at(bad_address)</code>:</p>
-<pre><code class="language-lil">value = ^9999999    # almost certainly a segfault
+<pre><code class="language-lil">value = ^9999999    : almost certainly a segfault
 </code></pre>
 <p>These operators are useful for low-level programming and interfacing with hardware at specific memory addresses (MMIO). Use them carefully.</p>
 <p>In the interpreter (<code>lil file.lil</code>), both operators produce an error.</p>
@@ -1832,47 +1951,53 @@ print "value: " x_val
 <h2 id="building-with-gtk"><a class="header" href="#building-with-gtk">Building with GTK</a></h2>
 <p>The default <code>make</code> builds lil without GTK support. Use <code>make gtk</code> to include it:</p>
 <pre><code class="language-sh">make gtk
-make install-gtk    # install the gtk-enabled binary to PATH
+make install-gtk    : install the gtk-enabled binary to PATH
 </code></pre>
 <p>This requires <code>libgtk-3-dev</code> (or your distro’s GTK+3 development package).</p>
+<h2 id="important-string-literals-required"><a class="header" href="#important-string-literals-required">Important: String Literals Required</a></h2>
+<p>All GTK function arguments (widget names, property names, signal names, variable names) <strong>must be quoted strings</strong>. Bare identifiers are evaluated as variables, which will cause errors.</p>
+<pre><code class="language-lil">window@gtk("win", "hello", 400, 300)    : correct
+window@gtk(win, "hello", 400, 300)      : WRONG - win evaluated as variable
+</code></pre>
 <h2 id="widgets"><a class="header" href="#widgets">Widgets</a></h2>
 <p>Create widgets with <code>func@gtk</code> commands. Every widget gets a string name you choose:</p>
-<pre><code class="language-lil">window@gtk "main" "hello" 400 300    # name, title, width, height
-vbox@gtk "box" 10                     # vertical box with 10px spacing
-hbox@gtk "row" 5                      # horizontal box with 5px spacing
-button@gtk "btn" "click me"           # button with label
-label@gtk "lbl" "hello world"         # static text label
-entry@gtk "input" "type here..."      # text entry with placeholder
+<pre><code class="language-lil">window@gtk("main", "hello", 400, 300)    : name, title, width, height
+vbox@gtk("box", 10)                     : vertical box with 10px spacing
+hbox@gtk("row", 5)                      : horizontal box with 5px spacing
+button@gtk("btn", "click me")           : button with label
+label@gtk("lbl", "hello world")         : static text label
+entry@gtk("input", "type here...")      : text entry with placeholder
 </code></pre>
 <p>Widgets are referred to by string names, not objects.</p>
 <h2 id="layout"><a class="header" href="#layout">Layout</a></h2>
 <p>Build a hierarchy by adding children to containers:</p>
-<pre><code class="language-lil">add@gtk "box" "btn" "lbl" "input"    # add multiple children at once
-show@gtk "box"                        # show the container and all children
+<pre><code class="language-lil">add@gtk("box", "btn", "lbl", "input")    : add multiple children at once
+show@gtk("box")                        : show the container and all children
 </code></pre>
 <h2 id="properties"><a class="header" href="#properties">Properties</a></h2>
 <p>Set and get widget properties at runtime:</p>
-<pre><code class="language-lil">set@gtk "lbl" "label" "new text"      # change button/label text
-set@gtk "input" "text" "hello"        # change entry text
-set@gtk "main" "title" "my app"       # change window title
-set@gtk "btn" "sensitive" "false"     # disable a widget
+<pre><code class="language-lil">set@gtk("lbl", "label", "new text")      : change button/label text
+set@gtk("input", "text", "hello")        : change entry text
+set@gtk("main", "title", "my app")       : change window title
+set@gtk("btn", "sensitive", "false")     : disable a widget
 </code></pre>
 <p>Get current property values:</p>
-<pre><code class="language-lil">current = get@gtk "lbl" "label"
-print current
+<pre><code class="language-lil">current = get@gtk("lbl", "label")
+write(current)
 </code></pre>
 <p>Available properties: <code>label</code>, <code>text</code>, <code>title</code>, <code>placeholder</code>, <code>sensitive</code>, <code>visible</code>, <code>width</code>, <code>height</code>.</p>
 <h2 id="events-no-callbacks"><a class="header" href="#events-no-callbacks">Events (no callbacks)</a></h2>
-<p>Instead of callback functions, GTK signals set lil variables. You poll them in a loop:</p>
-<pre><code class="language-lil">on@gtk "btn" "clicked" ev
-on@gtk "main" "destroy" closed
-show@gtk "main"
+<p>Instead of callback functions, GTK signals set lil variables. You poll them in a loop.</p>
+<p><strong>Critical</strong>: The third argument to <code>on@gtk</code> must be a <strong>quoted string</strong> containing the variable name. Bare identifiers are evaluated as variables (their value is used, not their name).</p>
+<pre><code class="language-lil">on@gtk("btn", "clicked", "ev")
+on@gtk("main", "destroy", "closed")
+show@gtk("main")
 
 loop {
-  wait@gtk          # blocks until any registered signal fires
-  if closed == 1 { stop }
+  wait@gtk          : blocks until any registered signal fires
+  if closed == 1 { break }
   if ev == 1 {
-    set@gtk "btn" "label" "clicked!"
+    set@gtk("btn", "label", "clicked!")
     ev = 0
   }
 }
@@ -1880,28 +2005,28 @@ loop {
 <p><code>wait@gtk</code> blocks until a signal fires. Then you check which variable was set and handle it. Set the variable back to 0 after handling it.</p>
 <h3 id="timeout-events"><a class="header" href="#timeout-events">Timeout events</a></h3>
 <p>Fire a signal after a delay:</p>
-<pre><code class="language-lil">timeout@gtk 1000 tick t    # fire 'tick' after 1000ms, sets t
+<pre><code class="language-lil">timeout@gtk(1000, "tick", "t")    : fire 'tick' after 1000ms, sets t
 </code></pre>
 <h2 id="complete-example"><a class="header" href="#complete-example">Complete Example</a></h2>
 <p>A window with a button that counts clicks:</p>
 <pre><code class="language-lil">include gtk
 
-window@gtk win "Counter" 300 200
-vbox@gtk box 10
-button@gtk btn "clicks: 0"
-add@gtk box btn
-add@gtk win box
-on@gtk btn clicked ev
-on@gtk win destroy closed
-show@gtk win
+window@gtk("win", "Counter", 300, 200)
+vbox@gtk("box", 10)
+button@gtk("btn", "clicks: 0")
+add@gtk("box", "btn")
+add@gtk("win", "box")
+on@gtk("btn", "clicked", "ev")
+on@gtk("win", "destroy", "closed")
+show@gtk("win")
 
 count = 0
 loop {
   wait@gtk
-  if closed == 1 { stop }
+  if closed == 1 { break }
   if ev == 1 {
     count = count + 1
-    set@gtk btn label "clicks: {count}"
+    set@gtk("btn", "label", "clicks: {count}")
     ev = 0
   }
 }
@@ -1913,38 +2038,38 @@ loop {
 <tr><th>Function</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>window@gtk name title w h</code></td><td>Create window</td></tr>
-<tr><td><code>vbox@gtk name spacing</code></td><td>Vertical box</td></tr>
-<tr><td><code>hbox@gtk name spacing</code></td><td>Horizontal box</td></tr>
-<tr><td><code>button@gtk name label</code></td><td>Button</td></tr>
-<tr><td><code>label@gtk name text</code></td><td>Label</td></tr>
-<tr><td><code>entry@gtk name [placeholder]</code></td><td>Text entry</td></tr>
-<tr><td><code>add@gtk parent child ...</code></td><td>Add children to container</td></tr>
-<tr><td><code>set@gtk widget prop val</code></td><td>Set property</td></tr>
-<tr><td><code>get@gtk widget prop</code></td><td>Get property (returns string)</td></tr>
-<tr><td><code>on@gtk widget signal var</code></td><td>Register event, sets var on trigger</td></tr>
+<tr><td><code>window@gtk(name, title, w, h)</code></td><td>Create window</td></tr>
+<tr><td><code>vbox@gtk(name, spacing)</code></td><td>Vertical box</td></tr>
+<tr><td><code>hbox@gtk(name, spacing)</code></td><td>Horizontal box</td></tr>
+<tr><td><code>button@gtk(name, label)</code></td><td>Button</td></tr>
+<tr><td><code>label@gtk(name, text)</code></td><td>Label</td></tr>
+<tr><td><code>entry@gtk(name, [placeholder])</code></td><td>Text entry</td></tr>
+<tr><td><code>add@gtk(parent, child, ...)</code></td><td>Add children to container</td></tr>
+<tr><td><code>set@gtk(widget, prop, val)</code></td><td>Set property</td></tr>
+<tr><td><code>get@gtk(widget, prop)</code></td><td>Get property (returns string)</td></tr>
+<tr><td><code>on@gtk(widget, signal, var)</code></td><td>Register event, sets var on trigger</td></tr>
 <tr><td><code>wait@gtk</code></td><td>Block until next signal</td></tr>
 <tr><td><code>run@gtk</code></td><td>Non-blocking signal check</td></tr>
-<tr><td><code>timeout@gtk ms signal var</code></td><td>Fire signal after delay</td></tr>
-<tr><td><code>show@gtk name</code></td><td>Show widget</td></tr>
+<tr><td><code>timeout@gtk(ms, signal, var)</code></td><td>Fire signal after delay</td></tr>
+<tr><td><code>show@gtk(name)</code></td><td>Show widget</td></tr>
 <tr><td><code>quit@gtk</code></td><td>Quit GTK main loop</td></tr>
-<tr><td><code>destroy@gtk name</code></td><td>Destroy widget</td></tr>
+<tr><td><code>destroy@gtk(name)</code></td><td>Destroy widget</td></tr>
 </tbody>
 </table>
 </div>
-<p>Signals: <code>clicked</code>, <code>changed</code>, <code>activate</code>, <code>enter-notify-event</code>, <code>leave-notify-event</code>, <code>focus-in-event</code>, <code>focus-out-event</code>, <code>destroy</code></p>
+<p>All arguments must be quoted strings. Signals: <code>clicked</code>, <code>changed</code>, <code>activate</code>, <code>enter-notify-event</code>, <code>leave-notify-event</code>, <code>focus-in-event</code>, <code>focus-out-event</code>, <code>destroy</code></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="dynamic-eval"><a class="header" href="#dynamic-eval">Dynamic Eval</a></h1>
 <p><code>eval@sys</code> lets you execute lil code from a string at runtime:</p>
 <pre><code class="language-lil">include sys
 
-eval@sys "x = 42"
-print x
+eval@sys("x = 42")
+write(x)
 </code></pre>
 <p>You can capture the return value:</p>
 <pre><code class="language-lil">include sys
-result = eval@sys "1 + 2"
-print result
+result = eval@sys("1 + 2")
+write(result)
 </code></pre>
 <p>Eval uses the same parser and interpreter as normal execution. Variables set inside eval are visible to the caller afterwards.</p>
 <p>Errors during eval are caught silently and return 0.</p>
@@ -1965,15 +2090,15 @@ print result
 <p>Functions that fail silently set a last error message:</p>
 <pre><code>include file
 include sys
-x = read@file "/nonexistent"
-print last_error@sys
+x = read@file("/nonexistent")
+write(last_error@sys)
 clear_error@sys
-print last_error@sys
+write(last_error@sys)
 </code></pre>
 <ul>
 <li><code>last_error@sys</code>  -  returns last error string (empty if none)</li>
 <li><code>clear_error@sys</code>  -  resets error state</li>
-<li><code>log@sys "msg"</code>  -  prints to stderr for debugging</li>
+<li><code>log@sys("msg")</code>  -  prints to stderr for debugging</li>
 </ul>
 
                     </main>

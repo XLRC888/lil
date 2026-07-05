@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -178,31 +178,31 @@
 <h2 id="basic-if"><a class="header" href="#basic-if">Basic if</a></h2>
 <pre><code class="language-lil">x = 10
 if x &gt; 5 {
-  print "big"
+  write("big")
 }
 </code></pre>
 <h2 id="ifelse"><a class="header" href="#ifelse">If/else</a></h2>
 <pre><code class="language-lil">x = 2
 if x &gt; 5 {
-  print "big"
+  write("big")
 } else {
-  print "small"
+  write("small")
 }
 </code></pre>
-<h2 id="ifelifelse"><a class="header" href="#ifelifelse">If/elif/else</a></h2>
+<h2 id="iforifelse"><a class="header" href="#iforifelse">If/orif/else</a></h2>
 <pre><code class="language-lil">x = 5
 if x &gt; 10 {
-  print "big"
-} elif x &gt; 3 {
-  print "medium"
+  write("big")
+} orif x &gt; 3 {
+  write("medium")
 } else {
-  print "small"
+  write("small")
 }
 </code></pre>
-<p>You can chain as many <code>elif</code> blocks as you need.</p>
+<p>You can chain as many <code>orif</code> blocks as you need. <code>elif</code> still works as an alias.</p>
 <h2 id="inline-conditions"><a class="header" href="#inline-conditions">Inline conditions</a></h2>
 <p>You can put small blocks on one line:</p>
-<pre><code class="language-lil">if x &gt; 5 { print "big" } else { print "small" }
+<pre><code class="language-lil">if x &gt; 5 { write("big") } else { write("small") }
 </code></pre>
 
                     </main>

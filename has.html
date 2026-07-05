@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -178,33 +178,33 @@
 <p>The <code>has</code> operator checks if a variable exists or if a string contains a substring. It can only be used inside <code>if</code> conditions.</p>
 <h2 id="variable-existence"><a class="header" href="#variable-existence">Variable existence</a></h2>
 <pre><code class="language-lil">if has x {
-  print "x exists"
+  write("x exists")
 }
 </code></pre>
 <p>This checks whether the variable <code>x</code> has been assigned. If the variable was never assigned, this is false.</p>
 <p>A practical use: check if data was read successfully:</p>
-<pre><code class="language-lil">data = read@file "data.txt"
+<pre><code class="language-lil">data = read@file("data.txt")
 if has data {
-  print "read succeeded"
+  write("read succeeded")
 }
 </code></pre>
 <p><code>read@file</code> returns empty string if the file doesn’t exist. <code>has data</code> tells you if data is non-empty.</p>
 <h2 id="substring-search"><a class="header" href="#substring-search">Substring search</a></h2>
 <pre><code class="language-lil">text = "hello world"
 if text has "world" {
-  print "found"
+  write("found")
 }
 </code></pre>
 <p>Check if a URL contains a protocol:</p>
 <pre><code class="language-lil">url = "https://example.com"
 if url has "https" {
-  print "secure connection"
+  write("secure connection")
 }
 </code></pre>
 <h2 id="multiple-has-conditions-combined"><a class="header" href="#multiple-has-conditions-combined">Multiple has conditions combined</a></h2>
 <p>You can chain <code>not</code> with <code>has</code>:</p>
 <pre><code class="language-lil">if has result and result has "error" {
-  print "got an error response"
+  write("got an error response")
 }
 </code></pre>
 <p>If <code>result</code> was never set, the first <code>has</code> is false and the substring check is never evaluated. This is a safe way to check both existence and content.</p>
@@ -222,27 +222,27 @@ if url has "https" {
 </table>
 </div>
 <pre><code class="language-lil">if text has nocase "WORLD" {
-  print "found case insensitive"
+  write("found case insensitive")
 }
 
 if text has word "world" {
-  print "found as whole word"
+  write("found as whole word")
 }
 </code></pre>
 <p>You can combine flags:</p>
 <pre><code class="language-lil">if text has nocase anywhere "WORLD" {
-  print "found"
+  write("found")
 }
 </code></pre>
 <h2 id="has-vs-regular-comparison"><a class="header" href="#has-vs-regular-comparison">Has vs regular comparison</a></h2>
 <p><code>has</code> checks existence, not value. Use <code>==</code> to check a value:</p>
 <pre><code class="language-lil">x = 0
-if has x { print "x exists" }   # prints (x was assigned)
-if x == 0 { print "x is zero" } # also prints
+if has x { write("x exists") }   : prints (x was assigned)
+if x == 0 { write("x is zero") } : also prints
 
 y = ""
-if has y { print "y exists" }   # prints (y was assigned, even empty)
-if y == "" { print "y is empty" } # also prints
+if has y { write("y exists") }   : prints (y was assigned, even empty)
+if y == "" { write("y is empty") } : also prints
 </code></pre>
 <p>A variable can exist but hold a falsy value. Use <code>has</code> when you care whether it was assigned at all, not what it holds.</p>
 

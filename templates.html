@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -178,7 +178,7 @@
 <p>Template strings let you embed variable values inside a string using <code>{varname}</code> with backtick strings. In Python this would be an f-string like <code>f"hello {name}"</code>. In lil it’s <code>`hello {name}`</code>:</p>
 <pre><code class="language-lil">name = "alice"
 age = 30
-print `my name is {name} and i am {age} years old`
+write(`my name is {name} and i am {age} years old`)
 </code></pre>
 <p>This prints <code>my name is alice and i am 30 years old</code>.</p>
 <h2 id="template-vs-concatenation"><a class="header" href="#template-vs-concatenation">Template vs Concatenation</a></h2>
@@ -193,24 +193,24 @@ print `my name is {name} and i am {age} years old`
 <pre><code class="language-lil">username = "bob"
 score = 95
 msg = `player {username} scored {score} points`
-print msg
+write(msg)
 </code></pre>
 <h2 id="mixing-with-library-calls"><a class="header" href="#mixing-with-library-calls">Mixing with library calls</a></h2>
 <pre><code class="language-lil">now = minimal@date
-print `the time is {now}`
+write(`the time is {now}`)
 </code></pre>
-<pre><code class="language-lil">rand = random@math
-print `your lucky number is {rand}`
+<pre><code class="language-lil">rand = random@math()
+write(`your lucky number is {rand}`)
 </code></pre>
 <h2 id="templates-in-conditions"><a class="header" href="#templates-in-conditions">Templates in conditions</a></h2>
-<pre><code class="language-lil">name = read@file "name.txt"
-if len@string name &gt; 0 {
-  print `welcome, {name}`
+<pre><code class="language-lil">name = read@file("name.txt")
+if len@string(name) &gt; 0 {
+  write(`welcome, {name}`)
 }
 </code></pre>
 <h2 id="what-happens-with-undefined-variables"><a class="header" href="#what-happens-with-undefined-variables">What happens with undefined variables</a></h2>
 <p>If you use a variable name that doesn’t exist in a template, it evaluates to 0 (for numbers) or “” (for strings):</p>
-<pre><code class="language-lil">print `value is {undefined_var}`   # prints "value is 0"
+<pre><code class="language-lil">write(`value is {undefined_var}`)   : prints "value is 0"
 </code></pre>
 
                     </main>

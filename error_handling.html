@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -180,7 +180,7 @@
 <pre><code class="language-lil">try {
   risky_stuff()
 } catch {
-  print "something went wrong"
+  write("something went wrong")
 }
 </code></pre>
 <p>If the code inside <code>try</code> triggers an error, execution jumps to <code>catch</code> immediately.</p>
@@ -188,11 +188,11 @@
 <p>Reading a file that might not exist:</p>
 <pre><code class="language-lil">data = ""
 try {
-  data = read@file "maybe.tmp"
+  data = read@file("maybe.tmp")
 } catch {
-  print "could not read file"
+  write("could not read file")
 }
-print data
+write(data)
 </code></pre>
 <h2 id="what-gets-caught"><a class="header" href="#what-gets-caught">What gets caught</a></h2>
 <p>Runtime errors, type errors, out-of-bounds access, division by zero, and undefined function calls are all caught. Parse errors happen before the code runs and can’t be caught.</p>

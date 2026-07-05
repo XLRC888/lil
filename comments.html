@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Comments (none) - lil Book</title>
+        <title>Comments - lil Book</title>
 
 
         <!-- Custom HTML head -->
@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -175,8 +175,24 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="comments"><a class="header" href="#comments">Comments</a></h1>
-<p>lil does not have comments. The <code>#</code> character is used for function definitions, not comments.</p>
-<p>Code is self-documenting  -  short, clear variable names and simple control flow remove the need for comments.</p>
+<p><code>:</code> starts a single-line comment. Everything after <code>:</code> on that line is ignored:</p>
+<pre><code class="language-lil">: this is a comment
+x = 42
+</code></pre>
+<p><code>::</code> starts a block comment. Everything between <code>::</code> and the next <code>::</code> is ignored:</p>
+<pre><code class="language-lil">:: this is a
+block comment ::
+x = 10
+</code></pre>
+<p>Block comments can span multiple lines:</p>
+<pre><code class="language-lil">::
+this is
+a multi-line
+comment
+::
+</code></pre>
+<p><code>#</code> is for function definitions, not comments: <code>#add(a, b) { a + b }</code>.</p>
+<p><code>//</code> is integer division, not a comment: <code>10 // 3 = 3</code>.</p>
 
                     </main>
 

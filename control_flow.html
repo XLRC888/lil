@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -175,9 +175,9 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="control-flow"><a class="header" href="#control-flow">Control Flow</a></h1>
-<p>This chapter covers all the ways to control what your program does next: if/elif/else conditions, while loops, for loops, and the loop/stop/break/continue keywords.</p>
-<h2 id="ifelifelse"><a class="header" href="#ifelifelse">If/elif/else</a></h2>
-<p>lil’s if/elif/else works like Python but without colons or parentheses. In Python you write:</p>
+<p>This chapter covers all the ways to control what your program does next: if/orif/else conditions, while loops, for loops, and the loop/break/continue keywords.</p>
+<h2 id="iforifelse"><a class="header" href="#iforifelse">If/orif/else</a></h2>
+<p>lil’s if/orif/else works like Python but without colons or parentheses. In Python you write:</p>
 <pre><code class="language-python">if x &gt; 5:
     print("big")
 elif x &gt; 0:
@@ -187,23 +187,24 @@ else:
 </code></pre>
 <p>In lil the same logic looks like:</p>
 <pre><code class="language-lil">if x &gt; 5 {
-  print "big"
-} elif x &gt; 0 {
-  print "small"
+  write("big")
+} orif x &gt; 0 {
+  write("small")
 } else {
-  print "zero or negative"
+  write("zero or negative")
 }
 </code></pre>
-<p>Conditions don’t need parentheses around them. Just write the expression directly after <code>if</code> or <code>elif</code>. The braces are required even for single-line bodies.</p>
+<p>Conditions don’t need parentheses around them. Just write the expression directly after <code>if</code> or <code>orif</code>. The braces are required even for single-line bodies.</p>
+<p><code>elif</code> still works as an alias for <code>orif</code>.</p>
 <p>You can store condition results in variables:</p>
 <pre><code class="language-lil">is_positive = x &gt; 0
 if is_positive {
-  print "x is positive"
+  write("x is positive")
 }
 </code></pre>
 <p>Since conditions return 1 (true) or 0 (false), you can use them in arithmetic:</p>
 <pre><code class="language-lil">count = (x &gt; 10) + (y &gt; 10) + (z &gt; 10)
-print "variables over 10:", count
+write("variables over 10:", count)
 </code></pre>
 <h2 id="loop-types"><a class="header" href="#loop-types">Loop types</a></h2>
 <p>lil has three kinds of loops covered on their own pages:</p>
@@ -212,7 +213,17 @@ print "variables over 10:", count
 <li><a href="for_loops.html">For loops</a> - iterate over a numeric range</li>
 <li><a href="loop_stop_break.html">Loop blocks</a> - infinite loop with explicit exit</li>
 </ul>
-<p>All three support <code>break</code>, <code>stop</code>, and <code>continue</code>.</p>
+<p>All three support <code>break</code> and <code>continue</code>. (<code>stop</code> is a kept alias of <code>break</code>.)</p>
+<h2 id="short-circuit-"><a class="header" href="#short-circuit-">Short-circuit &amp;&amp;</a></h2>
+<p><code>&amp;&amp;</code> evaluates the right side only if the left side is truthy:</p>
+<pre><code class="language-lil">while i &lt; 10 &amp;&amp; arr[i] != "" {
+    i = i + 1
+}
+</code></pre>
+<h2 id="statement-separator-"><a class="header" href="#statement-separator-">Statement separator ;</a></h2>
+<p>Multiple statements on one line with <code>;</code>:</p>
+<pre><code class="language-lil">a = 5 ; b = 10 ; write(a + b)
+</code></pre>
 
                     </main>
 

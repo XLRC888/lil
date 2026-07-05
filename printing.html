@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Print - lil Book</title>
+        <title>Write (Output) - lil Book</title>
 
 
         <!-- Custom HTML head -->
@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -174,29 +174,43 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="print"><a class="header" href="#print">Print</a></h1>
-<p>The <code>print</code> statement outputs values to stdout.</p>
-<pre><code class="language-lil">print "hello"
-print 42
-print 3.14
+                        <h1 id="write-output"><a class="header" href="#write-output">Write (Output)</a></h1>
+<p>The <code>write()</code> function outputs values to stdout.</p>
+<pre><code class="language-lil">write("hello")
+write(42)
+write(3.14)
 </code></pre>
-<p>Multiple values separated by commas are printed with spaces between them:</p>
-<pre><code class="language-lil">print "the answer is", 42
+<p>Multiple arguments are printed with spaces between them, followed by a newline:</p>
+<pre><code class="language-lil">write("the answer is", 42)
 </code></pre>
-<p>Print with no arguments is a syntax error. To print a blank line, print an empty string:</p>
-<pre><code class="language-lil">print ""
+<p>Write with no arguments prints a blank line:</p>
+<pre><code class="language-lil">write("")
 </code></pre>
-<p>Print the result of a library function directly:</p>
-<pre><code class="language-lil">print full@date
+<p>Write the result of a library function directly:</p>
+<pre><code class="language-lil">write(full@date)
 </code></pre>
-<p>Print multiple results from different functions in one line:</p>
-<pre><code class="language-lil">print minimal@date, random@math
+<p>Write multiple results from different functions in one line:</p>
+<pre><code class="language-lil">write(minimal@date, random@math)
 </code></pre>
-<p>Print values alongside variables:</p>
+<p>Write values alongside variables:</p>
 <pre><code class="language-lil">name = "bob"
 score = 95
-print "player", name, "scored", score
+write("player", name, "scored", score)
 </code></pre>
+<h2 id="statement-separator"><a class="header" href="#statement-separator">Statement separator</a></h2>
+<p>Multiple statements can go on one line with <code>;</code>:</p>
+<pre><code class="language-lil">write("a") ; write("b")
+</code></pre>
+<h2 id="comments"><a class="header" href="#comments">Comments</a></h2>
+<p><code>:</code> starts a single-line comment. <code>::</code> starts a block comment that ends with <code>::</code>:</p>
+<pre><code class="language-lil">: this is a comment
+write("hello")
+
+:: this is a
+block comment ::
+write("world")
+</code></pre>
+<p><code>//</code> is integer division, not a comment: <code>10 // 3 = 3</code>.</p>
 
                     </main>
 

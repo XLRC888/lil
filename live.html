@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Input and Output - lil Book</title>
+        <title>Live Bindings - lil Book</title>
 
 
         <!-- Custom HTML head -->
@@ -174,74 +174,37 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="input-and-output"><a class="header" href="#input-and-output">Input and Output</a></h1>
-<p>lil keeps I/O simpler than Python. No file objects, no context managers, no close() calls. Just read, write, and a few file library functions.</p>
-<h2 id="write"><a class="header" href="#write">Write</a></h2>
-<p>The <code>write()</code> function outputs text:</p>
-<pre><code class="language-lil">write("hello world")
+                        <h1 id="live-bindings"><a class="header" href="#live-bindings">Live Bindings</a></h1>
+<p>A <code>live</code> binding links one variable to another so that reads of the bound variable always reflect the current value of its source.</p>
+<h2 id="syntax"><a class="header" href="#syntax">Syntax</a></h2>
+<pre><code class="language-lil">y = 1
+live x = y
+y = 42
+write(x)
 </code></pre>
-<p>Write multiple values separated by commas:</p>
-<pre><code class="language-lil">name = "alice"
-write("hello", name)
+<p>This prints <code>42</code>. After <code>live x = y</code>, every read of <code>x</code> follows the link back to <code>y</code> and returns whatever <code>y</code> currently holds. You do not need to reassign <code>x</code> when <code>y</code> changes.</p>
+<h2 id="what-gets-bound"><a class="header" href="#what-gets-bound">What gets bound</a></h2>
+<p><code>live</code> records the source variable by name. Reads dereference that name at lookup time, so later assignments to the source propagate automatically:</p>
+<pre><code class="language-lil">a = 10
+live b = a
+a = 20
+write(b)
 </code></pre>
-<pre><code class="language-lil">x = 42
-write("the answer is", x)
-</code></pre>
-<h2 id="read"><a class="header" href="#read">Read</a></h2>
-<p>The <code>read()</code> function reads a line from stdin and returns it as a string:</p>
-<pre><code class="language-lil">name = read()
-write("hello", name)
-</code></pre>
-<p>Show a prompt string:</p>
-<pre><code class="language-lil">name = read("enter your name: ")
-write("hello", name)
-</code></pre>
-<p>In Python, you’d write <code>name = input("enter your name: ")</code>. In lil, <code>read()</code> is a function that returns a string.</p>
-<pre><code class="language-lil">s = read("type something: ")
-len = len@string(s)
-write("you typed", len, "characters")
-</code></pre>
-<h2 id="file-io"><a class="header" href="#file-io">File I/O</a></h2>
-<p>lil uses the <code>file</code> library for file operations:</p>
-<pre><code class="language-lil">data = read@file("config.txt")
-</code></pre>
-<p>In Python that’s <code>with open("config.txt") as f: data = f.read()</code>. lil does it in one call.</p>
-<pre><code class="language-lil">text = read@file("notes.txt")
-if text == "" {
-  write("file is empty or missing")
-}
-</code></pre>
-<p>Writing a file:</p>
-<pre><code class="language-lil">write@file("output.txt", "hello world")
-</code></pre>
-<p>You can write the result of an expression directly:</p>
-<pre><code class="language-lil">today = standart@date
-write@file("date.txt", today)
-</code></pre>
-<p>Appending to a file:</p>
-<pre><code class="language-lil">append@file("log.txt", "new entry")
-</code></pre>
-<p>Check if a file exists:</p>
-<pre><code class="language-lil">if exists@file("data.txt") == 1 {
-  data = read@file("data.txt")
-  write(data)
-}
-</code></pre>
-<p>List directory contents:</p>
-<pre><code class="language-lil">files = list@file("/home/user")
-write(files)
-</code></pre>
-<p>See the <a href="builtins.html">Built-in Libraries</a> page for the full file library reference.</p>
+<p>Prints <code>20</code>.</p>
+<h2 id="reassigning-the-bound-variable"><a class="header" href="#reassigning-the-bound-variable">Reassigning the bound variable</a></h2>
+<p>Assigning directly to <code>x</code> overwrites the binding with the new value and clears the live link. <code>live x = y</code> followed by <code>x = 5</code> leaves <code>x</code> holding <code>5</code> as an ordinary variable, no longer tracking <code>y</code>.</p>
+<h2 id="when-to-use-it"><a class="header" href="#when-to-use-it">When to use it</a></h2>
+<p>Live bindings are useful for aliases that should track a changing source: a display variable that mirrors a counter, a cached view of a value that must stay in sync. For a one-time copy, use plain assignment (<code>x = y</code>).</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="functions_advanced.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="undefined_default.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="printing.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="lists.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -251,11 +214,11 @@ write(files)
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="functions_advanced.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="undefined_default.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="printing.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="lists.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

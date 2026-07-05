@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -179,6 +179,7 @@
 <h2 id="modifiers-1"><a class="header" href="#modifiers-1">Modifiers</a></h2>
 <ul>
 <li><a href="undefined_default.html">Undefined Default</a>  -  change what undefined variables return</li>
+<li><a href="live.html">Live Bindings</a>  -  link one variable to another with <code>live x = y</code></li>
 </ul>
 <h2 id="get-statement"><a class="header" href="#get-statement">Get Statement</a></h2>
 <p>The <code>get</code> statement extracts variable values from an external file without leaking its variables into your scope:</p>
@@ -186,8 +187,8 @@
 </code></pre>
 <p>This runs <code>data.lil</code> in a sandbox, snapshots the values of <code>x</code> and <code>y</code>, then copies them into your script. The file’s own variables are discarded.</p>
 <p><strong>Indexed access</strong>: retrieve historical (previous) assignment values:</p>
-<pre><code class="language-lil">get "x"(1) from data.lil    # 1st previous value of x
-get "x"(2) from data.lil    # 2nd previous value
+<pre><code class="language-lil">get "x"(1) from data.lil    : 1st previous value of x
+get "x"(2) from data.lil    : 2nd previous value
 </code></pre>
 <p>Index 0 (or no index) returns the current value. Uses the assignment history tracking in the VM.</p>
 <p><strong>Rename on import</strong>: map the file’s variable to a different name:</p>

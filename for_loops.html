@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6db86042.js";
+            window.path_to_searchindex_js = "searchindex-be3c4476.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-76adc0db.js"></script>
+        <script src="toc-e3d61385.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -177,14 +177,14 @@
                         <h1 id="for-loops"><a class="header" href="#for-loops">For Loops</a></h1>
 <p>The <code>for</code> loop iterates over a range of numbers. In Python you’d write <code>for i in range(1, 6):</code>. In lil it’s <code>for i = 1 to 5 {</code>:</p>
 <pre><code class="language-lil">for i = 1 to 5 {
-  print i
+  write(i)
 }
 </code></pre>
-<p>This prints 1 through 5. The loop variable (<code>i</code>) starts at the first value and increments by 1 each iteration until it exceeds the second value.</p>
+<p>This prints 1 through 5. The loop variable (<code>i</code>) starts at the first value and increments by 1 each iteration until it exceeds the second value. The end value is inclusive: <code>for i = 1 to 5</code> iterates 1, 2, 3, 4, 5.</p>
 <p>Python’s <code>range(1, 6)</code> includes 1 but excludes 6. lil’s <code>1 to 5</code> includes both ends.</p>
 <h2 id="using-the-loop-variable-in-calculations"><a class="header" href="#using-the-loop-variable-in-calculations">Using the loop variable in calculations</a></h2>
 <pre><code class="language-lil">for i = 1 to 10 {
-  print i * i
+  write(i * i)
 }
 </code></pre>
 <p>Prints 1, 4, 9, 16, 25, 36, 49, 64, 81, 100. The loop variable is just a regular variable you can use in any expression.</p>
@@ -193,7 +193,7 @@
 for i = 1 to 10 {
   squares = squares + i * i
 }
-print squares
+write(squares)
 </code></pre>
 <p>This sums the squares of 1 through 10.</p>
 <h2 id="expressions-for-range-bounds"><a class="header" href="#expressions-for-range-bounds">Expressions for range bounds</a></h2>
@@ -201,14 +201,14 @@ print squares
 <pre><code class="language-lil">start = 2
 end = 10
 for i = start to end {
-  print i
+  write(i)
 }
 </code></pre>
 <h2 id="no-counting-down"><a class="header" href="#no-counting-down">No counting down</a></h2>
 <p>lil’s <code>for</code> only counts up. To count down, use a while loop:</p>
 <pre><code class="language-lil">i = 10
 while i &gt;= 1 {
-  print i
+  write(i)
   i = i - 1
 }
 </code></pre>
@@ -218,14 +218,14 @@ while i &gt;= 1 {
   for col = 1 to 5 {
     line = line + " " + row * col
   }
-  print line
+  write(line)
 }
 </code></pre>
 <p>Prints a 5x5 multiplication table. Each row builds up a string as the inner loop runs.</p>
 <h2 id="break-in-for-loops"><a class="header" href="#break-in-for-loops">Break in for loops</a></h2>
 <pre><code class="language-lil">for i = 1 to 100 {
   if i &gt; 3 { break }
-  print i
+  write(i)
 }
 </code></pre>
 <p>This prints 1, 2, 3.</p>
