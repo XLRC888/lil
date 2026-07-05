@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4e473da6.js";
+            window.path_to_searchindex_js = "searchindex-0a90dac4.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-e3d61385.js"></script>
+        <script src="toc-a3b2d5b2.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -246,6 +246,15 @@ y = read("Enter text: ")
 y = 42                     : allowed (not forced)
 </code></pre>
 <p><code>intify</code> errors if the value is not a valid number. <code>read()</code> always returns a string.</p>
+<h2 id="live-bindings"><a class="header" href="#live-bindings">Live Bindings</a></h2>
+<p>A <code>live</code> binding links one variable to another so that reads of the bound variable always reflect the current value of its source:</p>
+<pre><code class="language-lil">y = 1
+live x = y
+y = 42
+write(x)     : prints 42
+</code></pre>
+<p>After <code>live x = y</code>, every read of <code>x</code> follows the link back to <code>y</code> and returns whatever <code>y</code> currently holds. You do not need to reassign <code>x</code> when <code>y</code> changes.</p>
+<p>Assigning directly to <code>x</code> overwrites the binding and clears the live link. For a one-time copy, use plain assignment (<code>x = y</code>).</p>
 <h2 id="changing-the-undefined-default"><a class="header" href="#changing-the-undefined-default">Changing the undefined default</a></h2>
 <p>By default, reading an undefined variable returns <code>0</code>. Use <code>?default = value</code> to change this:</p>
 <pre><code class="language-lil">?default = "Undefined"

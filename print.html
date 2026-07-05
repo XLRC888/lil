@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4e473da6.js";
+            window.path_to_searchindex_js = "searchindex-0a90dac4.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-e3d61385.js"></script>
+        <script src="toc-a3b2d5b2.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -402,6 +402,15 @@ y = read("Enter text: ")
 y = 42                     : allowed (not forced)
 </code></pre>
 <p><code>intify</code> errors if the value is not a valid number. <code>read()</code> always returns a string.</p>
+<h2 id="live-bindings"><a class="header" href="#live-bindings">Live Bindings</a></h2>
+<p>A <code>live</code> binding links one variable to another so that reads of the bound variable always reflect the current value of its source:</p>
+<pre><code class="language-lil">y = 1
+live x = y
+y = 42
+write(x)     : prints 42
+</code></pre>
+<p>After <code>live x = y</code>, every read of <code>x</code> follows the link back to <code>y</code> and returns whatever <code>y</code> currently holds. You do not need to reassign <code>x</code> when <code>y</code> changes.</p>
+<p>Assigning directly to <code>x</code> overwrites the binding and clears the live link. For a one-time copy, use plain assignment (<code>x = y</code>).</p>
 <h2 id="changing-the-undefined-default"><a class="header" href="#changing-the-undefined-default">Changing the undefined default</a></h2>
 <p>By default, reading an undefined variable returns <code>0</code>. Use <code>?default = value</code> to change this:</p>
 <pre><code class="language-lil">?default = "Undefined"
@@ -1656,7 +1665,6 @@ write(data)
 <h2 id="modifiers-1"><a class="header" href="#modifiers-1">Modifiers</a></h2>
 <ul>
 <li><a href="#undefined-default">Undefined Default</a>  -  change what undefined variables return</li>
-<li><a href="#live-bindings">Live Bindings</a>  -  link one variable to another with <code>live x = y</code></li>
 </ul>
 <h2 id="get-statement"><a class="header" href="#get-statement">Get Statement</a></h2>
 <p>The <code>get</code> statement extracts variable values from an external file without leaking its variables into your scope:</p>
@@ -1687,28 +1695,6 @@ write(x)       : prints "hello"
 write(y)       : prints 99
 </code></pre>
 <p>The name after <code>?</code> is descriptive only and is ignored by the runtime. Only one global default exists. Once set, every undefined variable will return that value until you change it again.</p>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="live-bindings"><a class="header" href="#live-bindings">Live Bindings</a></h1>
-<p>A <code>live</code> binding links one variable to another so that reads of the bound variable always reflect the current value of its source.</p>
-<h2 id="syntax"><a class="header" href="#syntax">Syntax</a></h2>
-<pre><code class="language-lil">y = 1
-live x = y
-y = 42
-write(x)
-</code></pre>
-<p>This prints <code>42</code>. After <code>live x = y</code>, every read of <code>x</code> follows the link back to <code>y</code> and returns whatever <code>y</code> currently holds. You do not need to reassign <code>x</code> when <code>y</code> changes.</p>
-<h2 id="what-gets-bound"><a class="header" href="#what-gets-bound">What gets bound</a></h2>
-<p><code>live</code> records the source variable by name. Reads dereference that name at lookup time, so later assignments to the source propagate automatically:</p>
-<pre><code class="language-lil">a = 10
-live b = a
-a = 20
-write(b)
-</code></pre>
-<p>Prints <code>20</code>.</p>
-<h2 id="reassigning-the-bound-variable"><a class="header" href="#reassigning-the-bound-variable">Reassigning the bound variable</a></h2>
-<p>Assigning directly to <code>x</code> overwrites the binding with the new value and clears the live link. <code>live x = y</code> followed by <code>x = 5</code> leaves <code>x</code> holding <code>5</code> as an ordinary variable, no longer tracking <code>y</code>.</p>
-<h2 id="when-to-use-it"><a class="header" href="#when-to-use-it">When to use it</a></h2>
-<p>Live bindings are useful for aliases that should track a changing source: a display variable that mirrors a counter, a cached view of a value that must stay in sync. For a one-time copy, use plain assignment (<code>x = y</code>).</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="lists"><a class="header" href="#lists">Lists</a></h1>
 <p>Lists are ordered collections of values. They are created with square bracket syntax and support index access.</p>
