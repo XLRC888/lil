@@ -54,12 +54,13 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_WHILE, TOK_FOR, TOK_TO, TOK_GET, TOK_FROM, TOK_EXIT, TOK_PLUS, TOK_MINUS, TOK_STAR,
     TOK_SLASH, TOK_MOD, TOK_EQ, TOK_NE, TOK_LT, TOK_GT, TOK_LE, TOK_GE, TOK_ASSIGN,
     TOK_LPAREN, TOK_RPAREN, TOK_LBRACE, TOK_RBRACE, TOK_COMMA,
-    TOK_SEMI, TOK_NEWLINE, TOK_EOF, TOK_AND, TOK_OR, TOK_NOT,
+    TOK_SEMICOLON, TOK_NEWLINE, TOK_EOF, TOK_AND, TOK_OR, TOK_NOT,
     TOK_LOOP, TOK_STOP, TOK_BREAK, TOK_CONTINUE, TOK_INCLUDE, TOK_STRINGIFY, TOK_INTIFY, TOK_TOGGLE,
     TOK_HAS, TOK_NOCASE, TOK_ANYWHERE, TOK_WORD,
     TOK_LBRACKET, TOK_RBRACKET,
     TOK_TEMPLATE, TOK_HASH, TOK_HASH_ID, TOK_AT, TOK_CARET,     TOK_AMPERSAND, TOK_PIPE, TOK_DOT,
-    TOK_TRY, TOK_CATCH, TOK_FORCE, TOK_UNFORCE, TOK_QMARK, TOK_UNINCLUDE, TOK_COLON, TOK_STRUCT, TOK_LIVE } TokenType;
+    TOK_TRY, TOK_CATCH, TOK_FORCE, TOK_UNFORCE, TOK_QMARK, TOK_UNINCLUDE, TOK_COLON, TOK_STRUCT, TOK_LIVE,
+    TOK_AND_AND, TOK_WRITE, TOK_READ, TOK_ORIF } TokenType;
 
 typedef struct {
     TokenType type;
@@ -73,7 +74,8 @@ typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_LOOP, NODE_STOP, NODE_INCLUDE, NODE_GET, NODE_FUNCTION,
     NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE,
     NODE_STRINGIFY, NODE_INTIFY, NODE_TOGGLE, NODE_TRY, NODE_FORCE, NODE_UNFORCE, NODE_SET_UNDEF,
-    NODE_LIST, NODE_INDEX, NODE_INDEX_SET, NODE_DICT, NODE_STRUCT_DEF, NODE_LIVE, NODE_ANON_FUNC, NODE_DESTRUCT } NodeType;
+    NODE_LIST, NODE_INDEX, NODE_INDEX_SET, NODE_DICT, NODE_STRUCT_DEF, NODE_LIVE, NODE_ANON_FUNC, NODE_DESTRUCT,
+    NODE_METHOD_CALL, NODE_SEMICOLON } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -94,7 +96,7 @@ typedef struct ASTNode {
         struct { char *var; struct ASTNode *start, *end, *body; } forto;
         struct { struct ASTNode *body; } loop;
         struct { char *name; char **params; int nparams; struct ASTNode *body; } func_def;
-        struct { char *name; struct ASTNode **args; int nargs; } func_call;
+        struct { char *name; struct ASTNode **args; int nargs; char *lib; } func_call;
         struct { char *path; char **funcs; int nfuncs; } include;
         struct { char **varnames; char **newnames; int nvars; char *path; int *indices; } get_stmt;
         struct { char *lib; char **args; int argc; } funcall;
@@ -108,6 +110,8 @@ typedef struct ASTNode {
         struct { struct ASTNode *container, *index, *value; } idx_set;
         struct { char **fields; int nfields; struct ASTNode *source; } destruct;
         struct { struct ASTNode **stmts; int count, cap; } block;
+        struct { struct ASTNode *receiver; char *method; struct ASTNode **args; int argc; char *lib; } method_call;
+        struct { struct ASTNode *left; struct ASTNode *right; } semicolon;
     } data;
 } ASTNode;
 
@@ -152,6 +156,10 @@ typedef struct {
     int lib_imported[8];
     jmp_buf error_jmp;
     int scope_depth;
+    int anon_counter;
+    int for_counter;
+    int in_try;
+    int error_occurred;
 } LilState;
 
 extern Var vars[MAX_VARS];

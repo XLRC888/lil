@@ -58,6 +58,7 @@ int var_ensure(const char *name) {
     vars[var_count].name = sdup(name);
     vars[var_count].val = undef_val;
     if (undef_val.type == VAL_STR) vars[var_count].val.data.str = sdup(undef_val.data.str);
+    else if (undef_val.type == VAL_LIST || undef_val.type == VAL_DICT) vars[var_count].val = copy_val(undef_val);
     vars[var_count].forced = 0;
     vars[var_count].scope_id = scope_depth;
     vars[var_count].live = 0;
@@ -144,6 +145,10 @@ void state_save(LilState *s) {
     memcpy(s->lib_imported, lib_imported, sizeof(lib_imported));
     memcpy(s->error_jmp, error_jmp, sizeof(jmp_buf));
     s->scope_depth = scope_depth;
+    s->anon_counter = anon_counter;
+    s->for_counter = for_counter;
+    s->in_try = in_try;
+    s->error_occurred = error_occurred;
 }
 
 void state_restore(LilState *s) {
@@ -157,6 +162,10 @@ void state_restore(LilState *s) {
     assign_hist_count = s->assign_hist_count;
     memcpy(lib_imported, s->lib_imported, sizeof(lib_imported));
     scope_depth = s->scope_depth;
+    anon_counter = s->anon_counter;
+    for_counter = s->for_counter;
+    in_try = s->in_try;
+    error_occurred = s->error_occurred;
 }
 
 void run_file_interpreted(const char *path) {
@@ -580,6 +589,59 @@ Value eval_expr(ASTNode *n) {
             return make_str(aname);
         }
         case NODE_FUNC_CALL: {
+            if (!strcmp(n->data.func_call.name, "write")) {
+                for (int i = 0; i < n->data.func_call.nargs; i++) {
+                    Value v = eval_expr(n->data.func_call.args[i]);
+                    if (i > 0) printf(" ");
+                    char *s = val_tostr(v);
+                    printf("%s", s);
+                    free(s);
+                    val_free(v);
+                }
+                printf("\n");
+                fflush(stdout);
+                return make_num(0);
+            }
+            if (!strcmp(n->data.func_call.name, "read")) {
+                if (n->data.func_call.nargs >= 1) {
+                    Value pv = eval_expr(n->data.func_call.args[0]);
+                    char *ps = val_tostr(pv);
+                    printf("%s", ps);
+                    free(ps);
+                    val_free(pv);
+                    fflush(stdout);
+                }
+                char buf[BUF_SIZE];
+                if (!fgets(buf, sizeof(buf), stdin)) return make_str("");
+                size_t len = strlen(buf);
+                while (len > 0 && (buf[len-1] == '\n' || buf[len-1] == '\r')) buf[--len] = 0;
+                return make_str(buf);
+            }
+            if (n->data.func_call.lib) {
+                int li = lib_idx(n->data.func_call.lib);
+                if (li >= 0 && !lib_imported[li])
+                    fatal("line %d: library '%s' not imported (use 'include %s')", n->line, n->data.func_call.lib, n->data.func_call.lib);
+                char **sargs = malloc(sizeof(char*) * (n->data.func_call.nargs + 1));
+                sargs[0] = sdup(n->data.func_call.name);
+                for (int i = 0; i < n->data.func_call.nargs; i++) {
+                    Value av = eval_expr(n->data.func_call.args[i]);
+                    char *sv = val_tostr(av);
+                    val_free(av);
+                    if (n->data.func_call.args[i]->type == NODE_ID) {
+                        char *prefixed = malloc(strlen(sv) + 2);
+                        prefixed[0] = '\1';
+                        strcpy(prefixed + 1, sv);
+                        sargs[i + 1] = prefixed;
+                        free(sv);
+                    } else {
+                        sargs[i + 1] = sv;
+                    }
+                }
+                Value result = lib_dispatch(n->data.func_call.lib, sargs[0], n->data.func_call.nargs + 1, sargs, n->line);
+                for (int i = 0; i < n->data.func_call.nargs + 1; i++) free(sargs[i]);
+                free(sargs);
+                return result;
+            }
             for (int i = 0; i < func_count; i++) {
                 if (!strcmp(funcs[i].name, n->data.func_call.name)) {
                     int saved_count = var_count;
@@ -597,6 +659,7 @@ Value eval_expr(ASTNode *n) {
                         var_set_no_scope(funcs[i].params[j], arg_vals[j]);
                     free(arg_vals);
                     Value ret = make_num(0);
+                    _last_expr_val = make_num(0);
                     int r = exec_stmt(funcs[i].body);
                     if (r == 1) { pop_scope(); var_count = saved_count; scope_depth = saved_scope; assign_hist_count = saved_hist; return make_num(0); }
                     if (funcs[i].body->type == NODE_BLOCK && funcs[i].body->data.block.count > 0) {
@@ -687,9 +750,20 @@ Value eval_expr(ASTNode *n) {
             return o;
         }
         case NODE_BINOP: {
+            int op = n->data.binop.op;
+            if (op == TOK_SEMICOLON) {
+                Value lv = eval_expr(n->data.binop.left);
+                val_free(lv);
+                return eval_expr(n->data.binop.right);
+            }
+            if (op == TOK_AND_AND) {
+                Value lv = eval_expr(n->data.binop.left);
+                if (!truthy(lv)) return lv;
+                val_free(lv);
+                return eval_expr(n->data.binop.right);
+            }
             Value l = eval_expr(n->data.binop.left);
             Value r = eval_expr(n->data.binop.right);
-            int op = n->data.binop.op;
 
             if (op == TOK_PLUS) {
                 if (l.type == VAL_STR || r.type == VAL_STR) {
@@ -777,6 +851,75 @@ Value eval_expr(ASTNode *n) {
                 fatal("line %d: gtk not supported (recompile with 'make gtk')", n->line);
             return lib_dispatch(n->data.funcall.lib, n->data.funcall.args[0], n->data.funcall.argc, n->data.funcall.args, n->line);
         }
+        case NODE_SEMICOLON: {
+            Value lv = eval_expr(n->data.semicolon.left);
+            val_free(lv);
+            return eval_expr(n->data.semicolon.right);
+        }
+        case NODE_METHOD_CALL: {
+            Value rec = eval_expr(n->data.method_call.receiver);
+            char *rec_str = val_tostr(rec);
+            val_free(rec);
+            int total = n->data.method_call.argc + 2;
+            char **margs = malloc(sizeof(char*) * total);
+            margs[0] = sdup(n->data.method_call.method);
+            margs[1] = rec_str;
+            for (int i = 0; i < n->data.method_call.argc; i++) {
+                Value av = eval_expr(n->data.method_call.args[i]);
+                margs[i + 2] = val_tostr(av);
+                val_free(av);
+            }
+            Value result;
+            if (n->data.method_call.lib) {
+                int li = lib_idx(n->data.method_call.lib);
+                if (li >= 0 && !lib_imported[li])
+                    fatal("line %d: library '%s' not imported (use 'include %s')", n->line, n->data.method_call.lib, n->data.method_call.lib);
+                result = lib_dispatch(n->data.method_call.lib, n->data.method_call.method, total, margs, n->line);
+            } else {
+                int fi = -1;
+                for (int i = 0; i < func_count; i++) {
+                    if (!strcmp(funcs[i].name, n->data.method_call.method)) { fi = i; break; }
+                }
+                if (fi < 0) fatal("line %d: function '%s' not defined", n->line, n->data.method_call.method);
+                int saved_count = var_count;
+                int saved_scope = scope_depth;
+                int saved_hist = assign_hist_count;
+                push_scope();
+                for (int j = 0; j < funcs[fi].nparams; j++) {
+                    Value av;
+                    if (j + 1 < total) {
+                        av = make_str(margs[j + 1]);
+                    } else {
+                        av = make_num(0);
+                    }
+                    var_set_no_scope(funcs[fi].params[j], av);
+                }
+                _last_expr_val = make_num(0);
+                int r = exec_stmt(funcs[fi].body);
+                if (r == 1) { pop_scope(); var_count = saved_count; scope_depth = saved_scope; assign_hist_count = saved_hist; return make_num(0); }
+                if (funcs[fi].body->type == NODE_BLOCK && funcs[fi].body->data.block.count > 0) {
+                    ASTNode *last = funcs[fi].body->data.block.stmts[funcs[fi].body->data.block.count - 1];
+                    if (last) {
+                        if (last->type == NODE_ASSIGN) {
+                            result = var_get(last->data.assign.name);
+                        } else {
+                            result = copy_val(_last_expr_val);
+                        }
+                    } else {
+                        result = copy_val(_last_expr_val);
+                    }
+                } else {
+                    result = copy_val(_last_expr_val);
+                }
+                pop_scope();
+                var_count = saved_count;
+                scope_depth = saved_scope;
+                assign_hist_count = saved_hist;
+            }
+            for (int i = 0; i < total; i++) free(margs[i]);
+            free(margs);
+            return result;
+        }
         default:
             fatal("line %d: expression expected", n->line);
             return make_num(0);
@@ -789,6 +932,7 @@ Value stmt_val(ASTNode *n) {
         case NODE_NUM: case NODE_STR: case NODE_ID:
         case NODE_BINOP: case NODE_UNARY: case NODE_ASSIGN:
         case NODE_FUNC_CALL: case NODE_TEMPLATE:
+        case NODE_METHOD_CALL: case NODE_SEMICOLON:
             return eval_expr(n);
         case NODE_IF: {
             Value cv = eval_expr(n->data.if_stmt.cond);
@@ -1021,6 +1165,7 @@ int exec_stmt(ASTNode *n) {
         case NODE_GET: {
             LilState saved;
             state_save(&saved);
+            int saved_struct_count = struct_count;
 
             scope_depth = 0;
             var_count = 0;
@@ -1042,6 +1187,15 @@ int exec_stmt(ASTNode *n) {
                 }
             }
 
+            for (int i = 0; i < var_count; i++) {
+                free(vars[i].name);
+                val_free(vars[i].val);
+                if (vars[i].live_src) free(vars[i].live_src);
+            }
+            for (int i = saved_struct_count; i < struct_count; i++)
+                free(structs[i].name);
+            struct_count = saved_struct_count;
+
             memcpy(vars, saved.vars, sizeof(Var) * saved.var_count);
             var_count = saved.var_count;
             func_count = saved.func_count;
@@ -1062,6 +1216,7 @@ int exec_stmt(ASTNode *n) {
                 LilState saved;
                 state_save(&saved);
                 int outer_fc = func_count;
+                int saved_struct_count = struct_count;
 
                 scope_depth = 0;
                 var_count = 0;
@@ -1086,6 +1241,15 @@ int exec_stmt(ASTNode *n) {
                     }
                 }
                 func_count = wi;
+
+                for (int i = 0; i < var_count; i++) {
+                    free(vars[i].name);
+                    val_free(vars[i].val);
+                    if (vars[i].live_src) free(vars[i].live_src);
+                }
+                for (int i = saved_struct_count; i < struct_count; i++)
+                    free(structs[i].name);
+                struct_count = saved_struct_count;
 
                 memcpy(error_jmp, saved.error_jmp, sizeof(jmp_buf));
                 memcpy(vars, saved.vars, sizeof(Var) * saved.var_count);
@@ -1244,6 +1408,11 @@ int exec_stmt(ASTNode *n) {
             undef_val = v;
             return 0;
         }
+        case NODE_SEMICOLON: {
+            int r = exec_stmt(n->data.semicolon.left);
+            if (r) return r;
+            return exec_stmt(n->data.semicolon.right);
+        }
         default:
             _last_expr_val = eval_expr(n);
             return 0;
@@ -1375,14 +1544,16 @@ void patch_cont_fixups(int target) {
 
 int ce_expr(ASTNode *n) {
     if (!n) { emit(OP_CONST, add_const(make_num(0))); return 1; }
+    int saved_len = code_len;
     compile_line = n->line;
     switch (n->type) {
         case NODE_NUM: emit(OP_CONST, add_const(make_num(n->data.num))); return 1;
         case NODE_STR: emit(OP_CONST, add_const(make_str(n->data.str))); return 1;
         case NODE_ID: emit(OP_VAR_GET_IDX, var_ensure(n->data.id)); return 1;
         case NODE_BINOP:
+            if (n->data.binop.op == TOK_AND_AND) return 0;
             if (!ce_expr(n->data.binop.left)) return 0;
-            if (!ce_expr(n->data.binop.right)) return 0;
+            if (!ce_expr(n->data.binop.right)) { code_len = saved_len; return 0; }
             switch (n->data.binop.op) {
                 case TOK_PLUS: emit(OP_ADD, 0); break;
                 case TOK_MINUS: emit(OP_SUB, 0); break;
@@ -1634,6 +1805,11 @@ OP_VAR_SET_IDX: {
         if (vars[idx].forced_type == FORCE_INT && v.type == VAL_STR) fatal("line %d: cannot assign string to int-forced variable", code_line[ip]);
         if (vars[idx].forced_type == FORCE_STR && v.type == VAL_NUM) fatal("line %d: cannot assign number to str-forced variable", code_line[ip]);
     }
+    if (assign_hist_count < MAX_ASSIGN_HISTORY) {
+        assign_history[assign_hist_count] = copy_val(vars[idx].val);
+        assign_var_idx[assign_hist_count] = idx;
+        assign_hist_count++;
+    }
     val_free(vars[idx].val);
     vars[idx].val = v;
     ip++; goto *dtab[code[ip].op];
@@ -1644,6 +1820,11 @@ OP_INC_IDX: {
     if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);
     vars[idx].val.data.num += 1;
     vars[idx].val.type = VAL_NUM;
+    if (assign_hist_count < MAX_ASSIGN_HISTORY) {
+        assign_history[assign_hist_count] = make_num(vars[idx].val.data.num);
+        assign_var_idx[assign_hist_count] = idx;
+        assign_hist_count++;
+    }
     ip++; goto *dtab[code[ip].op];
 }
 OP_DEC_IDX: {
@@ -1652,6 +1833,11 @@ OP_DEC_IDX: {
     if (vars[idx].val.type == VAL_STR) free(vars[idx].val.data.str);
     vars[idx].val.data.num -= 1;
     vars[idx].val.type = VAL_NUM;
+    if (assign_hist_count < MAX_ASSIGN_HISTORY) {
+        assign_history[assign_hist_count] = make_num(vars[idx].val.data.num);
+        assign_var_idx[assign_hist_count] = idx;
+        assign_hist_count++;
+    }
     ip++; goto *dtab[code[ip].op];
 }
 OP_ADD: {
@@ -1762,7 +1948,7 @@ OP_PRINT: {
         if (i > 0) printf(" ");
         if (vals[i].type == VAL_STR) { printf("%s", vals[i].data.str); free(vals[i].data.str); }
         else if (vals[i].type == VAL_LIST || vals[i].type == VAL_DICT) { char *s = val_tostr(vals[i]); printf("%s", s); free(s); val_free(vals[i]); }
-        else printf("%g", vals[i].data.num);
+        else { char *s = val_tostr(vals[i]); printf("%s", s); free(s); }
     }
     free(vals); printf("\n"); fflush(stdout);
     ip++; goto *dtab[code[ip].op];

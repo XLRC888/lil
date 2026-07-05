@@ -1,1 +1,2 @@
-x = &string|upper "hello"
+include string
+print upper@string "hello"

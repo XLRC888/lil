@@ -8,7 +8,7 @@ Errors are caught with `try/catch`:
 try {
   risky_stuff()
 } catch {
-  print "something went wrong"
+  write("something went wrong")
 }
 ```
 
@@ -21,11 +21,11 @@ Reading a file that might not exist:
 ```lil
 data = ""
 try {
-  data = read@file "maybe.tmp"
+  data = read@file("maybe.tmp")
 } catch {
-  print "could not read file"
+  write("could not read file")
 }
-print data
+write(data)
 ```
 
 ## What gets caught

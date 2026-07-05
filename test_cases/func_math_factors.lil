@@ -1,1 +1,2 @@
-x = &math|factors 12
+include math
+print factors@math 12

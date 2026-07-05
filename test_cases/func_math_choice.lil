@@ -1,1 +1,2 @@
-&math|choice a b c
+include math
+print choice@math a b c

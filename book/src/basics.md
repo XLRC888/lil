@@ -16,15 +16,15 @@ print("hello, world")
 ```
 
 ```lil
-print "hello, world"
+write("hello, world")
 ```
 
-Here is a variable, a function call, and a print in lil:
+Here is a variable, a function call, and a write in lil:
 
 ```lil
 name = "alice"
 greeting = "hello, " + name
-print greeting
+write(greeting)
 ```
 
 Variables hold values. You assign with `=` and read by just writing the name:
@@ -32,7 +32,7 @@ Variables hold values. You assign with `=` and read by just writing the name:
 ```lil
 x = 10
 y = x + 5
-print y
+write(y)
 ```
 
 If a variable is used before being assigned, it defaults to `0` instead of raising an error. This is different from Python, where `NameError` would fire.

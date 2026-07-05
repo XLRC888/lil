@@ -5,7 +5,7 @@ Template strings let you embed variable values inside a string using `{varname}`
 ```lil
 name = "alice"
 age = 30
-print `my name is {name} and i am {age} years old`
+write(`my name is {name} and i am {age} years old`)
 ```
 
 This prints `my name is alice and i am 30 years old`.
@@ -32,27 +32,27 @@ Templates are cleaner for anything more than a single concatenation.
 username = "bob"
 score = 95
 msg = `player {username} scored {score} points`
-print msg
+write(msg)
 ```
 
 ## Mixing with library calls
 
 ```lil
 now = minimal@date
-print `the time is {now}`
+write(`the time is {now}`)
 ```
 
 ```lil
-rand = random@math
-print `your lucky number is {rand}`
+rand = random@math()
+write(`your lucky number is {rand}`)
 ```
 
 ## Templates in conditions
 
 ```lil
-name = read@file "name.txt"
-if len@string name > 0 {
-  print `welcome, {name}`
+name = read@file("name.txt")
+if len@string(name) > 0 {
+  write(`welcome, {name}`)
 }
 ```
 
@@ -61,5 +61,5 @@ if len@string name > 0 {
 If you use a variable name that doesn't exist in a template, it evaluates to 0 (for numbers) or "" (for strings):
 
 ```lil
-print `value is {undefined_var}`   # prints "value is 0"
+write(`value is {undefined_var}`)   : prints "value is 0"
 ```

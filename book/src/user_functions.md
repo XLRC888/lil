@@ -4,7 +4,7 @@ Define a function with `#name(params)` syntax followed by a block in braces:
 
 ```lil
 #greet() {
-  print "hello"
+  write("hello")
 }
 
 greet()
@@ -29,7 +29,7 @@ lil:
 }
 
 result = add(3, 4)
-print result
+write(result)
 ```
 
 ## Practical Examples
@@ -42,18 +42,18 @@ Convert Fahrenheit to Celsius:
 }
 
 temp = fahr_to_celsius(100)
-print temp
+write(temp)
 ```
 
 Roll a die using a library function inside a user function:
 
 ```lil
 #roll_dice() {
-  randint@math 1 6
+  randint@math(1, 6)
 }
 
 roll = roll_dice()
-print "you rolled", roll
+write("you rolled", roll)
 ```
 
 Check if a number is even:
@@ -64,7 +64,7 @@ Check if a number is even:
 }
 
 x = is_even(10)
-print x
+write(x)
 ```
 
 ## Scope
@@ -82,21 +82,21 @@ Each function call gets its own scope. Parameters and local variables are isolat
   x
 }
 
-print a(5)    # 15
-print b(5)    # 10
-print a(100)  # 110
+write(a(5))    : 15
+write(b(5))    : 10
+write(a(100))  : 110
 ```
 
 Two functions with the same parameter name don't interfere with each other:
 
 ```lil
 #a(x) {
-  print x
+  write(x)
 }
 
 #b(x) {
   a(x + 1)
-  print x
+  write(x)
 }
 
 b(100)
@@ -108,7 +108,7 @@ Variables created inside a function are local to that call and cleaned up when t
 #outer() {
   x = 99
   inner()
-  print x
+  write(x)
 }
 
 #inner() {
@@ -128,7 +128,7 @@ x = 10
 }
 
 set_x(42)
-print x
+write(x)
 ```
 
 ## Include
@@ -139,14 +139,14 @@ Functions defined in other files can be loaded with `include`:
 include dice
 
 roll = roll_dice()
-print roll
+write(roll)
 ```
 
 This loads and runs `dice.lil`, making its functions available. For example, `dice.lil` might contain:
 
 ```lil
 #roll_dice() {
-  randint@math 1 6
+  randint@math(1, 6)
 }
 ```
 
@@ -173,7 +173,7 @@ Functions can call themselves:
   }
 }
 
-print fib(10)
+write(fib(10))
 ```
 
 lil's functions work in both interpreted and compiled (AOT) mode.
@@ -184,7 +184,7 @@ Functions without a name can be created inline with `#(params) { body }`:
 
 ```lil
 double = #(x) { x * 2 }
-print double(5)
+write(double(5))
 ```
 
 The real power is passing them to higher-order library functions:
@@ -193,12 +193,12 @@ The real power is passing them to higher-order library functions:
 include list
 
 nums = new@list
-push@list nums 1
-push@list nums 2
-push@list nums 3
+push@list(nums, 1)
+push@list(nums, 2)
+push@list(nums, 3)
 
-doubled = map@list nums #(x) { x * 2 }
-print doubled
+doubled = map@list(nums, #(x) { x * 2 })
+write(doubled)
 ```
 
 Anonymous functions see variables from the scope where they're defined:
@@ -206,8 +206,7 @@ Anonymous functions see variables from the scope where they're defined:
 ```lil
 prefix = "> "
 #add_prefix(s) { prefix + s }
-print add_prefix("hello")
+write(add_prefix("hello"))
 ```
 
 The anonymous function creates an internal name, registers in the function table, and returns the name as a string. `map@list` and `filter@list` resolve it automatically.
-

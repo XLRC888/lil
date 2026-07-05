@@ -167,6 +167,7 @@ ASTNode *parse_program(void) {
     while (lex_cur.type != TOK_EOF) {
         ASTNode *s = parse_stmt();
         if (s->type != NODE_EMPTY) block_add(prog, s);
+        while (lex_cur.type == TOK_SEMICOLON) { lex_next(); }
         if (lex_cur.type == TOK_NEWLINE) lex_next();
     }
     return prog;
@@ -179,6 +180,7 @@ ASTNode *parse_block(void) {
         if (lex_cur.type == TOK_NEWLINE) { lex_next(); continue; }
         ASTNode *s = parse_stmt();
         if (s->type != NODE_EMPTY) block_add(b, s);
+        while (lex_cur.type == TOK_SEMICOLON) { lex_next(); }
         if (lex_cur.type == TOK_NEWLINE) lex_next();
     }
     if (lex_cur.type != TOK_RBRACE) fatal("line %d: expected '}'", lex_cur.line);
@@ -257,6 +259,7 @@ ASTNode *parse_else_chain(void) {
 
 ASTNode *parse_stmt(void) {
     if (lex_cur.type == TOK_NEWLINE || lex_cur.type == TOK_EOF) return ast_alloc(NODE_EMPTY);
+    if (lex_cur.type == TOK_SEMICOLON) { lex_next(); return ast_alloc(NODE_EMPTY); }
 
     if (lex_cur.type == TOK_LBRACE) {
         int sp2, sl2, sh2; Token sc2;
@@ -266,6 +269,10 @@ ASTNode *parse_stmt(void) {
             lex_next();
             if (lex_cur.type == TOK_COMMA) lex_next();
             else break;
+        }
+        if (lex_cur.type == TOK_COLON) {
+            lex_setpos(sp2, sl2, sh2, sc2);
+            return parse_expr();
         }
         if (lex_cur.type == TOK_RBRACE) {
             lex_next();
@@ -558,7 +565,7 @@ ASTNode *parse_stmt(void) {
             lex_next();
             return ast_alloc(NODE_EMPTY);
         }
-        fatal("line %d: expected library name after uninclude", lex_cur.line);
+        fatal("line %d: expected library name after drop", lex_cur.line);
         return ast_alloc(NODE_EMPTY);
     }
     if (lex_cur.type == TOK_STRUCT) {
@@ -928,6 +935,8 @@ ASTNode *parse_primary(void) {
         return ast_templ(r);
     }
     if (lex_cur.type == TOK_AMPERSAND) {
+        static int amp_warned;
+        if (!amp_warned) { amp_warned = 1; fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: &lib|func syntax is deprecated, use func@lib\n", lex_cur.line); }
         lex_next();
         if (lex_cur.type != TOK_ID) fatal("line %d: expected library name after '&'", lex_cur.line);
         char *lib = sdup(lex_cur.val.str);
@@ -940,7 +949,16 @@ ASTNode *parse_primary(void) {
         if (argc >= cap) { cap = 4; args = malloc(sizeof(char*) * cap); if (!args) fatal("out of memory"); }
         args[argc++] = sdup(lex_cur.val.str);
         lex_next();
-        while (lex_cur.type == TOK_ID || lex_cur.type == TOK_STR || lex_cur.type == TOK_NUM || lex_cur.type == TOK_TEMPLATE) {
+        while (lex_cur.type == TOK_ID || lex_cur.type == TOK_STR || lex_cur.type == TOK_NUM || lex_cur.type == TOK_TEMPLATE || lex_cur.type == TOK_MINUS) {
+            if (lex_cur.type == TOK_MINUS) {
+                if (lex_peek_next().type != TOK_NUM) break;
+                lex_next();
+                if (argc >= cap) { cap *= 2; args = realloc(args, sizeof(char*) * cap); if (!args) fatal("out of memory"); }
+                char tmp[70]; snprintf(tmp, sizeof(tmp), "-%.10g", lex_cur.val.num);
+                args[argc++] = sdup(tmp);
+                lex_next();
+                continue;
+            }
             if (argc >= cap) { cap *= 2; args = realloc(args, sizeof(char*) * cap); if (!args) fatal("out of memory"); }
             if (lex_cur.type == TOK_NUM) {
                 char tmp[64]; snprintf(tmp, sizeof(tmp), "%.10g", lex_cur.val.num);
@@ -1007,54 +1025,92 @@ ASTNode *parse_primary(void) {
     }
     if (lex_cur.type == TOK_ID) {
         char *fname = sdup(lex_cur.val.str);
-        if (lex_peek_next().type == TOK_AT) {
-            lex_next();
-            lex_next();
-            if (lex_cur.type != TOK_ID) fatal("line %d: expected library name after '@'", lex_cur.line);
-            char *lib = sdup(lex_cur.val.str);
-            lex_next();
-            char **args = NULL;
-            int argc = 0, cap = 0;
-            if (argc >= cap) { cap = 4; args = malloc(sizeof(char*) * cap); if (!args) fatal("out of memory"); }
-            args[argc++] = fname;
-            while (lex_cur.type == TOK_ID || lex_cur.type == TOK_STR || lex_cur.type == TOK_NUM || lex_cur.type == TOK_TEMPLATE) {
-                if (argc >= cap) { cap *= 2; args = realloc(args, sizeof(char*) * cap); if (!args) fatal("out of memory"); }
-                if (lex_cur.type == TOK_NUM) {
-                    char tmp[64]; snprintf(tmp, sizeof(tmp), "%.10g", lex_cur.val.num);
-                    args[argc++] = sdup(tmp);
-                } else if (lex_cur.type == TOK_ID) {
-                    char *prefixed = malloc(strlen(lex_cur.val.str) + 2);
-                    if (!prefixed) fatal("out of memory");
-                    prefixed[0] = '\1';
-                    strcpy(prefixed + 1, lex_cur.val.str);
-                    args[argc++] = prefixed;
-                } else {
-                    args[argc++] = sdup(lex_cur.val.str);
-                }
-                lex_next();
-            }
-            return ast_function(lib, args, argc);
-        }
         if (lex_peek_next().type == TOK_LPAREN) {
             lex_next();
             lex_next();
             ASTNode **args = NULL;
             int nargs = 0, acap = 0;
             while (lex_cur.type != TOK_RPAREN && lex_cur.type != TOK_EOF) {
-                if (nargs >= acap) { acap = acap ? acap * 2 : 4; args = realloc(args, acap * sizeof(ASTNode*)); }
+                if (nargs >= acap) { acap = acap ? acap * 2 : 4; args = realloc(args, acap * sizeof(ASTNode*)); if (!args) fatal("out of memory"); }
                 args[nargs++] = parse_expr();
                 if (lex_cur.type == TOK_COMMA) lex_next();
             }
             if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
             lex_next();
+            char *lib = NULL;
+            if (lex_cur.type == TOK_AT) {
+                lex_next();
+                if (lex_cur.type != TOK_ID) fatal("line %d: expected library name after '@'", lex_cur.line);
+                lib = sdup(lex_cur.val.str);
+                lex_next();
+            }
             ASTNode *n = ast_alloc(NODE_FUNC_CALL);
             n->data.func_call.name = fname;
             n->data.func_call.args = args;
             n->data.func_call.nargs = nargs;
+            n->data.func_call.lib = lib;
             return n;
+        }
+        if (lex_peek_next().type == TOK_AT) {
+            lex_next();
+            lex_next();
+            if (lex_cur.type != TOK_ID) fatal("line %d: expected library name after '@'", lex_cur.line);
+            char *lib = sdup(lex_cur.val.str);
+            lex_next();
+            char **sargs = NULL;
+            int sargc = 0, scap = 0;
+            if (scap == 0) { scap = 4; sargs = malloc(sizeof(char*) * scap); if (!sargs) fatal("out of memory"); }
+            sargs[sargc++] = fname;
+            while (lex_cur.type == TOK_ID || lex_cur.type == TOK_STR || lex_cur.type == TOK_NUM || lex_cur.type == TOK_TEMPLATE || lex_cur.type == TOK_MINUS) {
+                if (lex_cur.type == TOK_MINUS) {
+                    if (lex_peek_next().type != TOK_NUM) break;
+                    lex_next();
+                    if (sargc >= scap) { scap *= 2; sargs = realloc(sargs, sizeof(char*) * scap); if (!sargs) fatal("out of memory"); }
+                    char tmp[70]; snprintf(tmp, sizeof(tmp), "-%.10g", lex_cur.val.num);
+                    sargs[sargc++] = sdup(tmp);
+                    lex_next();
+                    continue;
+                }
+                if (sargc >= scap) { scap *= 2; sargs = realloc(sargs, sizeof(char*) * scap); if (!sargs) fatal("out of memory"); }
+                if (lex_cur.type == TOK_NUM) {
+                    char tmp[64]; snprintf(tmp, sizeof(tmp), "%.10g", lex_cur.val.num);
+                    sargs[sargc++] = sdup(tmp);
+                } else if (lex_cur.type == TOK_ID) {
+                    char *prefixed = malloc(strlen(lex_cur.val.str) + 2);
+                    if (!prefixed) fatal("out of memory");
+                    prefixed[0] = '\1';
+                    strcpy(prefixed + 1, lex_cur.val.str);
+                    sargs[sargc++] = prefixed;
+                } else {
+                    sargs[sargc++] = sdup(lex_cur.val.str);
+                }
+                lex_next();
+            }
+            return ast_function(lib, sargs, sargc);
         }
         lex_next();
         return ast_id(fname);
+    }
+    if (lex_cur.type == TOK_WRITE || lex_cur.type == TOK_READ) {
+        char *fname = lex_cur.type == TOK_WRITE ? sdup("write") : sdup("read");
+        lex_next();
+        if (lex_cur.type != TOK_LPAREN) fatal("line %d: expected '(' after '%s'", lex_cur.line, fname);
+        lex_next();
+        ASTNode **wargs = NULL;
+        int wargs_n = 0, wargs_cap = 0;
+        while (lex_cur.type != TOK_RPAREN && lex_cur.type != TOK_EOF) {
+            if (wargs_n >= wargs_cap) { wargs_cap = wargs_cap ? wargs_cap * 2 : 4; wargs = realloc(wargs, wargs_cap * sizeof(ASTNode*)); if (!wargs) fatal("out of memory"); }
+            wargs[wargs_n++] = parse_expr();
+            if (lex_cur.type == TOK_COMMA) lex_next();
+        }
+        if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
+        lex_next();
+        ASTNode *n = ast_alloc(NODE_FUNC_CALL);
+        n->data.func_call.name = fname;
+        n->data.func_call.args = wargs;
+        n->data.func_call.nargs = wargs_n;
+        n->data.func_call.lib = NULL;
+        return n;
     }
     if (lex_cur.type == TOK_LPAREN) {
         lex_next();
@@ -1106,7 +1162,36 @@ ASTNode *parse_postfix(void) {
     while (lex_cur.type == TOK_LBRACKET || lex_cur.type == TOK_DOT) {
         if (lex_cur.type == TOK_DOT) {
             lex_next();
-            if (lex_cur.type != TOK_ID) fatal("line %d: expected field name after '.'", lex_cur.line);
+            if (lex_cur.type != TOK_ID) fatal("line %d: expected field or method name after '.'", lex_cur.line);
+            if (lex_peek_next().type == TOK_LPAREN) {
+                char *method = sdup(lex_cur.val.str);
+                lex_next();
+                lex_next();
+                ASTNode **args = NULL;
+                int nargs = 0, acap = 0;
+                while (lex_cur.type != TOK_RPAREN && lex_cur.type != TOK_EOF) {
+                    if (nargs >= acap) { acap = acap ? acap * 2 : 4; args = realloc(args, acap * sizeof(ASTNode*)); if (!args) fatal("out of memory"); }
+                    args[nargs++] = parse_expr();
+                    if (lex_cur.type == TOK_COMMA) lex_next();
+                }
+                if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
+                lex_next();
+                char *lib = NULL;
+                if (lex_cur.type == TOK_AT) {
+                    lex_next();
+                    if (lex_cur.type != TOK_ID) fatal("line %d: expected library name after '@'", lex_cur.line);
+                    lib = sdup(lex_cur.val.str);
+                    lex_next();
+                }
+                ASTNode *n = ast_alloc(NODE_METHOD_CALL);
+                n->data.method_call.receiver = e;
+                n->data.method_call.method = method;
+                n->data.method_call.args = args;
+                n->data.method_call.argc = nargs;
+                n->data.method_call.lib = lib;
+                e = n;
+                continue;
+            }
             ASTNode *f = ast_alloc(NODE_INDEX);
             f->data.idx.container = e;
             f->data.idx.index = ast_str(lex_cur.val.str);
@@ -1162,10 +1247,11 @@ ASTNode *parse_cmp(void) {
 
 ASTNode *parse_and(void) {
     ASTNode *l = parse_cmp();
-    while (lex_cur.type == TOK_AND) {
+    while (lex_cur.type == TOK_AND || lex_cur.type == TOK_AND_AND) {
+        int op = lex_cur.type;
         lex_next();
         ASTNode *r = parse_cmp();
-        l = ast_binop(TOK_AND, l, r);
+        l = ast_binop(op, l, r);
     }
     return l;
 }

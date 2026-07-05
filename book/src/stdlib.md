@@ -23,12 +23,12 @@ Functions that fail silently set a last error message:
 ```
 include file
 include sys
-x = read@file "/nonexistent"
-print last_error@sys
+x = read@file("/nonexistent")
+write(last_error@sys)
 clear_error@sys
-print last_error@sys
+write(last_error@sys)
 ```
 
 - `last_error@sys`  -  returns last error string (empty if none)
 - `clear_error@sys`  -  resets error state
-- `log@sys "msg"`  -  prints to stderr for debugging
+- `log@sys("msg")`  -  prints to stderr for debugging

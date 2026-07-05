@@ -5,16 +5,16 @@
 ```lil
 include sys
 
-eval@sys "x = 42"
-print x
+eval@sys("x = 42")
+write(x)
 ```
 
 You can capture the return value:
 
 ```lil
 include sys
-result = eval@sys "1 + 2"
-print result
+result = eval@sys("1 + 2")
+write(result)
 ```
 
 Eval uses the same parser and interpreter as normal execution. Variables set inside eval are visible to the caller afterwards.

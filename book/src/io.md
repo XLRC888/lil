@@ -1,49 +1,49 @@
 # Input and Output
 
-lil keeps I/O simpler than Python. No file objects, no context managers, no close() calls. Just print, input, and a few file library functions.
+lil keeps I/O simpler than Python. No file objects, no context managers, no close() calls. Just read, write, and a few file library functions.
 
-## Print
+## Write
 
-The `print` statement outputs text:
+The `write()` function outputs text:
 
 ```lil
-print "hello world"
+write("hello world")
 ```
 
-Print multiple values separated by commas:
+Write multiple values separated by commas:
 
 ```lil
 name = "alice"
-print "hello", name
+write("hello", name)
 ```
 
 ```lil
 x = 42
-print "the answer is", x
+write("the answer is", x)
 ```
 
-## Input
+## Read
 
-The `input` statement reads a line from stdin and stores it in a variable:
+The `read()` function reads a line from stdin and returns it as a string:
 
 ```lil
-input name
-print "hello", name
+name = read()
+write("hello", name)
 ```
 
 Show a prompt string:
 
 ```lil
-input "enter your name: " name
-print "hello", name
+name = read("enter your name: ")
+write("hello", name)
 ```
 
-In Python, you'd write `name = input("enter your name: ")`. In lil, `input` is a statement, not a function call. The variable comes after the optional prompt.
+In Python, you'd write `name = input("enter your name: ")`. In lil, `read()` is a function that returns a string.
 
 ```lil
-input "type something: " s
-len = len@string s
-print "you typed", len, "characters"
+s = read("type something: ")
+len = len@string(s)
+write("you typed", len, "characters")
 ```
 
 ## File I/O
@@ -51,51 +51,51 @@ print "you typed", len, "characters"
 lil uses the `file` library for file operations:
 
 ```lil
-data = read@file "config.txt"
+data = read@file("config.txt")
 ```
 
 In Python that's `with open("config.txt") as f: data = f.read()`. lil does it in one call.
 
 ```lil
-text = read@file "notes.txt"
+text = read@file("notes.txt")
 if text == "" {
-  print "file is empty or missing"
+  write("file is empty or missing")
 }
 ```
 
 Writing a file:
 
 ```lil
-write@file "output.txt" "hello world"
+write@file("output.txt", "hello world")
 ```
 
 You can write the result of an expression directly:
 
 ```lil
 today = standart@date
-write@file "date.txt" today
+write@file("date.txt", today)
 ```
 
 Appending to a file:
 
 ```lil
-append@file "log.txt" "new entry"
+append@file("log.txt", "new entry")
 ```
 
 Check if a file exists:
 
 ```lil
-if exists@file "data.txt" == 1 {
-  data = read@file "data.txt"
-  print data
+if exists@file("data.txt") == 1 {
+  data = read@file("data.txt")
+  write(data)
 }
 ```
 
 List directory contents:
 
 ```lil
-files = list@file "/home/user"
-print files
+files = list@file("/home/user")
+write(files)
 ```
 
 See the [Built-in Libraries](builtins.md) page for the full file library reference.

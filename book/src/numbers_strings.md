@@ -24,14 +24,14 @@ You can concatenate strings with `+`:
 a = "hello "
 b = "world"
 c = a + b
-print c
+write(c)
 ```
 
 If you add a string to a number, the number is converted to a string first:
 
 ```lil
 x = "score: " + 42
-print x
+write(x)
 ```
 
 ## String length
@@ -40,8 +40,8 @@ Get the length of a string with `len@string`:
 
 ```lil
 name = "alice"
-len = len@string name
-print name, "has", len, "characters"
+len = len@string("hello")
+write(name, "has", len, "characters")
 ```
 
 ## Math on numbers
@@ -50,10 +50,10 @@ You can write math expressions directly:
 
 ```lil
 result = 3.14 * 2
-print result
+write(result)
 
 r = 0.5
-print r
+write(r)
 ```
 
 ## Type conversion
@@ -73,7 +73,7 @@ stringify x
 x = "42"
 intify x
 x = x + 5
-print x
+write(x)
 
 x = "hello"
 intify x
@@ -92,10 +92,8 @@ intify x octal
 
 ```lil
 x = 42
-stringify x     # now "42"
-toggle x        # back to 42
-toggle x        # back to "42"
-toggle x        # back to 42
+stringify x     : now "42"
+toggle x        : back to 42
+toggle x        : back to "42"
+toggle x        : back to 42
 ```
-
-The old names `strify` and `swify` still work but are deprecated. Use `stringify` and `toggle` instead.

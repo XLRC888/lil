@@ -25,7 +25,7 @@ Write a script:
 }
 
 result = fib(35)
-print "fib(35) = " result
+write("fib(35) = ", result)
 ```
 
 Compile and run:
@@ -43,7 +43,7 @@ The compiled binary is self-contained. Copy it to another machine (same architec
 
 ```bash
 scp fib user@other-machine:~
-ssh user@other-machine ./fib    # works without lil
+ssh user@other-machine ./fib    : works without lil
 ```
 
 ## Performance
@@ -76,7 +76,7 @@ Simple operations, arithmetic, control flow, user-defined functions, and variabl
 ```lil
 x = 42
 y = x + 1
-print y
+write(y)
 ```
 
 This WILL compile and run correctly.
@@ -84,9 +84,9 @@ This WILL compile and run correctly.
 Library calls like `full@date` will NOT compile. The compiler generates a stub that returns a default value (0 for numbers, empty string for strings):
 
 ```lil
-print full@date          # compiles but prints nothing useful
-print cmd@sys "ls"       # returns 0 in compiled mode
-print "hello"             # this compiles and works fine
+write(full@date)          : compiles but prints nothing useful
+write(cmd@sys("ls"))      : returns 0 in compiled mode
+write("hello")             : this compiles and works fine
 ```
 
 ## Limitations
@@ -95,6 +95,14 @@ The following features are not available in compiled mode:
 
 - The `has` operator in conditions
 - Templates (template strings)
-- Library function calls (`func@lib args`)
+- Library function calls (`func(args)@lib`)
 
 If your script uses any of these features, compilation will fail and lil will tell you which construct could not be compiled.
+
+## Short-circuit && and ; in compiled mode
+
+`&&` and `;` work in compiled mode but fall back to the interpreter for execution. They work correctly but don't get the full AOT optimization.
+
+## Modifiers in AOT
+
+`force` and `unforce` still parse and run in compiled mode, but the locking concept does not apply. Variables in the generated C are statically typed, so `force x = 42` simply becomes `double x = 42;` (or the inferred type) with no lock attached. A later `x = 30` in the same compiled script will not be rejected the way it would in the interpreter. `unforce x` compiles to a no-op.

@@ -6,7 +6,7 @@ The `has` operator checks if a variable exists or if a string contains a substri
 
 ```lil
 if has x {
-  print "x exists"
+  write("x exists")
 }
 ```
 
@@ -15,9 +15,9 @@ This checks whether the variable `x` has been assigned. If the variable was neve
 A practical use: check if data was read successfully:
 
 ```lil
-data = read@file "data.txt"
+data = read@file("data.txt")
 if has data {
-  print "read succeeded"
+  write("read succeeded")
 }
 ```
 
@@ -28,7 +28,7 @@ if has data {
 ```lil
 text = "hello world"
 if text has "world" {
-  print "found"
+  write("found")
 }
 ```
 
@@ -37,7 +37,7 @@ Check if a URL contains a protocol:
 ```lil
 url = "https://example.com"
 if url has "https" {
-  print "secure connection"
+  write("secure connection")
 }
 ```
 
@@ -47,7 +47,7 @@ You can chain `not` with `has`:
 
 ```lil
 if has result and result has "error" {
-  print "got an error response"
+  write("got an error response")
 }
 ```
 
@@ -63,11 +63,11 @@ If `result` was never set, the first `has` is false and the substring check is n
 
 ```lil
 if text has nocase "WORLD" {
-  print "found case insensitive"
+  write("found case insensitive")
 }
 
 if text has word "world" {
-  print "found as whole word"
+  write("found as whole word")
 }
 ```
 
@@ -75,7 +75,7 @@ You can combine flags:
 
 ```lil
 if text has nocase anywhere "WORLD" {
-  print "found"
+  write("found")
 }
 ```
 
@@ -85,12 +85,12 @@ if text has nocase anywhere "WORLD" {
 
 ```lil
 x = 0
-if has x { print "x exists" }   # prints (x was assigned)
-if x == 0 { print "x is zero" } # also prints
+if has x { write("x exists") }   : prints (x was assigned)
+if x == 0 { write("x is zero") } : also prints
 
 y = ""
-if has y { print "y exists" }   # prints (y was assigned, even empty)
-if y == "" { print "y is empty" } # also prints
+if has y { write("y exists") }   : prints (y was assigned, even empty)
+if y == "" { write("y is empty") } : also prints
 ```
 
 A variable can exist but hold a falsy value. Use `has` when you care whether it was assigned at all, not what it holds.

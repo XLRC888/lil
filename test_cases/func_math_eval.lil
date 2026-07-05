@@ -1,1 +1,2 @@
-x = &math|eval "2 + 3"
+include math
+print calc@math "2 + 3"

@@ -1,1 +1,2 @@
-x = &math|fib 5
+include math
+print fib@math 5

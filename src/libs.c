@@ -161,8 +161,8 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             free(arg);
             return make_num(found);
         }
-        if (!strcmp(fn, "eval")) {
-            if (argc < 2) fatal("line %d: math eval expects a string expression", line);
+        if (!strcmp(fn, "calc")) {
+            if (argc < 2) fatal("line %d: math calc expects a string expression", line);
             char *expr_str = resolve_arg(args[1]);
             const char *p = expr_str;
             double result = math_parse_expr(&p);
@@ -584,16 +584,6 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             if (vars[vi].val.type != VAL_LIST) return make_num(0);
             return make_num(vars[vi].val.data.list.count);
         }
-        if (!strcmp(fn, "at")) {
-            if (argc < 3) fatal("line %d: list get expects list name and index", line);
-            char *vname = args[1];
-            if (vname[0] == '\1') vname++;
-            int vi = var_find(vname);
-            if (vi < 0 || vars[vi].val.type != VAL_LIST) fatal("line %d: list '%s' not found", line, vname);
-            char *is = resolve_arg(args[2]);
-            int idx = (int)strtod(is, NULL); free(is);
-            return list_get(vars[vi].val, idx);
-        }
         if (!strcmp(fn, "map")) {
             if (argc < 3) fatal("line %d: list map expects list name and function name", line);
             char *vname = args[1];
@@ -606,18 +596,23 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             Value result = make_list();
             Var saved[MAX_VARS];
             int saved_count = var_count;
+            int saved_func_count = func_count;
             memcpy(saved, vars, sizeof(Var) * var_count);
             for (int i = 0; i < lst.data.list.count; i++) {
+                for (int k = saved_count; k < var_count; k++) { free(vars[k].name); val_free(vars[k].val); if (vars[k].live_src) free(vars[k].live_src); }
                 var_count = saved_count;
                 memcpy(vars, saved, sizeof(Var) * var_count);
+                func_count = saved_func_count;
                 int pi = var_ensure(funcs[fi].params[0]);
                 vars[pi].val = copy_val(lst.data.list.items[i]);
                 _last_expr_val = make_num(0);
                 exec_stmt(funcs[fi].body);
                 list_append(&result, copy_val(_last_expr_val));
             }
+            for (int k = saved_count; k < var_count; k++) { free(vars[k].name); val_free(vars[k].val); if (vars[k].live_src) free(vars[k].live_src); }
             var_count = saved_count;
             memcpy(vars, saved, sizeof(Var) * var_count);
+            func_count = saved_func_count;
             return result;
         }
         if (!strcmp(fn, "filter")) {
@@ -632,10 +627,13 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             Value result = make_list();
             Var saved[MAX_VARS];
             int saved_count = var_count;
+            int saved_func_count = func_count;
             memcpy(saved, vars, sizeof(Var) * var_count);
             for (int i = 0; i < lst.data.list.count; i++) {
+                for (int k = saved_count; k < var_count; k++) { free(vars[k].name); val_free(vars[k].val); if (vars[k].live_src) free(vars[k].live_src); }
                 var_count = saved_count;
                 memcpy(vars, saved, sizeof(Var) * var_count);
+                func_count = saved_func_count;
                 int pi = var_ensure(funcs[fi].params[0]);
                 vars[pi].val = copy_val(lst.data.list.items[i]);
                 _last_expr_val = make_num(0);
@@ -643,8 +641,10 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
                 if (truthy(_last_expr_val))
                     list_append(&result, copy_val(lst.data.list.items[i]));
             }
+            for (int k = saved_count; k < var_count; k++) { free(vars[k].name); val_free(vars[k].val); if (vars[k].live_src) free(vars[k].live_src); }
             var_count = saved_count;
             memcpy(vars, saved, sizeof(Var) * var_count);
+            func_count = saved_func_count;
             return result;
         }
         if (!strcmp(fn, "reduce")) {
@@ -665,10 +665,13 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             free(is);
             Var saved[MAX_VARS];
             int saved_count = var_count;
+            int saved_func_count = func_count;
             memcpy(saved, vars, sizeof(Var) * var_count);
             for (int i = 0; i < lst.data.list.count; i++) {
+                for (int k = saved_count; k < var_count; k++) { free(vars[k].name); val_free(vars[k].val); if (vars[k].live_src) free(vars[k].live_src); }
                 var_count = saved_count;
                 memcpy(vars, saved, sizeof(Var) * var_count);
+                func_count = saved_func_count;
                 int pa = var_ensure(funcs[fi].params[0]);
                 int pb = var_ensure(funcs[fi].params[1]);
                 vars[pa].val = copy_val(accum);
@@ -678,8 +681,10 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
                 exec_stmt(funcs[fi].body);
                 accum = copy_val(_last_expr_val);
             }
+            for (int k = saved_count; k < var_count; k++) { free(vars[k].name); val_free(vars[k].val); if (vars[k].live_src) free(vars[k].live_src); }
             var_count = saved_count;
             memcpy(vars, saved, sizeof(Var) * var_count);
+            func_count = saved_func_count;
             return accum;
         }
         fatal("line %d: unknown list function '%s'", line, fn);

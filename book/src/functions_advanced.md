@@ -16,7 +16,7 @@ Use `#name(params)` syntax followed by the function body in braces:
 
 ```lil
 result = add(3, 4)
-print result
+write(result)
 ```
 
 ## Practical Predicate Functions
@@ -32,8 +32,8 @@ Functions that return 0 or 1 as boolean results:
   not is_even(n)
 }
 
-print is_even(42)
-print is_odd(42)
+write(is_even(42))
+write(is_odd(42))
 ```
 
 ## Using Library Functions Inside User Functions
@@ -42,23 +42,23 @@ Built-in library functions work inside your user-defined functions:
 
 ```lil
 #random_in_range(min, max) {
-  randint@math min max
+  randint@math(min, max)
 }
 
 r = random_in_range(5, 10)
-print r
+write(r)
 ```
 
 Bare variable names are auto-dereferenced in library calls:
 
 ```lil
 #rand_name() {
-  choice@math "alice" "bob" "charlie"
+  choice@math("alice", "bob", "charlie")
 }
 
 #greet() {
   name = rand_name()
-  print "hello", name
+  write("hello", name)
 }
 
 greet()
@@ -66,12 +66,12 @@ greet()
 
 ```lil
 #slugify(s) {
-  lower = lower@string s
-  replace@string lower " " "-"
+  lower = lower@string(s)
+  replace@string(lower, " ", "-")
 }
 
 slug = slugify("Hello World")
-print slug
+write(slug)
 ```
 
 ## Return Values
@@ -83,7 +83,7 @@ The last expression in the function body is the return value:
   x * 2
 }
 
-print double(21)
+write(double(21))
 ```
 
 If a function ends with an `if` expression, the taken branch's last value is returned:
@@ -92,25 +92,25 @@ If a function ends with an `if` expression, the taken branch's last value is ret
 #sign(n) {
   if n > 0 {
     1
-  } elif n < 0 {
+  } orif n < 0 {
     -1
   } else {
     0
   }
 }
 
-print sign(-5)
+write(sign(-5))
 ```
 
 If there's no value-producing expression, it returns 0:
 
 ```lil
 #noop() {
-  print "no return"
+  write("no return")
 }
 
 x = noop()
-print x
+write(x)
 ```
 
 ## Variable Save/Restore
@@ -122,11 +122,11 @@ x = "hello"
 
 #test() {
   x = "world"
-  print x
+  write(x)
 }
 
 test()
-print x
+write(x)
 ```
 
 Parameters are always save/restored independently of global variables:
@@ -136,11 +136,11 @@ x = 100
 
 #f(x) {
   x = x + 1
-  print x
+  write(x)
 }
 
 f(5)
-print x
+write(x)
 ```
 
 ## Recursion
@@ -154,7 +154,7 @@ print x
   }
 }
 
-print fib(10)
+write(fib(10))
 ```
 
 ## Notes

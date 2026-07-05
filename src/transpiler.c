@@ -34,7 +34,7 @@ VarType infer_expr_type(ASTNode *n) {
             int op = n->data.binop.op;
             VarType lt = infer_expr_type(n->data.binop.left);
             VarType rt = infer_expr_type(n->data.binop.right);
-            if (op == TOK_AND || op == TOK_OR || op == TOK_EQ || op == TOK_NE || op == TOK_LT || op == TOK_GT || op == TOK_LE || op == TOK_GE)
+            if (op == TOK_EQ || op == TOK_NE || op == TOK_LT || op == TOK_GT || op == TOK_LE || op == TOK_GE)
                 return TY_NUM;
             if (op == TOK_PLUS && (lt == TY_STR || rt == TY_STR)) return TY_STR;
             if (lt == TY_NUM && rt == TY_NUM) return TY_NUM;
@@ -50,6 +50,8 @@ VarType infer_expr_type(ASTNode *n) {
         }
         case NODE_TEMPLATE: return TY_STR;
         case NODE_FUNC_CALL: return TY_DYN;
+        case NODE_METHOD_CALL: return TY_DYN;
+        case NODE_SEMICOLON: return infer_expr_type(n->data.semicolon.right);
         default: return TY_DYN;
     }
 }
@@ -109,6 +111,15 @@ void infer_type_stmt(ASTNode *n) {
             for (int i = 0; i < n->data.destruct.nfields; i++)
                 var_ensure(n->data.destruct.fields[i]);
             infer_type_stmt(n->data.destruct.source);
+            break;
+        case NODE_METHOD_CALL:
+            infer_type_stmt(n->data.method_call.receiver);
+            for (int i = 0; i < n->data.method_call.argc; i++)
+                infer_type_stmt(n->data.method_call.args[i]);
+            break;
+        case NODE_SEMICOLON:
+            infer_type_stmt(n->data.semicolon.left);
+            infer_type_stmt(n->data.semicolon.right);
             break;
         default: break;
     }
@@ -214,11 +225,15 @@ void typecheck_stmt(ASTNode *n) {
         case NODE_STOP:
         case NODE_BREAK:
         case NODE_CONTINUE:
+            break;
         case NODE_NUM:
         case NODE_STR:
         case NODE_ID:
-        case NODE_UNARY:
         case NODE_TEMPLATE:
+            break;
+        case NODE_UNARY:
+            typecheck_stmt(n->data.unary.operand);
+            break;
         case NODE_LIST:
             for (int i = 0; i < n->data.list.count; i++)
                 typecheck_stmt(n->data.list.elements[i]);
@@ -244,11 +259,20 @@ void typecheck_stmt(ASTNode *n) {
         case NODE_INCLUDE:
         case NODE_FUNCTION:
         case NODE_STRUCT_DEF:
+            break;
         case NODE_DESTRUCT:
-            for (int i = 0; i < n->data.destruct.nfields; i++)
-                typecheck_stmt(n->data.destruct.source);
+            typecheck_stmt(n->data.destruct.source);
             break;
         case NODE_ANON_FUNC:
+            break;
+        case NODE_METHOD_CALL:
+            typecheck_stmt(n->data.method_call.receiver);
+            for (int i = 0; i < n->data.method_call.argc; i++)
+                typecheck_stmt(n->data.method_call.args[i]);
+            break;
+        case NODE_SEMICOLON:
+            typecheck_stmt(n->data.semicolon.left);
+            typecheck_stmt(n->data.semicolon.right);
             break;
         default:
             break;
@@ -277,9 +301,13 @@ void cg_varinit(FILE *f, ASTNode *prog) {
             fprintf(f, "  Value %s = {VAL_STR,{.str=NULL}};\n", vars[i].name);
             fprintf(f, "  var_ensure(\"%s\");\n", vars[i].name);
         } else {
-            if (undef_val.type == VAL_STR)
-                fprintf(f, "  Value %s = make_str(\"%s\");\n", vars[i].name, undef_val.data.str);
-            else
+            if (undef_val.type == VAL_STR) {
+                char *esc = cescape(undef_val.data.str);
+                fprintf(f, "  Value %s = make_str(\"%s\");\n", vars[i].name, esc);
+                free(esc);
+            } else if (undef_val.type == VAL_LIST || undef_val.type == VAL_DICT) {
+                fatal("undef default cannot be a list or dict in AOT mode");
+            } else
                 fprintf(f, "  Value %s = {VAL_NUM,{.num=%.17g}};\n", vars[i].name, undef_val.data.num);
             fprintf(f, "  var_ensure(\"%s\");\n", vars[i].name);
         }
@@ -318,6 +346,15 @@ void cg_collect_vars(ASTNode *n) {
             for (int i = 0; i < n->data.destruct.nfields; i++) var_ensure(n->data.destruct.fields[i]);
             cg_collect_vars(n->data.destruct.source);
             break;
+        case NODE_METHOD_CALL:
+            cg_collect_vars(n->data.method_call.receiver);
+            for (int i = 0; i < n->data.method_call.argc; i++)
+                cg_collect_vars(n->data.method_call.args[i]);
+            break;
+        case NODE_SEMICOLON:
+            cg_collect_vars(n->data.semicolon.left);
+            cg_collect_vars(n->data.semicolon.right);
+            break;
         default: break;
     }
 }
@@ -352,20 +389,43 @@ void cg_expr(FILE *f, ASTNode *n, VarType want) {
             int op = n->data.binop.op;
             VarType lt = infer_expr_type(n->data.binop.left);
             VarType rt = infer_expr_type(n->data.binop.right);
-            if (op == TOK_AND || op == TOK_OR) {
+            if (op == TOK_AND || op == TOK_AND_AND || op == TOK_OR) {
+                int is_and = (op == TOK_AND || op == TOK_AND_AND);
                 if (want == TY_NUM) {
-                    fprintf(f, "(truthy(");
+                    fprintf(f, "({ Value _l = ");
                     cg_expr(f, n->data.binop.left, TY_DYN);
-                    fprintf(f, ") %s truthy(", op == TOK_AND ? "&&" : "||");
-                    cg_expr(f, n->data.binop.right, TY_DYN);
-                    fprintf(f, "))");
+                    fprintf(f, "; val_tonum(truthy(_l) ? ");
+                    if (is_and) {
+                        fprintf(f, "(");
+                        cg_expr(f, n->data.binop.right, TY_DYN);
+                        fprintf(f, ") : _l); })");
+                    } else {
+                        fprintf(f, "_l : (");
+                        cg_expr(f, n->data.binop.right, TY_DYN);
+                        fprintf(f, ")); })");
+                    }
                 } else {
-                    fprintf(f, "make_num(truthy(");
+                    fprintf(f, "({ Value _l = ");
                     cg_expr(f, n->data.binop.left, TY_DYN);
-                    fprintf(f, ") %s truthy(", op == TOK_AND ? "&&" : "||");
-                    cg_expr(f, n->data.binop.right, TY_DYN);
-                    fprintf(f, "))");
+                    fprintf(f, "; truthy(_l) ? ");
+                    if (is_and) {
+                        fprintf(f, "(");
+                        cg_expr(f, n->data.binop.right, TY_DYN);
+                        fprintf(f, ") : _l; })");
+                    } else {
+                        fprintf(f, "_l : (");
+                        cg_expr(f, n->data.binop.right, TY_DYN);
+                        fprintf(f, "); })");
+                    }
                 }
+                break;
+            }
+            if (op == TOK_SEMICOLON) {
+                fprintf(f, "(");
+                cg_expr(f, n->data.binop.left, TY_DYN);
+                fprintf(f, ",");
+                cg_expr(f, n->data.binop.right, want);
+                fprintf(f, ")");
                 break;
             }
             if (op == TOK_EQ || op == TOK_NE || op == TOK_LT || op == TOK_GT || op == TOK_LE || op == TOK_GE) {
@@ -499,7 +559,39 @@ void cg_expr(FILE *f, ASTNode *n, VarType want) {
             fprintf(f, "))");
             break;
         }
+        case NODE_METHOD_CALL:
+            fatal("line %d: method calls not supported in AOT mode", n->line);
+            break;
+        case NODE_SEMICOLON: {
+            fprintf(f, "(");
+            cg_expr(f, n->data.semicolon.left, TY_DYN);
+            fprintf(f, ",");
+            cg_expr(f, n->data.semicolon.right, want);
+            fprintf(f, ")");
+            break;
+        }
         case NODE_FUNC_CALL: {
+            if (!strcmp(n->data.func_call.name, "write")) {
+                fprintf(f, "({");
+                for (int i = 0; i < n->data.func_call.nargs; i++) {
+                    if (i > 0) fprintf(f, "printf(\" \");");
+                    fprintf(f, "{ Value _wv = ");
+                    cg_expr(f, n->data.func_call.args[i], TY_DYN);
+                    fprintf(f, "; if (_wv.type == VAL_STR) printf(\"%%s\",_wv.data.str); else { char *_ws = val_tostr(_wv); printf(\"%%s\", _ws); free(_ws); } val_free(_wv); }");
+                }
+                fprintf(f, "printf(\"\\n\"); make_num(0); })");
+                break;
+            }
+            if (!strcmp(n->data.func_call.name, "read")) {
+                fprintf(f, "({ char _buf[4096]; ");
+                if (n->data.func_call.nargs > 0) {
+                    fprintf(f, "{ Value _rp = ");
+                    cg_expr(f, n->data.func_call.args[0], TY_DYN);
+                    fprintf(f, "; if (_rp.type == VAL_STR) printf(\"%%s\",_rp.data.str); else { char *_rps = val_tostr(_rp); printf(\"%%s\",_rps); free(_rps); } val_free(_rp); } ");
+                }
+                fprintf(f, "fgets(_buf, sizeof(_buf), stdin) ? (_buf[strcspn(_buf, \"\\n\")] = 0, make_str(_buf)) : make_str(\"\"); })");
+                break;
+            }
             fprintf(f, "_lil_fn_%s(", n->data.func_call.name);
             for (int i = 0; i < n->data.func_call.nargs; i++) {
                 if (i > 0) fprintf(f, ", ");
@@ -555,8 +647,10 @@ void cg_expr(FILE *f, ASTNode *n, VarType want) {
         }
         case NODE_LIST:
         case NODE_DICT:
-        case NODE_INDEX:
             fprintf(f, want == TY_NUM ? "0" : "make_num(0)");
+            break;
+        case NODE_INDEX:
+            fatal("line %d: list/string/dict indexing is not supported in AOT mode; remove this or run interpreted", n->line);
             break;
         default: fprintf(f, want == TY_NUM ? "0" : "make_num(0)"); break;
     }
@@ -823,10 +917,44 @@ case NODE_ANON_FUNC: {
     break;
 }
 case NODE_INDEX:
-case NODE_INDEX_SET: {
-            fprintf(f, "/* list ops only available in interpreted mode */\n");
+            fatal("line %d: list/string/dict indexing is not supported in AOT mode; remove this or run interpreted", n->line);
+            break;
+        case NODE_INDEX_SET: {
+            fatal("line %d: list/string/dict indexing is not supported in AOT mode; remove this or run interpreted", n->line);
             break;
         }
+        case NODE_FUNC_CALL: {
+            if (!strcmp(n->data.func_call.name, "write")) {
+                for (int i = 0; i < n->data.func_call.nargs; i++) {
+                    if (i > 0) fprintf(f, "printf(\" \");\n");
+                    fprintf(f, "{\n  Value _wv = ");
+                    cg_expr(f, n->data.func_call.args[i], TY_DYN);
+                    fprintf(f, ";\n  if (_wv.type == VAL_STR) printf(\"%%s\",_wv.data.str);\n");
+                    fprintf(f, "  else { char *_ws = val_tostr(_wv); printf(\"%%s\", _ws); free(_ws); }\n");
+                    fprintf(f, "  val_free(_wv);\n}\n");
+                }
+                fprintf(f, "printf(\"\\n\");\n");
+            } else if (!strcmp(n->data.func_call.name, "read")) {
+                fprintf(f, "{\n  char _buf[4096];\n");
+                if (n->data.func_call.nargs > 0) {
+                    fprintf(f, "  { Value _rp = ");
+                    cg_expr(f, n->data.func_call.args[0], TY_DYN);
+                    fprintf(f, "; if (_rp.type == VAL_STR) printf(\"%%s\",_rp.data.str); else { char *_rps = val_tostr(_rp); printf(\"%%s\",_rps); free(_rps); } val_free(_rp); }\n");
+                }
+                fprintf(f, "  fgets(_buf, sizeof(_buf), stdin);\n}\n");
+            } else {
+                cg_expr(f, n, TY_DYN);
+                fprintf(f, ";\n");
+            }
+            break;
+        }
+        case NODE_METHOD_CALL:
+            fatal("line %d: method calls not supported in AOT mode", n->line);
+            break;
+        case NODE_SEMICOLON:
+            cg_stmt(f, n->data.semicolon.left, loop_ids, loop_depth);
+            cg_stmt(f, n->data.semicolon.right, loop_ids, loop_depth);
+            break;
     }
 }
 
@@ -1012,6 +1140,7 @@ int generate_c(const char *path, const char *outpath) {
             cg_emit_func(f, prog->data.block.stmts[i]);
 
     fprintf(f, "int main() {\n");
+    fprintf(f, "  if (setjmp(_try_jmp)) { return 1; }\n");
     cg_varinit(f, prog);
     int *empty = NULL;
     cg_stmt(f, prog, empty, 0);

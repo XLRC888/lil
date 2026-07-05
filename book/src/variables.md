@@ -13,15 +13,15 @@ Variables do not need to be declared before use. The first time you assign to a 
 
 ```lil
 %counter
-print counter     # 0
+write(counter)     : 0
 counter = 10
-print counter     # 10
+write(counter)     : 10
 ```
 
 If you use a variable that has not been assigned yet, its value defaults to `0`:
 
 ```lil
-print z
+write(z)
 ```
 
 In Python, an undefined variable raises `NameError`. In lil, you get `0`. This is useful for counters and accumulators that start at zero implicitly.
@@ -32,7 +32,7 @@ Counting up works naturally:
 count = 0
 count = count + 1
 count = count + 1
-print count
+write(count)
 ```
 
 You can reassign variables to values of any type:
@@ -53,14 +53,14 @@ Assign a number to a variable:
 
 ```lil
 n = 10
-print "number:", n
+write("number:", n)
 ```
 
 Store the result of a math expression:
 
 ```lil
 area = 3.14 * 5 * 5
-print "area is", area
+write("area is", area)
 ```
 
 ## Forcing variable types
@@ -70,10 +70,10 @@ print "area is", area
 ```lil
 x = 42
 force x
-x = 30        # ERROR: cannot assign to a forced variable
-stringify x   # ERROR: cannot stringify a forced variable
-unforce x     # unlock it
-x = 30        # works again
+x = 30        : ERROR: cannot assign to a forced variable
+stringify x   : ERROR: cannot stringify a forced variable
+unforce x     : unlock it
+x = 30        : works again
 ```
 
 Combined assignment and force:
@@ -89,14 +89,14 @@ unforce x = 56
 
 ```lil
 force int input "Enter your age: " age
-print "next year you will be", age + 1
+write("next year you will be", age + 1)
 ```
 
 `force str input` reads input as a string and forces it:
 
 ```lil
 force str input "Enter your name: " name
-print "hello", name
+write("hello", name)
 ```
 
 ### Input validation without force
@@ -105,23 +105,23 @@ Use `int input` or `str input` to validate the input type without forcing the va
 
 ```lil
 int input "Enter a number: " x
-x = "now im a string"     # allowed (not forced)
+x = "now im a string"     : allowed (not forced)
 str input "Enter text: " y
-y = 42                     # allowed (not forced)
+y = 42                     : allowed (not forced)
 ```
 
 `int input` errors if the input is not a valid number. `str input` accepts anything as a string.
 
 ## Changing the undefined default
 
-By default, reading an undefined variable returns `0`. Use `?undef = value` to change this:
+By default, reading an undefined variable returns `0`. Use `?default = value` to change this:
 
 ```lil
-?undefinedVariableBecomes = "Undefined"
-print someVar     # prints "Undefined"
+?default = "Undefined"
+write(someVar)     : prints "Undefined"
 
-?x = 0
-print anotherVar  # prints 0
+?default = 0
+write(anotherVar)  : prints 0
 ```
 
-The name after `?` is descriptive and ignored. Only one value is stored globally. Once set, all undefined variables will return that value until changed.
+The name after `?` is descriptive only and is ignored by the runtime. Only one value is stored globally. Once set, all undefined variables will return that value until changed.

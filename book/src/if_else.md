@@ -5,7 +5,7 @@
 ```lil
 x = 10
 if x > 5 {
-  print "big"
+  write("big")
 }
 ```
 
@@ -14,31 +14,31 @@ if x > 5 {
 ```lil
 x = 2
 if x > 5 {
-  print "big"
+  write("big")
 } else {
-  print "small"
+  write("small")
 }
 ```
 
-## If/elif/else
+## If/orif/else
 
 ```lil
 x = 5
 if x > 10 {
-  print "big"
-} elif x > 3 {
-  print "medium"
+  write("big")
+} orif x > 3 {
+  write("medium")
 } else {
-  print "small"
+  write("small")
 }
 ```
 
-You can chain as many `elif` blocks as you need.
+You can chain as many `orif` blocks as you need. `elif` still works as an alias.
 
 ## Inline conditions
 
 You can put small blocks on one line:
 
 ```lil
-if x > 5 { print "big" } else { print "small" }
+if x > 5 { write("big") } else { write("small") }
 ```

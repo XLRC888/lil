@@ -1,41 +1,64 @@
-# Print
+# Write (Output)
 
-The `print` statement outputs values to stdout.
-
-```lil
-print "hello"
-print 42
-print 3.14
-```
-
-Multiple values separated by commas are printed with spaces between them:
+The `write()` function outputs values to stdout.
 
 ```lil
-print "the answer is", 42
+write("hello")
+write(42)
+write(3.14)
 ```
 
-Print with no arguments is a syntax error. To print a blank line, print an empty string:
+Multiple arguments are printed with spaces between them, followed by a newline:
 
 ```lil
-print ""
+write("the answer is", 42)
 ```
 
-Print the result of a library function directly:
+Write with no arguments prints a blank line:
 
 ```lil
-print full@date
+write("")
 ```
 
-Print multiple results from different functions in one line:
+Write the result of a library function directly:
 
 ```lil
-print minimal@date, random@math
+write(full@date)
 ```
 
-Print values alongside variables:
+Write multiple results from different functions in one line:
+
+```lil
+write(minimal@date, random@math)
+```
+
+Write values alongside variables:
 
 ```lil
 name = "bob"
 score = 95
-print "player", name, "scored", score
+write("player", name, "scored", score)
 ```
+
+## Statement separator
+
+Multiple statements can go on one line with `;`:
+
+```lil
+write("a") ; write("b")
+```
+
+## Comments
+
+`:` starts a single-line comment. `::` starts a block comment that ends with `::`:
+
+```lil
+: this is a comment
+write("hello")
+
+:: this is a
+block comment ::
+write("world")
+```
+
+`//` is integer division, not a comment: `10 // 3 = 3`.

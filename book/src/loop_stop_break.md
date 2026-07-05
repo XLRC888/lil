@@ -1,41 +1,43 @@
-# Loop, Stop, and Break
+# Loop and Break
 
 ## Loop
 
-`loop` creates an infinite loop with no condition. Use `stop` or `break` to exit:
+`loop` creates an infinite loop with no condition. Use `break` to exit:
 
 ```lil
 loop {
-  if condition { stop }
+  if condition { break }
 }
 ```
 
 This is equivalent to `while 1` but reads more naturally for "do until done" patterns.
 
-## Stop vs Break
+## Break
 
-`stop` and `break` both exit a loop. They work in `loop`, `while`, and `for` blocks. There is no difference between them.
+`break` exits a loop. It works in `loop`, `while`, and `for` blocks.
 
 ```lil
 i = 0
 loop {
-  print i
+  write(i)
   i = i + 1
-  if i > 5 { stop }
+  if i > 5 { break }
 }
 ```
 
+`stop` is kept as an alias for backward compatibility, but `break` is the preferred keyword.
+
 ## Practical example
 
-A common pattern: run an event loop that stops when a flag is set:
+A common pattern: run an event loop that breaks when a flag is set:
 
 ```lil
 running = 1
 loop {
-  input cmd
+  cmd = read()
   if cmd == "quit" { running = 0 }
-  if cmd == "help" { print "commands: quit, help" }
-  if not running { stop }
+  if cmd == "help" { write("commands: quit, help") }
+  if not running { break }
 }
 ```
 
@@ -48,9 +50,9 @@ Using `sleep@math` to run something every 2 seconds:
 ```lil
 count = 0
 loop {
-  print "tick", count
+  write("tick", count)
   count = count + 1
-  sleep@math 2
+  sleep@math(2)
   if count >= 5 { break }
 }
 ```

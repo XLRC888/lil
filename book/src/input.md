@@ -1,37 +1,48 @@
-# Input
+# Read (Input)
 
-The `input` statement reads a line from stdin and stores it in a variable as a string.
+The `read()` function reads a line from stdin and returns it as a string.
 
 ```lil
-input name
-print "hello", name
+name = read()
+write("hello", name)
 ```
 
 You can provide a prompt string:
 
 ```lil
-input "what is your name? " name
-print "nice to meet you,", name
+name = read("what is your name? ")
+write("nice to meet you,", name)
 ```
 
-If the user does not enter anything (EOF), the variable is set to an empty string:
+If the user does not enter anything (EOF), the result is an empty string:
 
 ```lil
-input "press enter to continue" x
-print "ok, continuing"
+x = read("press enter to continue")
+write("ok, continuing")
 ```
 
 Force input as a number and do a calculation:
 
 ```lil
-force int input "age: " age
-print "next year youll be", age + 1
+age = read("age: ")
+intify age
+write("next year youll be", age + 1)
 ```
 
 Read a number input and use it in an expression directly after:
 
 ```lil
-force int input "enter a number: " n
+n = read("enter a number: ")
+intify n
 result = n * 2
-print "doubled:", result
+write("doubled:", result)
+```
+
+## Legacy syntax
+
+The old `input` statement still works but `read()` is preferred:
+
+```lil
+input name
+input "what is your name? " name
 ```

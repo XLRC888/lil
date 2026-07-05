@@ -1,10 +1,10 @@
 # Control Flow
 
-This chapter covers all the ways to control what your program does next: if/elif/else conditions, while loops, for loops, and the loop/stop/break/continue keywords.
+This chapter covers all the ways to control what your program does next: if/orif/else conditions, while loops, for loops, and the loop/break/continue keywords.
 
-## If/elif/else
+## If/orif/else
 
-lil's if/elif/else works like Python but without colons or parentheses. In Python you write:
+lil's if/orif/else works like Python but without colons or parentheses. In Python you write:
 
 ```python
 if x > 5:
@@ -19,22 +19,24 @@ In lil the same logic looks like:
 
 ```lil
 if x > 5 {
-  print "big"
-} elif x > 0 {
-  print "small"
+  write("big")
+} orif x > 0 {
+  write("small")
 } else {
-  print "zero or negative"
+  write("zero or negative")
 }
 ```
 
-Conditions don't need parentheses around them. Just write the expression directly after `if` or `elif`. The braces are required even for single-line bodies.
+Conditions don't need parentheses around them. Just write the expression directly after `if` or `orif`. The braces are required even for single-line bodies.
+
+`elif` still works as an alias for `orif`.
 
 You can store condition results in variables:
 
 ```lil
 is_positive = x > 0
 if is_positive {
-  print "x is positive"
+  write("x is positive")
 }
 ```
 
@@ -42,7 +44,7 @@ Since conditions return 1 (true) or 0 (false), you can use them in arithmetic:
 
 ```lil
 count = (x > 10) + (y > 10) + (z > 10)
-print "variables over 10:", count
+write("variables over 10:", count)
 ```
 
 ## Loop types
@@ -53,4 +55,22 @@ lil has three kinds of loops covered on their own pages:
 - [For loops](for_loops.md) - iterate over a numeric range
 - [Loop blocks](loop_stop_break.md) - infinite loop with explicit exit
 
-All three support `break`, `stop`, and `continue`.
+All three support `break` and `continue`. (`stop` is a kept alias of `break`.)
+
+## Short-circuit &&
+
+`&&` evaluates the right side only if the left side is truthy:
+
+```lil
+while i < 10 && arr[i] != "" {
+    i = i + 1
+}
+```
+
+## Statement separator ;
+
+Multiple statements on one line with `;`:
+
+```lil
+a = 5 ; b = 10 ; write(a + b)
+```

@@ -11,7 +11,7 @@ The `@` operator returns the memory address of a variable as a number:
 ```lil
 x = 42
 addr = @x
-print addr
+write(addr)
 ```
 
 The address will be different every time you run the program (ASLR). One run might print `140732789041152`, the next `140732789041184`.
@@ -21,7 +21,7 @@ You can also get addresses of string variables:
 ```lil
 msg = "hello"
 msg_addr = @msg
-print msg_addr
+write(msg_addr)
 ```
 
 ## Dereference (^)
@@ -32,7 +32,7 @@ The `^` operator reads a value from a memory address:
 x = 42
 addr = @x
 value = ^addr
-print value    # prints 42
+write(value)    : prints 42
 ```
 
 This round-trips through a pointer: write a value, take its address, then dereference it back.
@@ -43,8 +43,8 @@ This round-trips through a pointer: write a value, take its address, then derefe
 x = 42
 x_addr = @x
 x_val = ^x_addr
-print "address: " x_addr
-print "value: " x_val
+write("address: ", x_addr)
+write("value: ", x_val)
 ```
 
 Each run will show a different address but always the same value.
@@ -54,7 +54,7 @@ Each run will show a different address but always the same value.
 Dereferencing an invalid address will crash your program with a segfault, just like Python's `ctypes.string_at(bad_address)`:
 
 ```lil
-value = ^9999999    # almost certainly a segfault
+value = ^9999999    : almost certainly a segfault
 ```
 
 These operators are useful for low-level programming and interfacing with hardware at specific memory addresses (MMIO). Use them carefully.

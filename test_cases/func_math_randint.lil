@@ -1,1 +1,2 @@
-&math|randint 1 6
+include math
+print randint@math 1 6

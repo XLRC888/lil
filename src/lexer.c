@@ -16,6 +16,27 @@ static Token lex_scan(void) {
         if (c == ' ' || c == '\t' || c == '\r') { lex_pos++; continue; }
         if (c == '\n') { lex_pos++; lex_line++; t.type = TOK_NEWLINE; return t; }
 
+        if (c == ':') {
+            if (lex_pos + 1 < lex_len && lex_src[lex_pos + 1] == ':') {
+                lex_pos += 2;
+                while (lex_pos + 1 < lex_len) {
+                    if (lex_src[lex_pos] == ':' && lex_src[lex_pos + 1] == ':') { lex_pos += 2; break; }
+                    if (lex_src[lex_pos] == '\n') lex_line++;
+                    lex_pos++;
+                }
+                continue;
+            }
+            lex_pos++;
+            while (lex_pos < lex_len && lex_src[lex_pos] != '\n') lex_pos++;
+            continue;
+        }
+
+        if (c == '/' && lex_pos + 1 < lex_len && lex_src[lex_pos + 1] == '/') {
+            lex_pos += 2;
+            while (lex_pos < lex_len && lex_src[lex_pos] != '\n') lex_pos++;
+            continue;
+        }
+
         if (c == '"') {
             lex_pos++;
             int start = lex_pos;
@@ -65,6 +86,14 @@ static Token lex_scan(void) {
             size_t n = lex_pos - start;
             char *word = sdupn(lex_src + start, n);
 
+            int savesp = lex_pos;
+            while (savesp < lex_len && (lex_src[savesp] == ' ' || lex_src[savesp] == '\t' || lex_src[savesp] == '\r')) savesp++;
+            if (savesp < lex_len && lex_src[savesp] == '@') {
+                t.type = TOK_ID;
+                t.val.str = word;
+                return t;
+            }
+
             if (!strcmp(word, "print"))   { free(word); t.type = TOK_PRINT; return t; }
             if (!strcmp(word, "input"))   { free(word); t.type = TOK_INPUT; return t; }
             if (!strcmp(word, "if"))      { free(word); t.type = TOK_IF; return t; }
@@ -78,10 +107,8 @@ static Token lex_scan(void) {
             if (!strcmp(word, "or"))      { free(word); t.type = TOK_OR; return t; }
             if (!strcmp(word, "not"))     { free(word); t.type = TOK_NOT; return t; }
             if (!strcmp(word, "stringify")) { free(word); t.type = TOK_STRINGIFY; return t; }
-            if (!strcmp(word, "strify"))   { free(word); fprintf(stderr, "line %d: warning: \"strify\" is deprecated, use \"stringify\" instead\n", lex_line); t.type = TOK_STRINGIFY; return t; }
             if (!strcmp(word, "intify"))   { free(word); t.type = TOK_INTIFY; return t; }
             if (!strcmp(word, "toggle"))   { free(word); t.type = TOK_TOGGLE; return t; }
-            if (!strcmp(word, "swify"))    { free(word); fprintf(stderr, "line %d: warning: \"swify\" is deprecated, use \"toggle\" instead\n", lex_line); t.type = TOK_TOGGLE; return t; }
             if (!strcmp(word, "try"))     { free(word); t.type = TOK_TRY; return t; }
             if (!strcmp(word, "catch"))   { free(word); t.type = TOK_CATCH; return t; }
             if (!strcmp(word, "loop"))    { free(word); t.type = TOK_LOOP; return t; }
@@ -89,7 +116,7 @@ static Token lex_scan(void) {
             if (!strcmp(word, "break"))   { free(word); t.type = TOK_BREAK; return t; }
             if (!strcmp(word, "continue")) { free(word); t.type = TOK_CONTINUE; return t; }
             if (!strcmp(word, "include")) { free(word); t.type = TOK_INCLUDE; return t; }
-            if (!strcmp(word, "uninclude")) { free(word); t.type = TOK_UNINCLUDE; return t; }
+            if (!strcmp(word, "drop")) { free(word); t.type = TOK_UNINCLUDE; return t; }
             if (!strcmp(word, "has"))     { free(word); t.type = TOK_HAS; return t; }
             if (!strcmp(word, "nocase"))  { free(word); t.type = TOK_NOCASE; return t; }
             if (!strcmp(word, "anywhere")) { free(word); t.type = TOK_ANYWHERE; return t; }
@@ -100,6 +127,9 @@ static Token lex_scan(void) {
             if (!strcmp(word, "from"))    { free(word); t.type = TOK_FROM; return t; }
             if (!strcmp(word, "struct"))  { free(word); t.type = TOK_STRUCT; return t; }
             if (!strcmp(word, "live"))    { free(word); t.type = TOK_LIVE; return t; }
+            if (!strcmp(word, "write"))   { free(word); t.type = TOK_WRITE; return t; }
+            if (!strcmp(word, "read"))    { free(word); t.type = TOK_READ; return t; }
+            if (!strcmp(word, "orif"))    { free(word); t.type = TOK_ORIF; return t; }
 
             t.type = TOK_ID;
             t.val.str = word;
@@ -121,7 +151,6 @@ static Token lex_scan(void) {
             case '[': t.type = TOK_LBRACKET; return t;
             case ']': t.type = TOK_RBRACKET; return t;
             case ',': t.type = TOK_COMMA; return t;
-            case ';': t.type = TOK_SEMI; return t;
             case '=':
                 if (lex_pos < lex_len && lex_src[lex_pos] == '=') { lex_pos++; t.type = TOK_EQ; return t; }
                 t.type = TOK_ASSIGN; return t;
@@ -135,16 +164,16 @@ static Token lex_scan(void) {
                 if (lex_pos < lex_len && lex_src[lex_pos] == '=') { lex_pos++; t.type = TOK_GE; return t; }
                 t.type = TOK_GT; return t;
             case '&':
-                if (lex_pos < lex_len && lex_src[lex_pos] == '&') { lex_pos++; t.type = TOK_AND; return t; }
+                if (lex_pos < lex_len && lex_src[lex_pos] == '&') { lex_pos++; t.type = TOK_AND_AND; return t; }
                 t.type = TOK_AMPERSAND; return t;
             case '|':
                 if (lex_pos < lex_len && lex_src[lex_pos] == '|') { lex_pos++; t.type = TOK_OR; return t; }
                 t.type = TOK_PIPE; return t;
             case '@': t.type = TOK_AT; return t;
+            case ';': t.type = TOK_SEMICOLON; return t;
             case '^': t.type = TOK_CARET; return t;
             case '?': t.type = TOK_QMARK; return t;
             case '.': t.type = TOK_DOT; return t;
-            case ':': t.type = TOK_COLON; return t;
             case '#': {
                 if (lex_pos < lex_len && (isalpha(lex_src[lex_pos]) || lex_src[lex_pos] == '_')) {
                     int start = lex_pos;

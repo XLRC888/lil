@@ -1,1 +1,2 @@
-x = &math|isprime 7
+include math
+print isprime@math 7

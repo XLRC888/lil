@@ -5,6 +5,7 @@ Modifiers use the `?` prefix to change global behavior. Other features like `get
 ## Modifiers
 
 - [Undefined Default](undefined_default.md)  -  change what undefined variables return
+- [Live Bindings](live.md)  -  link one variable to another with `live x = y`
 
 ## Get Statement
 
@@ -19,8 +20,8 @@ This runs `data.lil` in a sandbox, snapshots the values of `x` and `y`, then cop
 **Indexed access**: retrieve historical (previous) assignment values:
 
 ```lil
-get "x"(1) from data.lil    # 1st previous value of x
-get "x"(2) from data.lil    # 2nd previous value
+get "x"(1) from data.lil    : 1st previous value of x
+get "x"(2) from data.lil    : 2nd previous value
 ```
 
 Index 0 (or no index) returns the current value. Uses the assignment history tracking in the VM.

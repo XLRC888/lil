@@ -3,7 +3,7 @@
 Create a file called `hello.lil`:
 
 ```lil
-print "hello, world"
+write("hello, world")
 ```
 
 Run it:
@@ -12,27 +12,26 @@ Run it:
 lil hello.lil
 ```
 
-In Python you write `print("hello")` with parentheses. In lil, just `print "hello"`. No parens, no commas between the keyword and its arguments.
+In Python you write `print("hello")` with parentheses. In lil, `write("hello")` is a function call with parentheses.
 
-The `print` statement outputs text to stdout and appends a newline:
+The `write()` function outputs text to stdout and appends a newline:
 
 ```lil
-print 42
-print "hello"
+write(42)
+write("hello")
 ```
 
-You can print multiple values by separating them with commas:
+You can write multiple values by separating them with commas:
 
 ```lil
-print "the answer is", 42
+write("the answer is", 42)
 ```
 
 This prints: `the answer is 42`
 
-Print with a variable:
+Write with a variable:
 
 ```lil
 name = "alice"
-print "hello", name
+write("hello", name)
 ```
-

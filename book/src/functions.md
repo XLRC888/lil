@@ -4,18 +4,18 @@ lil has two kinds of functions: built-in library functions from the standard lib
 
 ## Built-in Library Functions
 
-These are functions that come with lil, organized by library like `math`, `string`, `file`, `sys`, and `date`. You call them with `@` syntax:
+These are functions that come with lil, organized by library like `math`, `string`, `file`, `sys`, and `date`. You call them with `func(args)@lib` syntax:
 
 ```lil
-randint@math 1 6
+randint@math(1, 6)
 ```
 
-The function name comes first, then `@`, then the library name, then space-separated arguments.
+The function name comes first, then `@`, then the library name, then arguments in parentheses.
 
 ```lil
 name = "alice"
-upper@string name
-print name
+upper@string(name)
+write(name)
 ```
 
 See the [Built-in Libraries](builtins.md) page for the full list of available functions.
@@ -34,14 +34,14 @@ There's no `def`, no colon, and no `return` keyword. The function body is a bloc
 
 ```lil
 result = add(3, 4)
-print result
+write(result)
 ```
 
 Functions can also be created without a name (anonymous functions/closures) for inline use:
 
 ```lil
 double = #(x) { x * 2 }
-print double(5)
+write(double(5))
 ```
 
 See [User-defined Functions](user_functions.md) and [Advanced Functions](functions_advanced.md) for details.

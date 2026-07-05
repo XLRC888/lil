@@ -16,8 +16,8 @@ Access elements by position (0-indexed):
 
 ```
 x = [10, 20, 30]
-print x[0]
-print x[1]
+write(x[0])
+write(x[1])
 x[2] = 99
 ```
 
@@ -25,9 +25,9 @@ String indexing works the same way. `s[i]` returns a single-character string, an
 
 ```
 s = "hello"
-print s[0]          # "h"
+write(s[0])          : "h"
 s[0] = "j"
-print s             # "jello"
+write(s)             : "jello"
 ```
 
 Out-of-range access errors at runtime.
@@ -39,8 +39,8 @@ Pull multiple fields from a dict or struct in one line with `{field1, field2} = 
 ```lil
 node = {"type": "num", "value": 42}
 {type, value} = node
-print type
-print value
+write(type)
+write(value)
 ```
 
 Works with structs too (structs are dicts underneath):
@@ -49,7 +49,7 @@ Works with structs too (structs are dicts underneath):
 struct Point { x, y }
 p = Point(10, 20)
 {x, y} = p
-print x, y
+write(x, y)
 ```
 
 This is shorthand for `type = node["type"]; value = node["value"]`. Field names become variable names.
@@ -63,23 +63,24 @@ The `list` library provides operations for dynamic list manipulation:
 include list
 
 x = new@list
-push@list x 1
-push@list x 2
-push@list x 3
-print len@list x
-print at@list x 1
-val = pop@list x
+push@list(x, 1)
+push@list(x, 2)
+push@list(x, 3)
+write(len@list(x))
+write(x[1])
+val = pop@list(x)
 ```
 
 ### Functions
 - `new@list`  -  create empty list
-- `push@list list val`  -  append value to end
-- `pop@list list`  -  remove and return last element
-- `at@list list index`  -  retrieve element without modifying
-- `len@list list`  -  number of elements
-- `map@list list fn`  -  apply function to each element, returns new list
-- `filter@list list fn`  -  keep elements where function returns truthy
-- `reduce@list list fn init`  -  reduce list to single value
+- `push@list(list, val)`  -  append value to end
+- `pop@list(list)`  -  remove and return last element
+- `len@list(list)`  -  number of elements
+- `map@list(list, fn)`  -  apply function to each element, returns new list
+- `filter@list(list, fn)`  -  keep elements where function returns truthy
+- `reduce@list(list, fn, init)`  -  reduce list to single value
+
+Read individual elements with bracket syntax: `x[i]` returns the value at position `i` (0-indexed).
 
 ## map/filter/reduce
 
@@ -93,12 +94,12 @@ include list
 }
 
 nums = new@list
-push@list nums 1
-push@list nums 2
-push@list nums 3
+push@list(nums, 1)
+push@list(nums, 2)
+push@list(nums, 3)
 
-doubled = map@list nums double
-print doubled
+doubled = map@list(nums, double)
+write(doubled)
 ```
 
 `filter` keeps elements where the function returns truthy:
@@ -108,8 +109,8 @@ print doubled
     if x > 5 { 1 } else { 0 }
 }
 
-filtered = filter@list nums isbig
-print filtered
+filtered = filter@list(nums, isbig)
+write(filtered)
 ```
 
 `reduce` combines all elements using a two-parameter function and an initial value:
@@ -119,6 +120,6 @@ print filtered
     a + b
 }
 
-total = reduce@list nums add 0
-print total
+total = reduce@list(nums, add, 0)
+write(total)
 ```

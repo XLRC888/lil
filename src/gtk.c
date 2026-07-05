@@ -7,6 +7,10 @@ static int gtk_wc;
 static int gtk_window_gone;
 static int gtk_in_main;
 
+static Value gtk_str(const char *s) {
+    return make_str(s ? s : "");
+}
+
 GtkWidget *gtk_find_w(const char *name)
 {
     for (int i = 0; i < gtk_wc; i++) if (!strcmp(gtk_ws[i].name, name)) return gtk_ws[i].widget;
@@ -36,7 +40,7 @@ void gtk_sig_cb(GtkWidget *w, gpointer d) {
     GtkSigData *sd = (GtkSigData *)d;
     if (!strcmp(sd->sig, "changed")) {
         if (!GTK_IS_ENTRY(w)) { var_set(sd->vname, make_str("")); return; }
-        var_set(sd->vname, make_str(gtk_entry_get_text(GTK_ENTRY(w))));
+        var_set(sd->vname, gtk_str(gtk_entry_get_text(GTK_ENTRY(w))));
     } else
         var_set(sd->vname, make_str("1"));
     if (gtk_in_main && strcmp(sd->vname, "__gtk_quit"))
@@ -57,7 +61,7 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     }
 
     if (!strcmp(fn, "window")) {
-        if (argc < 5) fatal("line %d: &gtk|window name title width height", line);
+        if (argc < 5) fatal("line %d: window@gtk name title width height", line);
         char *name = resolve_arg(args[1]);
         char *title = resolve_arg(args[2]);
         char *ws = resolve_arg(args[3]);
@@ -75,7 +79,7 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     }
 
     if (!strcmp(fn, "vbox")) {
-        if (argc < 3) fatal("line %d: &gtk|vbox name spacing", line);
+        if (argc < 3) fatal("line %d: vbox@gtk name spacing", line);
         char *name = resolve_arg(args[1]);
         char *ss = resolve_arg(args[2]);
         int sp = atoi(ss); free(ss);
@@ -86,7 +90,7 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     }
 
     if (!strcmp(fn, "hbox")) {
-        if (argc < 3) fatal("line %d: &gtk|hbox name spacing", line);
+        if (argc < 3) fatal("line %d: hbox@gtk name spacing", line);
         char *name = resolve_arg(args[1]);
         char *ss = resolve_arg(args[2]);
         int sp = atoi(ss); free(ss);
@@ -97,7 +101,7 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     }
 
     if (!strcmp(fn, "button")) {
-        if (argc < 3) fatal("line %d: &gtk|button name label", line);
+        if (argc < 3) fatal("line %d: button@gtk name label", line);
         char *name = resolve_arg(args[1]);
         char *label = resolve_arg(args[2]);
         GtkWidget *btn = gtk_button_new_with_label(label);
@@ -107,7 +111,7 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     }
 
     if (!strcmp(fn, "label")) {
-        if (argc < 3) fatal("line %d: &gtk|label name text", line);
+        if (argc < 3) fatal("line %d: label@gtk name text", line);
         char *name = resolve_arg(args[1]);
         char *text = resolve_arg(args[2]);
         GtkWidget *lbl = gtk_label_new(text);
@@ -117,7 +121,7 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     }
 
     if (!strcmp(fn, "entry")) {
-        if (argc < 2) fatal("line %d: &gtk|entry name [placeholder]", line);
+        if (argc < 2) fatal("line %d: entry@gtk name [placeholder]", line);
         char *name = resolve_arg(args[1]);
         GtkWidget *e = gtk_entry_new();
         if (argc >= 3) {
@@ -131,7 +135,7 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     }
 
     if (!strcmp(fn, "add")) {
-        if (argc < 3) fatal("line %d: &gtk|add parent child [child2 ...]", line);
+        if (argc < 3) fatal("line %d: add@gtk parent child [child2 ...]", line);
         char *pname = resolve_arg(args[1]);
         GtkWidget *parent = gtk_find_w(pname);
         free(pname);
@@ -147,7 +151,7 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     }
 
     if (!strcmp(fn, "show")) {
-        if (argc < 2) fatal("line %d: &gtk|show name", line);
+        if (argc < 2) fatal("line %d: show@gtk name", line);
         char *name = resolve_arg(args[1]);
         GtkWidget *w = gtk_find_w(name);
         if (!w) fatal("line %d: widget '%s' not found", line, args[1]);
@@ -157,7 +161,7 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     }
 
     if (!strcmp(fn, "set")) {
-        if (argc < 4) fatal("line %d: &gtk|set widget prop value", line);
+        if (argc < 4) fatal("line %d: set@gtk widget prop value", line);
         char *name = resolve_arg(args[1]);
         char *prop = resolve_arg(args[2]);
         char *val = resolve_arg(args[3]);
@@ -190,26 +194,26 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     }
 
     if (!strcmp(fn, "get")) {
-        if (argc < 3) fatal("line %d: &gtk|get widget prop", line);
+        if (argc < 3) fatal("line %d: get@gtk widget prop", line);
         char *name = resolve_arg(args[1]);
         char *prop = resolve_arg(args[2]);
         GtkWidget *w = gtk_find_w(name);
         if (!w) fatal("line %d: widget '%s' not found", line, args[1]);
         Value r = make_str("");
         if (!strcmp(prop, "label")) {
-            if (GTK_IS_BUTTON(w)) r = make_str(gtk_button_get_label(GTK_BUTTON(w)));
-            else if (GTK_IS_LABEL(w)) r = make_str(gtk_label_get_text(GTK_LABEL(w)));
+            if (GTK_IS_BUTTON(w)) r = gtk_str(gtk_button_get_label(GTK_BUTTON(w)));
+            else if (GTK_IS_LABEL(w)) r = gtk_str(gtk_label_get_text(GTK_LABEL(w)));
         } else if (!strcmp(prop, "text")) {
-            if (GTK_IS_LABEL(w)) r = make_str(gtk_label_get_text(GTK_LABEL(w)));
+            if (GTK_IS_LABEL(w)) r = gtk_str(gtk_label_get_text(GTK_LABEL(w)));
         } else if (!strcmp(prop, "title")) {
-            if (GTK_IS_WINDOW(w)) r = make_str(gtk_window_get_title(GTK_WINDOW(w)));
+            if (GTK_IS_WINDOW(w)) r = gtk_str(gtk_window_get_title(GTK_WINDOW(w)));
         }
         free(name); free(prop);
         return r;
     }
 
     if (!strcmp(fn, "on")) {
-        if (argc < 4) fatal("line %d: &gtk|on widget signal varname", line);
+        if (argc < 4) fatal("line %d: on@gtk widget signal varname", line);
         char *name = resolve_arg(args[1]);
         char *sig = resolve_arg(args[2]);
         char *vname = resolve_arg(args[3]);
@@ -242,7 +246,7 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     }
 
     if (!strcmp(fn, "timeout")) {
-        if (argc < 4) fatal("line %d: &gtk|timeout ms signal varname", line);
+        if (argc < 4) fatal("line %d: timeout@gtk ms signal varname", line);
         char *mss = resolve_arg(args[1]);
         int ms = atoi(mss); free(mss);
         char *sig = resolve_arg(args[2]);
@@ -262,7 +266,7 @@ Value gtk_dispatch(const char *fn, int argc, char **args, int line) {
     }
 
     if (!strcmp(fn, "destroy")) {
-        if (argc < 2) fatal("line %d: &gtk|destroy name", line);
+        if (argc < 2) fatal("line %d: destroy@gtk name", line);
         char *name = resolve_arg(args[1]);
         GtkWidget *w = gtk_find_w(name);
         if (w) gtk_widget_destroy(w);
