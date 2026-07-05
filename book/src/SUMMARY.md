@@ -27,7 +27,6 @@
 - [Error Handling](error_handling.md)
 - [Modifiers](modifiers.md)
   - [Undefined Default](undefined_default.md)
-  - [Live Bindings](live.md)
 - [Lists](lists.md)
 - [Advanced Features](advanced.md)
   - [Compiled Mode](compiled.md)

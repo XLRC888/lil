@@ -116,6 +116,21 @@ y = 42                     : allowed (not forced)
 
 `intify` errors if the value is not a valid number. `read()` always returns a string.
 
+## Live Bindings
+
+A `live` binding links one variable to another so that reads of the bound variable always reflect the current value of its source:
+
+```lil
+y = 1
+live x = y
+y = 42
+write(x)     : prints 42
+```
+
+After `live x = y`, every read of `x` follows the link back to `y` and returns whatever `y` currently holds. You do not need to reassign `x` when `y` changes.
+
+Assigning directly to `x` overwrites the binding and clears the live link. For a one-time copy, use plain assignment (`x = y`).
+
 ## Changing the undefined default
 
 By default, reading an undefined variable returns `0`. Use `?default = value` to change this:

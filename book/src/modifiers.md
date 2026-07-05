@@ -5,7 +5,6 @@ Modifiers use the `?` prefix to change global behavior. Other features like `get
 ## Modifiers
 
 - [Undefined Default](undefined_default.md)  -  change what undefined variables return
-- [Live Bindings](live.md)  -  link one variable to another with `live x = y`
 
 ## Get Statement
 
