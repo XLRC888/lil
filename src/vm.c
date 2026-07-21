@@ -782,8 +782,7 @@ Value eval_expr(ASTNode *n) {
                     val_free(l); val_free(r);
                     return concatv;
                 }
-                val_free(l); val_free(r);
-                return make_num(l.data.num + r.data.num);
+                double _r = val_tonum(l) + val_tonum(r); val_free(l); val_free(r); return make_num(_r);
             }
             if (op == TOK_MINUS) { double _r = val_tonum(l) - val_tonum(r); val_free(l); val_free(r); return make_num(_r); }
             if (op == TOK_STAR)  { double _r = val_tonum(l) * val_tonum(r); val_free(l); val_free(r); return make_num(_r); }
@@ -829,8 +828,7 @@ Value eval_expr(ASTNode *n) {
                     }
                 }
             } else {
-                int lv = (l.type == VAL_STR) ? (strlen(l.data.str) != 0) : (l.data.num != 0);
-                int rv = (r.type == VAL_STR) ? (strlen(r.data.str) != 0) : (r.data.num != 0);
+                int lv = truthy(l), rv = truthy(r);
                 switch (op) {
                     case TOK_AND: result = (lv && rv); break;
                     case TOK_OR: result = (lv || rv); break;
@@ -1265,7 +1263,7 @@ int exec_stmt(ASTNode *n) {
         }
         case NODE_STRUCT_DEF: {
             if (struct_count >= MAX_FUNCS || func_count >= MAX_FUNCS)
-                fatal("too many structs or functions", n->line);
+                fatal("line %d: too many structs or functions", n->line);
             structs[struct_count].name = sdup(n->data.struct_def.name);
             structs[struct_count].fields = n->data.struct_def.fields;
             structs[struct_count].nfields = n->data.struct_def.nfields;
@@ -1371,8 +1369,11 @@ int exec_stmt(ASTNode *n) {
             if (cval.type != VAL_LIST) { val_free(cval); val_free(vval); fatal("line %d: cannot index non-list", n->line); }
             int iidx = (int)di;
             if (iidx < 0) { val_free(cval); val_free(vval); fatal("line %d: negative list index", n->line); }
-            int found = var_find(n->data.idx_set.container->data.id);
-            if (found >= 0 && vars[found].forced) fatal("line %d: cannot modify forced list", n->line);
+            int found = -1;
+            if (n->data.idx_set.container->type == NODE_ID) {
+                found = var_find(n->data.idx_set.container->data.id);
+                if (found >= 0 && vars[found].forced) fatal("line %d: cannot modify forced list", n->line);
+            }
             list_set(&cval, iidx, vval);
             if (found >= 0) var_set(n->data.idx_set.container->data.id, cval);
             else val_free(cval);

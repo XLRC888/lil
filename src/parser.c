@@ -1410,6 +1410,7 @@ int check_cond_flags(ASTNode *cond, int flags) {
     }
 
     free(ls); free(rs);
+    val_free(lv); val_free(rv);
     return (op == TOK_EQ) ? result : !result;
 }
 
@@ -1430,7 +1431,7 @@ int check_has(ASTNode *lhs_expr, ASTNode *item, ASTNode **items, int nitems, int
             if (nocase) { free(haystack); free(needle); }
 
             if (!found) result = 0;
-            free(rs);
+            free(rs); val_free(rv);
         }
     } else if (item) {
         Value rv = eval_expr(item);
@@ -1439,9 +1440,10 @@ int check_has(ASTNode *lhs_expr, ASTNode *item, ASTNode **items, int nitems, int
         char *needle = nocase ? str_lower(rs) : rs;
         result = (strstr(haystack, needle) != NULL) ? 1 : 0;
         if (nocase) { free(haystack); free(needle); }
-        free(rs);
+        free(rs); val_free(rv);
     }
 
     free(ls);
+    val_free(lv);
     return result;
 }

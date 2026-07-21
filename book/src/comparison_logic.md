@@ -77,9 +77,7 @@ b = 1 or 0     : 1 (true)
 c = not 1      : 0 (false)
 ```
 
-`and` and `or` short-circuit. If the left operand determines the result, the right operand is never evaluated.
-
-`&&` also short-circuits and returns the actual value, not 0/1:
+`and` and `or` evaluate both operands unconditionally. `&&` short-circuits (right side is only evaluated if the left side is truthy) and returns the actual value, not 0/1:
 
 ```lil
 x = 0

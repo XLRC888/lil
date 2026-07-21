@@ -401,6 +401,7 @@ static void scan_mc_all(const char *src) {
                 p++;
                 while (*p == ' ' || *p == '\t') p++;
                 char *merged = malloc(4096);
+                if (!merged) { fprintf(stderr, "out of memory\n"); return; }
                 merged[0] = 0;
                 size_t mpos = 0;
                 while (*p && *p != '\n' && *p != '\r') {
@@ -1930,7 +1931,9 @@ static void cg_block_tags(void) {
             for (int k = 0; k < npaths; k++)
                 if (!strcmp(tpath[k], path)) { found = k; break; }
             if (found < 0) { found = npaths; if (found < 32) { npaths++; strcpy(tpath[found], path); ntmp[found] = 0; } }
-            if (ntmp[found] < 64) strcpy(tmp[found][ntmp[found]++], bl->name);
+            if (ntmp[found] < 64) {
+                snprintf(tmp[found][ntmp[found]++], 128, "%s", bl->name);
+            }
         }
         if (tier && tier[0]) {
             char *tier_tag = !strcmp(tier, "iron") ? "needs_iron_tool"
@@ -1944,7 +1947,9 @@ static void cg_block_tags(void) {
                 for (int k = 0; k < npaths; k++)
                     if (!strcmp(tpath[k], path)) { found = k; break; }
                 if (found < 0) { found = npaths; if (found < 32) { npaths++; strcpy(tpath[found], path); ntmp[found] = 0; } }
-                if (ntmp[found] < 64) strcpy(tmp[found][ntmp[found]++], bl->name);
+                if (ntmp[found] < 64) {
+                snprintf(tmp[found][ntmp[found]++], 128, "%s", bl->name);
+            }
             }
         }
     }

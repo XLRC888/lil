@@ -83,6 +83,7 @@ void run_file(const char *path) {
             if (dot) {
                 size_t n = dot - path;
                 char *base = malloc(n + 6);
+                if (!base) { fprintf(stderr, "out of memory\n"); return; }
                 memcpy(base, path, n); base[n] = 0;
                 strcat(base, ".java");
                 java_output_filename = base;
@@ -201,6 +202,7 @@ int main(int argc, char **argv) {
             if (dot) {
                 size_t n = dot - inpath;
                 char *buf = malloc(n + 1);
+                if (!buf) { fprintf(stderr, "out of memory\n"); return 1; }
                 memcpy(buf, inpath, n); buf[n] = 0;
                 outpath = buf;
             } else {
