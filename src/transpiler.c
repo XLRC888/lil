@@ -635,7 +635,7 @@ void cg_expr(FILE *f, ASTNode *n, VarType want) {
                     }
                     fprintf(f, "}[_i-1]));})");
                 }
-                else if (!strcmp(fn, "sleep")) { fprintf(f, "({double _s=%s;struct timespec ts;ts.tv_sec=(time_t)_s;ts.tv_nsec=(long)((_s-ts.tv_sec)*1e9);nanosleep(&ts,0);make_num(0);})", n->data.funcall.args[1]); }
+                else if (!strcmp(fn, "sleep") || !strcmp(fn, "wait")) { fprintf(f, "({double _s=%s;struct timespec ts;ts.tv_sec=(time_t)_s;ts.tv_nsec=(long)((_s-ts.tv_sec)*1e9);nanosleep(&ts,0);make_num(0);})", n->data.funcall.args[1]); }
                 else if (!strcmp(fn, "hasops")) { fprintf(f, "make_num(0)"); }
                 else if (!strcmp(fn, "eval")) { fprintf(f, "make_num(0)"); }
                 else if (!strcmp(fn, "factors")) { fprintf(f, "make_str(strdup(\"\"))"); }
@@ -1015,10 +1015,17 @@ int generate_c(const char *path, const char *outpath) {
 
     char *psrc = src;
     while (*psrc == ' ' || *psrc == '\t' || *psrc == '\n' || *psrc == '\r') psrc++;
-    if (psrc[0] == '[' && strncmp(psrc, "[compiled]", 10) == 0
-        && (psrc[10] == '\n' || psrc[10] == '\r' || psrc[10] == 0)) {
-        psrc = psrc + 10;
-        while (*psrc == '\n' || *psrc == '\r') psrc++;
+    if (psrc[0] == '[') {
+        if (strncmp(psrc, "[compiled]", 10) == 0
+            && (psrc[10] == '\n' || psrc[10] == '\r' || psrc[10] == 0)) {
+            psrc = psrc + 10;
+            while (*psrc == '\n' || *psrc == '\r') psrc++;
+        } else if (strncmp(psrc, "[MCMForge]", 10) == 0
+            && (psrc[10] == '\n' || psrc[10] == '\r' || psrc[10] == 0)) {
+            fprintf(stderr, "error: file is in MCMForge mode (use -j instead of -c)\n");
+            free(src);
+            return 1;
+        }
     }
 
     if (setjmp(error_jmp)) { free(src); src = NULL; if (f) fclose(f); return 1; }

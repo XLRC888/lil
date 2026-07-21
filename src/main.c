@@ -43,16 +43,58 @@ void run_file(const char *path) {
     src[got] = 0;
 
     compiled_header = 0;
+    mcm_forge_mode = 0;
+    if (java_output_filename) { free(java_output_filename); java_output_filename = NULL; }
     char *psrc = src;
     while (*psrc == ' ' || *psrc == '\t' || *psrc == '\n' || *psrc == '\r') psrc++;
-    if (psrc[0] == '[' && strncmp(psrc, "[compiled]", 10) == 0
-        && (psrc[10] == '\n' || psrc[10] == '\r' || psrc[10] == 0)) {
-        compiled_header = 1;
-        psrc = psrc + 10;
-        while (*psrc == '\n' || *psrc == '\r') psrc++;
+    if (psrc[0] == '[') {
+        if (strncmp(psrc, "[compiled]", 10) == 0
+            && (psrc[10] == '\n' || psrc[10] == '\r' || psrc[10] == 0)) {
+            compiled_header = 1;
+            psrc = psrc + 10;
+            while (*psrc == '\n' || *psrc == '\r') psrc++;
+        } else if (strncmp(psrc, "[MCMForge]", 10) == 0
+            && (psrc[10] == '\n' || psrc[10] == '\r' || psrc[10] == 0)) {
+            mcm_forge_mode = 1;
+            compiled_header = 1;
+            psrc = psrc + 10;
+            while (*psrc == '\n' || *psrc == '\r') psrc++;
+        }
+    }
+    if (mcm_forge_mode) {
+        while (*psrc == ' ' || *psrc == '\t' || *psrc == '\n' || *psrc == '\r') psrc++;
+        if (psrc[0] == '(' && psrc[1] == '[') {
+            char *cp = psrc + 2;
+            int start = 0;
+            while (cp < src + got && *cp != ']' && *cp != '\n') cp++;
+            if (*cp == ']' && cp > psrc + 2) {
+                start = 2;
+                int end = cp - psrc;
+                java_output_filename = sdupn(psrc + start, end - start);
+                cp++;
+                if (*cp == ')') cp++;
+                psrc = cp;
+                while (*psrc == '\n' || *psrc == '\r') psrc++;
+            }
+        }
+        if (!java_output_filename) {
+            const char *dot = strrchr(path, '.');
+            if (dot) {
+                size_t n = dot - path;
+                char *base = malloc(n + 6);
+                memcpy(base, path, n); base[n] = 0;
+                strcat(base, ".java");
+                java_output_filename = base;
+            } else {
+                java_output_filename = sdup("output.java");
+            }
+        }
     }
     if (compiled_header && !compile_mode) {
-        fprintf(stderr, "error: code is in compiled mode (use -c to compile)\n");
+        if (mcm_forge_mode)
+            fprintf(stderr, "error: code is in MCMForge mode (use -j to compile)\n");
+        else
+            fprintf(stderr, "error: code is in compiled mode (use -c to compile)\n");
         free(src);
         return;
     }
@@ -108,6 +150,8 @@ int main(int argc, char **argv) {
     error_occurred = 0;
     in_try = 0;
     compile_mode = 0;
+    mcm_forge_mode = 0;
+    java_output_filename = NULL;
     const char *inpath = NULL;
     const char *outpath = NULL;
     for (int i = 1; i < argc; i++) {
@@ -116,10 +160,14 @@ int main(int argc, char **argv) {
             printf("  no args      start REPL\n");
             printf("  file.lil     execute file\n");
             printf("  -c file.lil  compile to standalone binary\n");
+            printf("  -j file.lil  compile to Java (MCMForge)\n");
             printf("  -o output    output filename (default: a.out)\n");
             return 0;
         } else if (!strcmp(argv[i], "-c") || !strcmp(argv[i], "--compile")) {
             compile_mode = 1;
+        } else if (!strcmp(argv[i], "-j") || !strcmp(argv[i], "--java")) {
+            compile_mode = 1;
+            mcm_forge_mode = 1;
         } else if (!strcmp(argv[i], "-o")) {
             if (i + 1 < argc) outpath = argv[++i];
             else { fprintf(stderr, "error: -o requires an argument\n"); return 1; }
@@ -131,6 +179,28 @@ int main(int argc, char **argv) {
         }
     }
     if (compile_mode) {
+        if (!inpath) { fprintf(stderr, "error: no input file\n"); return 1; }
+        if (mcm_forge_mode) {
+            if (!outpath) {
+                if (!java_output_filename) {
+                    const char *dot = strrchr(inpath, '.');
+                    if (dot) {
+                        size_t n = dot - inpath;
+                        char *buf = malloc(n + 6);
+                        memcpy(buf, inpath, n); buf[n] = 0;
+                        strcat(buf, ".java");
+                        java_output_filename = buf;
+                        outpath = java_output_filename;
+                    } else {
+                        java_output_filename = sdup("output.java");
+                        outpath = java_output_filename;
+                    }
+                } else {
+                    outpath = java_output_filename;
+                }
+            }
+            return generate_java(inpath, outpath);
+        }
         if (!outpath) {
             const char *dot = inpath ? strrchr(inpath, '.') : NULL;
             if (dot) {
@@ -142,7 +212,6 @@ int main(int argc, char **argv) {
                 outpath = "a.out";
             }
         }
-        if (!inpath) { fprintf(stderr, "error: no input file\n"); return 1; }
         return generate_c(inpath, outpath);
     }
     if (inpath) {

@@ -77,6 +77,11 @@ static Token lex_scan(void) {
             if (end == lex_src + lex_pos) { lex_pos++; continue; }
             t.type = TOK_NUM;
             lex_pos = end - lex_src;
+            if (lex_pos < lex_len && lex_src[lex_pos] == 'm' && lex_pos + 1 < lex_len && lex_src[lex_pos + 1] == 's') {
+                lex_pos += 2;
+            } else if (lex_pos < lex_len && (lex_src[lex_pos] == 's' || lex_src[lex_pos] == 'm' || lex_src[lex_pos] == 'h')) {
+                lex_pos++;
+            }
             return t;
         }
 

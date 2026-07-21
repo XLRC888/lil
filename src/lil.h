@@ -18,7 +18,7 @@
 #include <gtk/gtk.h>
 #endif
 
-#define VERSION "0.1.0"
+#define VERSION "0.2.0"
 #define MAX_VARS 1024
 #define MAX_FUNCS 256
 #define MAX_GTK_WIDGETS 256
@@ -95,7 +95,7 @@ typedef struct ASTNode {
         struct { struct ASTNode *cond, *body; } while_stmt;
         struct { char *var; struct ASTNode *start, *end, *body; } forto;
         struct { struct ASTNode *body; } loop;
-        struct { char *name; char **params; int nparams; struct ASTNode *body; } func_def;
+        struct { char *name; char **params; int nparams; struct ASTNode *body; char *lib; } func_def;
         struct { char *name; struct ASTNode **args; int nargs; char *lib; } func_call;
         struct { char *path; char **funcs; int nfuncs; } include;
         struct { char **varnames; char **newnames; int nvars; char *path; int *indices; } get_stmt;
@@ -177,6 +177,8 @@ extern int assign_hist_count;
 extern int assign_var_idx[MAX_ASSIGN_HISTORY];
 extern int compile_mode;
 extern int compiled_header;
+extern int mcm_forge_mode;
+extern char *java_output_filename;
 extern Token lex_cur;
 extern int scope_depth;
 
@@ -249,6 +251,7 @@ extern int anon_counter;
 extern VarType var_types[MAX_VARS];
 
 int generate_c(const char *path, const char *outpath);
+int generate_java(const char *path, const char *outpath);
 
 void state_save(LilState *s);
 void state_restore(LilState *s);

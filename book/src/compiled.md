@@ -1,6 +1,8 @@
 # Compiled Mode
 
-lil can compile scripts into standalone binaries. The resulting executable does not need lil to run. Think of it like Cython for Python: same source, faster execution, no interpreter required.
+lil can compile scripts into standalone binaries (use `-c`). The resulting executable does not need lil to run. Think of it like Cython for Python: same source, faster execution, no interpreter required.
+
+**Note:** There is also a Java/Forge output mode (`-j`) for generating Minecraft mod source. See [Minecraft Forge Generator](minecraft_forge.md).
 
 ## How it works
 

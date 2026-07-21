@@ -189,7 +189,7 @@ Value lib_dispatch(const char *lib, const char *fn, int argc, char **args, int l
             int idx = rand() % (argc - 1) + 1;
             return make_str(args[idx]);
         }
-        if (!strcmp(fn, "sleep")) {
+        if (!strcmp(fn, "sleep") || !strcmp(fn, "wait")) {
             if (argc < 2) fatal("line %d: sleep expects seconds", line);
             char *rs = resolve_arg(args[1]);
             double secs = strtod(rs, NULL); free(rs);

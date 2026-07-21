@@ -132,6 +132,7 @@ ASTNode *ast_templ(const char *raw) {
 ASTNode *ast_func_def(const char *name, ASTNode *body) {
     ASTNode *n = ast_alloc(NODE_FUNC_DEF);
     n->data.func_def.name = sdup(name);
+    n->data.func_def.lib = NULL;
     n->data.func_def.body = body;
     return n;
 }
@@ -824,6 +825,19 @@ ASTNode *parse_stmt(void) {
     if (e->type == NODE_FUNC_CALL) {
         while (lex_cur.type == TOK_NEWLINE) lex_next();
         if (lex_cur.type == TOK_LBRACE) {
+            if (e->data.func_call.name && (!strcmp(e->data.func_call.name, "newCreativeTab")
+                || !strcmp(e->data.func_call.name, "recipeShaped")
+                || !strcmp(e->data.func_call.name, "recipeShapeless")
+                || !strcmp(e->data.func_call.name, "recipeSmelting"))) {
+                int depth = 1; lex_next();
+                while (lex_cur.type != TOK_EOF && depth > 0) {
+                    if (lex_cur.type == TOK_LBRACE) depth++;
+                    if (lex_cur.type == TOK_RBRACE) { depth--; if (!depth) break; }
+                    lex_next();
+                }
+                if (lex_cur.type == TOK_RBRACE) lex_next();
+                return ast_alloc(NODE_EMPTY);
+            }
             int np = e->data.func_call.nargs;
             char **params = malloc(np * sizeof(char*));
             for (int i = 0; i < np; i++) {
@@ -834,9 +848,53 @@ ASTNode *parse_stmt(void) {
             ASTNode *body = parse_block();
             ASTNode *n = ast_alloc(NODE_FUNC_DEF);
             n->data.func_def.name = e->data.func_call.name;
+            e->data.func_call.name = NULL;
             n->data.func_def.params = params;
             n->data.func_def.nparams = np;
             n->data.func_def.body = body;
+            n->data.func_def.lib = e->data.func_call.lib;
+            e->data.func_call.lib = NULL;
+            return n;
+        }
+    }
+
+    if (e->type == NODE_FUNCTION && e->data.funcall.lib) {
+        while (lex_cur.type == TOK_NEWLINE) lex_next();
+        if (lex_cur.type == TOK_LBRACE) {
+            char *fname = e->data.funcall.args[0];
+            if (fname && !strcmp(fname, "itemNames")) {
+                ASTNode *n = ast_alloc(NODE_FUNC_DEF);
+                n->data.func_def.name = sdup(fname);
+                n->data.func_def.lib = sdup(e->data.funcall.lib);
+                n->data.func_def.body = NULL;
+                n->data.func_def.params = NULL;
+                n->data.func_def.nparams = 0;
+                int depth = 1; lex_next();
+                while (lex_cur.type != TOK_EOF && depth > 0) {
+                    if (lex_cur.type == TOK_LBRACE) depth++;
+                    if (lex_cur.type == TOK_RBRACE) { depth--; if (!depth) break; }
+                    lex_next();
+                }
+                if (lex_cur.type == TOK_RBRACE) lex_next();
+                return n;
+            }
+            if (fname && (!strcmp(fname, "newCreativeTab"))) {
+                int depth = 1; lex_next();
+                while (lex_cur.type != TOK_EOF && depth > 0) {
+                    if (lex_cur.type == TOK_LBRACE) depth++;
+                    if (lex_cur.type == TOK_RBRACE) { depth--; if (!depth) break; }
+                    lex_next();
+                }
+                if (lex_cur.type == TOK_RBRACE) lex_next();
+                return ast_alloc(NODE_EMPTY);
+            }
+            ASTNode *body = parse_block();
+            ASTNode *n = ast_alloc(NODE_FUNC_DEF);
+            n->data.func_def.name = sdup(fname);
+            n->data.func_def.params = NULL;
+            n->data.func_def.nparams = 0;
+            n->data.func_def.body = body;
+            n->data.func_def.lib = sdup(e->data.funcall.lib);
             return n;
         }
     }
@@ -848,6 +906,16 @@ ASTNode *parse_stmt(void) {
         n->data.idx_set.index = e->data.idx.index;
         n->data.idx_set.value = parse_expr();
         return n;
+    }
+
+    if (lex_cur.type == TOK_ASSIGN && e->type == NODE_FUNCTION) {
+        if (e->data.funcall.lib && !strcmp(e->data.funcall.lib, "minecraft")) {
+            lex_next();
+            while (lex_cur.type != TOK_NEWLINE && lex_cur.type != TOK_EOF && lex_cur.type != TOK_RBRACE)
+                lex_next();
+            return ast_alloc(NODE_EMPTY);
+        }
+        fatal("line %d: cannot assign to function expression", e->line);
     }
 
     return e;
@@ -1057,6 +1125,24 @@ ASTNode *parse_primary(void) {
             if (lex_cur.type != TOK_ID) fatal("line %d: expected library name after '@'", lex_cur.line);
             char *lib = sdup(lex_cur.val.str);
             lex_next();
+            if (lex_cur.type == TOK_LPAREN) {
+                lex_next();
+                ASTNode **args = NULL;
+                int nargs = 0, acap = 0;
+                while (lex_cur.type != TOK_RPAREN && lex_cur.type != TOK_EOF) {
+                    if (nargs >= acap) { acap = acap ? acap * 2 : 4; args = realloc(args, acap * sizeof(ASTNode*)); if (!args) fatal("out of memory"); }
+                    args[nargs++] = parse_expr();
+                    if (lex_cur.type == TOK_COMMA) lex_next();
+                }
+                if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
+                lex_next();
+                ASTNode *n = ast_alloc(NODE_FUNC_CALL);
+                n->data.func_call.name = fname;
+                n->data.func_call.args = args;
+                n->data.func_call.nargs = nargs;
+                n->data.func_call.lib = lib;
+                return n;
+            }
             char **sargs = NULL;
             int sargc = 0, scap = 0;
             if (scap == 0) { scap = 4; sargs = malloc(sizeof(char*) * scap); if (!sargs) fatal("out of memory"); }

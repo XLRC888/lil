@@ -30,6 +30,7 @@
 - [Lists](lists.md)
 - [Advanced Features](advanced.md)
   - [Compiled Mode](compiled.md)
+  - [Minecraft Forge Generator](minecraft_forge.md)
   - [C Extensions](c_ext.md)
   - [GTK GUI Library](gtk.md)
   - [Dynamic Eval](eval.md)
