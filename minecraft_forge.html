@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Compiled Mode - lil Book</title>
+        <title>Minecraft Forge Generator - lil Book</title>
 
 
         <!-- Custom HTML head -->
@@ -174,95 +174,254 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="compiled-mode"><a class="header" href="#compiled-mode">Compiled Mode</a></h1>
-<p>lil can compile scripts into standalone binaries (use <code>-c</code>). The resulting executable does not need lil to run. Think of it like Cython for Python: same source, faster execution, no interpreter required.</p>
-<p><strong>Note:</strong> There is also a Java/Forge output mode (<code>-j</code>) for generating Minecraft mod source. See <a href="minecraft_forge.html">Minecraft Forge Generator</a>.</p>
-<h2 id="how-it-works"><a class="header" href="#how-it-works">How it works</a></h2>
-<p>When you compile, lil:</p>
-<ol>
-<li>Reads and parses the script</li>
-<li>Infers variable types (numeric variables become C doubles)</li>
-<li>Generates a C file containing the program logic and a minimal runtime</li>
-<li>Compiles the C file with gcc into a standalone binary</li>
-</ol>
-<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
-<p>Write a script:</p>
-<pre><code class="language-lil">#fib(n) {
-  if n &lt;= 2 {
-    1
-  } else {
-    fib(n - 1) + fib(n - 2)
-  }
-}
+                        <h1 id="minecraft-forge-mod-generator"><a class="header" href="#minecraft-forge-mod-generator">Minecraft Forge Mod Generator</a></h1>
+<p>lil can generate complete Minecraft Forge mods from a high-level DSL. Use <code>-j</code> to enable Java generation and <code>-o &lt;dir&gt;/</code> to write a full mod directory tree.</p>
+<h2 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h2>
+<pre><code class="language-lil">[MCMForge]
+include minecraft-forge
 
-result = fib(35)
-write("fib(35) = ", result)
+modID@minecraft = "example_mod"
+modVersion@minecraft = "0.1.0"
+mcVersion@minecraft = "1.20.1"
+modName@minecraft = "Example Mod"
+modAuthors@minecraft = "you"
 </code></pre>
-<p>Compile and run:</p>
-<pre><code class="language-bash">lil -c fib.lil -o fib
-./fib
-</code></pre>
-<p>If you omit <code>-o</code>, the output name is derived from the input filename (the <code>.lil</code> extension is removed). If that fails, it defaults to <code>a.out</code>.</p>
-<h2 id="standalone-binary"><a class="header" href="#standalone-binary">Standalone Binary</a></h2>
-<p>The compiled binary is self-contained. Copy it to another machine (same architecture) and it runs without lil installed:</p>
-<pre><code class="language-bash">scp fib user@other-machine:~
-ssh user@other-machine ./fib    : works without lil
-</code></pre>
-<h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
-<p>Compiled mode is significantly faster than interpreted mode, especially for numeric code. The type inference pass eliminates the overhead of dynamic type checks for variables that are proven to always hold numbers.</p>
+<p>Compile: <code>lil -j mod.lil -o mod_out/</code></p>
+<h2 id="metadata"><a class="header" href="#metadata">Metadata</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>benchmark</th><th>interpreted</th><th>compiled</th><th>C</th></tr>
+<tr><th>Directive</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td>loop 50M</td><td>0.56s</td><td>0.05s</td><td>0.05s</td></tr>
-<tr><td>primes 5k</td><td>0.05s</td><td>0.005s</td><td>0.004s</td></tr>
-<tr><td>fib(35)</td><td>4.2s</td><td>0.4s</td><td>0.3s</td></tr>
+<tr><td><code>modID@minecraft</code></td><td>Mod identifier (used in file paths, registry names)</td></tr>
+<tr><td><code>modVersion@minecraft</code></td><td>Mod version</td></tr>
+<tr><td><code>mcVersion@minecraft</code></td><td>Minecraft version target</td></tr>
+<tr><td><code>modName@minecraft</code></td><td>Human-readable mod name</td></tr>
+<tr><td><code>modAuthors@minecraft</code></td><td>Author string</td></tr>
 </tbody>
 </table>
 </div>
-<p>Compare for yourself:</p>
-<pre><code class="language-bash">time lil fib.lil
-time ./fib
+<h2 id="items"><a class="header" href="#items">Items</a></h2>
+<h3 id="basic-items"><a class="header" href="#basic-items">Basic Items</a></h3>
+<pre><code class="language-lil">newItem@minecraft(ruby) {
+    propertiesItem@minecraft {
+        stacksTo = 64
+    }
+    itemNames@minecraft {
+        [1] = "Ruby"
+    }
+}
 </code></pre>
-<p>Compiled code matches C performance on simple numeric loops. The <code>fib(35)</code> recursive function runs roughly 10x faster when compiled.</p>
-<h2 id="functions"><a class="header" href="#functions">Functions</a></h2>
-<p>User-defined functions (<code>#name()</code>) work in compiled mode. Each function becomes a standalone C function with its own local variable scope and type inference. Function calls work inside expressions, control flow, and can be recursive.</p>
-<h2 id="what-compiles-and-what-doesnt"><a class="header" href="#what-compiles-and-what-doesnt">What Compiles (and What Doesn’t)</a></h2>
-<p>Simple operations, arithmetic, control flow, user-defined functions, and variable assignments all compile fine:</p>
-<pre><code class="language-lil">x = 42
-y = x + 1
-write(y)
+<h3 id="tools-automatic-type-detection"><a class="header" href="#tools-automatic-type-detection">Tools (automatic type detection)</a></h3>
+<p>Names containing <code>_sword</code>, <code>_pickaxe</code>, <code>_axe</code>, <code>_shovel</code>, or <code>_hoe</code> are automatically typed:</p>
+<pre><code class="language-lil">newItem@minecraft(ruby_sword, ruby_pickaxe, ruby_axe) {
+    propertiesItem@minecraft {
+        tier = "ruby"
+        attackDamage = 3
+        attackSpeed = -2.4
+    }
+    itemNames@minecraft {
+        [1] = "Ruby Sword"
+        [2] = "Ruby Pickaxe"
+        [3] = "Ruby Axe"
+    }
+}
 </code></pre>
-<p>This WILL compile and run correctly.</p>
-<p>Library calls like <code>full@date</code> will NOT compile. The compiler generates a stub that returns a default value (0 for numbers, empty string for strings):</p>
-<pre><code class="language-lil">write(full@date)          : compiles but prints nothing useful
-write(cmd@sys("ls"))      : returns 0 in compiled mode
-write("hello")             : this compiles and works fine
+<h3 id="armor"><a class="header" href="#armor">Armor</a></h3>
+<p>Armor names (<code>_helmet</code>, <code>_chestplate</code>, <code>_leggings</code>, <code>_boots</code>) are detected:</p>
+<pre><code class="language-lil">newItem@minecraft(ruby_helmet, ruby_boots) {
+    propertiesItem@minecraft {
+        tier = "ruby"
+        durability = 37
+        protection = 3, 6, 8, 3
+        toughness = 2.0
+    }
+    itemNames@minecraft {
+        [1] = "Ruby Helmet"
+        [2] = "Ruby Boots"
+    }
+}
 </code></pre>
-<h2 id="limitations"><a class="header" href="#limitations">Limitations</a></h2>
-<p>The following features are not available in compiled mode:</p>
-<ul>
-<li>The <code>has</code> operator in conditions</li>
-<li>Templates (template strings)</li>
-<li>Library function calls (<code>func(args)@lib</code>)</li>
-</ul>
-<p>If your script uses any of these features, compilation will fail and lil will tell you which construct could not be compiled.</p>
-<h2 id="short-circuit--and--in-compiled-mode"><a class="header" href="#short-circuit--and--in-compiled-mode">Short-circuit &amp;&amp; and ; in compiled mode</a></h2>
-<p><code>&amp;&amp;</code> and <code>;</code> work in compiled mode but fall back to the interpreter for execution. They work correctly but don’t get the full AOT optimization.</p>
-<h2 id="modifiers-in-aot"><a class="header" href="#modifiers-in-aot">Modifiers in AOT</a></h2>
-<p><code>force</code> and <code>unforce</code> still parse and run in compiled mode, but the locking concept does not apply. Variables in the generated C are statically typed, so <code>force x = 42</code> simply becomes <code>double x = 42;</code> (or the inferred type) with no lock attached. A later <code>x = 30</code> in the same compiled script will not be rejected the way it would in the interpreter. <code>unforce x</code> compiles to a no-op.</p>
+<h3 id="food"><a class="header" href="#food">Food</a></h3>
+<pre><code class="language-lil">newFood@minecraft(ruby_apple) {
+    propertiesItem@minecraft {
+        hunger = 6
+        saturation = 0.6
+        alwaysEdible = true
+    }
+    foodEffect@minecraft("NIGHT_VISION", 6000, 0, 1.0)
+    foodEffect@minecraft("REGENERATION", 100, 1, 1.0)
+}
+</code></pre>
+<h3 id="properties"><a class="header" href="#properties">Properties</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Applies To</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>tier</code></td><td>tools, armor</td><td>string</td><td>Tool tier (e.g. “ruby”, “diamond”)</td></tr>
+<tr><td><code>attackDamage</code></td><td>tools</td><td>number</td><td>Base attack damage</td></tr>
+<tr><td><code>attackSpeed</code></td><td>tools</td><td>number</td><td>Attack speed modifier</td></tr>
+<tr><td><code>durability</code></td><td>any</td><td>number</td><td>Item durability</td></tr>
+<tr><td><code>stacksTo</code></td><td>items</td><td>number</td><td>Max stack size</td></tr>
+<tr><td><code>isImmuneToLava</code></td><td>any</td><td>0/1</td><td>Fire resistance</td></tr>
+<tr><td><code>hunger</code></td><td>food</td><td>number</td><td>Hunger restored</td></tr>
+<tr><td><code>saturation</code></td><td>food</td><td>number</td><td>Saturation modifier</td></tr>
+<tr><td><code>alwaysEdible</code></td><td>food</td><td>0/1</td><td>Edible when full</td></tr>
+<tr><td><code>protection</code></td><td>armor</td><td>list</td><td>Per-slot protection values</td></tr>
+<tr><td><code>toughness</code></td><td>armor</td><td>number</td><td>Armor toughness</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="blocks"><a class="header" href="#blocks">Blocks</a></h2>
+<pre><code class="language-lil">newBlock@minecraft(ruby_block, ruby_ore) {
+    propertiesBlock@minecraft {
+        material = "metal"
+        hardness = 5.0
+        resistance = 6.0
+        tool = "pickaxe"
+        tier = "iron"
+        sound = "metal"
+    }
+    itemNames@minecraft {
+        [1] = "Ruby Block"
+        [2] = "Ruby Ore"
+    }
+}
+</code></pre>
+<h3 id="block-properties"><a class="header" href="#block-properties">Block Properties</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Values</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>material</code></td><td><code>metal</code>, <code>wood</code>, <code>stone</code>, <code>glass</code>, <code>dirt</code>, <code>plant</code>, <code>snow</code></td><td>Base material</td></tr>
+<tr><td><code>hardness</code></td><td>number</td><td>Mining hardness</td></tr>
+<tr><td><code>resistance</code></td><td>number</td><td>Explosion resistance</td></tr>
+<tr><td><code>tool</code></td><td><code>pickaxe</code>, <code>axe</code>, <code>shovel</code>, <code>hoe</code></td><td>Required tool type</td></tr>
+<tr><td><code>tier</code></td><td><code>stone</code>, <code>iron</code>, <code>diamond</code></td><td>Required tool tier</td></tr>
+<tr><td><code>sound</code></td><td><code>metal</code>, <code>wood</code>, <code>stone</code>, <code>glass</code>, <code>deepslate</code>, <code>gravel</code>, <code>snow</code></td><td>Block sound type</td></tr>
+<tr><td><code>requiresTool</code></td><td>0/1</td><td>Tool required for drops</td></tr>
+<tr><td><code>light</code></td><td>number (0-15)</td><td>Light emission level</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="recipes"><a class="header" href="#recipes">Recipes</a></h2>
+<h3 id="shaped"><a class="header" href="#shaped">Shaped</a></h3>
+<pre><code class="language-lil">recipeShaped@minecraft(ruby_sword) {
+    pattern {
+        "R", "R",
+        "R", "S"
+    }
+    keys = "R": "ruby", "S": "stick"
+    result = "ruby_sword"
+}
+</code></pre>
+<h3 id="shapeless"><a class="header" href="#shapeless">Shapeless</a></h3>
+<pre><code class="language-lil">recipeShapeless@minecraft(ruby) {
+    ingredients = "ruby_block"
+    result = "ruby"
+    count = 9
+}
+</code></pre>
+<h3 id="smelting"><a class="header" href="#smelting">Smelting</a></h3>
+<pre><code class="language-lil">recipeSmelting@minecraft(ruby) {
+    ingredient = "raw_ruby"
+    result = "ruby"
+    experience = 1.0
+    cookTime = 200
+}
+</code></pre>
+<h2 id="creative-tabs"><a class="header" href="#creative-tabs">Creative Tabs</a></h2>
+<pre><code class="language-lil">newCreativeTab@minecraft(ruby_tab) {
+    icon = "ruby_sword"
+    items = "ruby", "ruby_sword", "ruby_block", "ruby_apple"
+}
+</code></pre>
+<p>Multiple tabs are supported:</p>
+<pre><code class="language-lil">newCreativeTab@minecraft(materials_tab) {
+    icon = "ruby"
+    items = "ruby", "ruby_block"
+}
+newCreativeTab@minecraft(combat_tab) {
+    icon = "ruby_sword"
+    items = "ruby_sword", "ruby_helmet"
+}
+</code></pre>
+<h2 id="procedure-events"><a class="header" href="#procedure-events">Procedure Events</a></h2>
+<p>Items and blocks can have custom behavior via procedure blocks:</p>
+<h3 id="item-events"><a class="header" href="#item-events">Item Events</a></h3>
+<pre><code class="language-lil">procedureItem@minecraft(HitEntity) {
+    write@std "hit something"
+}
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event Name</th><th>Override Method</th></tr>
+</thead>
+<tbody>
+<tr><td><code>RightClick</code></td><td><code>InteractionResultHolder&lt;ItemStack&gt; use(Level, Player, InteractionHand)</code></td></tr>
+<tr><td><code>HitEntity</code></td><td><code>boolean hurtEnemy(ItemStack, LivingEntity, LivingEntity)</code></td></tr>
+<tr><td><code>Crafted</code></td><td><code>void onCraftedBy(ItemStack, Level, Player)</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="block-events"><a class="header" href="#block-events">Block Events</a></h3>
+<pre><code class="language-lil">procedureBlock@minecraft(BlockPlaced) {
+    write@std "placed"
+}
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event Name</th><th>Override Method</th></tr>
+</thead>
+<tbody>
+<tr><td><code>BlockPlaced</code></td><td><code>void onPlace(BlockState, Level, BlockPos, BlockState, boolean)</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="generated-files"><a class="header" href="#generated-files">Generated Files</a></h2>
+<p>When using <code>-o &lt;dir&gt;/</code>, lil produces:</p>
+<pre><code>&lt;dir&gt;/
+  build.gradle
+  gradle.properties
+  src/main/java/com/{modid}/
+    ModMain.java
+    ModItems.java
+    ModBlocks.java
+    ModCreativeTabs.java
+    ModArmorMaterials.java
+    ModToolTiers.java
+    {ClassName}.java           (one per item/block)
+  src/main/resources/
+    META-INF/mods.toml
+    pack.mcmeta
+    assets/{modid}/
+      lang/en_us.json
+      models/item/{name}.json
+      models/block/{name}.json
+      blockstates/{name}.json
+    data/{modid}/
+      recipes/{name}.json
+      loot_tables/blocks/{name}.json
+      tags/blocks/mineable/{tool}.json
+      tags/blocks/needs_{tier}_tool.json
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="advanced.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="compiled.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="minecraft_forge.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="c_ext.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -272,11 +431,11 @@ write("hello")             : this compiles and works fine
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="advanced.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="compiled.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="minecraft_forge.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="c_ext.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

@@ -16,8 +16,8 @@
         <link rel="icon" href="favicon-de23e50b.svg">
         <link rel="shortcut icon" href="favicon-8114d1fc.png">
         <link rel="stylesheet" href="css/variables-8adf115d.css">
-        <link rel="stylesheet" href="css/general-0392ca55.css">
-        <link rel="stylesheet" href="css/chrome-fc474251.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
         <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0a90dac4.js";
+            window.path_to_searchindex_js = "searchindex-ae258ff4.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a3b2d5b2.js"></script>
+        <script src="toc-05074f83.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1788,7 +1788,7 @@ write(total)
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="advanced-features"><a class="header" href="#advanced-features">Advanced Features</a></h1>
-<p>This chapter covers the advanced features of lil: templates, the has operator, compiled mode, and C extensions. If you know Python, many of these concepts will feel familiar under a different syntax.</p>
+<p>This chapter covers the advanced features of lil: templates, the has operator, compiled mode, Minecraft Forge mod generation, and C extensions. If you know Python, many of these concepts will feel familiar under a different syntax.</p>
 <h2 id="what-youll-find-here"><a class="header" href="#what-youll-find-here">What You’ll Find Here</a></h2>
 <div class="table-wrapper">
 <table>
@@ -1799,6 +1799,7 @@ write(total)
 <tr><td>Templates</td><td>f-strings like <code>f"hello {name}"</code></td><td>Inline variable substitution in strings</td></tr>
 <tr><td>Has operator</td><td><code>in</code> keyword like <code>"sub" in text</code></td><td>Check variable existence or substring match</td></tr>
 <tr><td>Compiled mode</td><td>Cython / Nuitka</td><td>Compile lil scripts to standalone C binaries</td></tr>
+<tr><td>Minecraft Forge</td><td>N/A</td><td>Generate complete Minecraft Forge mod Java source</td></tr>
 <tr><td>C extensions</td><td><code>ctypes</code> / <code>cffi</code></td><td>Direct memory access with address-of and dereference</td></tr>
 </tbody>
 </table>
@@ -1808,6 +1809,7 @@ write(total)
 <li><a href="#templates">Templates</a> - string interpolation with <code>{varname}</code></li>
 <li><a href="#the-has-operator">Has operator</a> - substring matching and variable existence checks</li>
 <li><a href="#compiled-mode">Compiled mode</a> - AOT compilation for 10x speedup</li>
+<li><a href="#minecraft-forge-mod-generator">Minecraft Forge</a> - Java mod source generation</li>
 <li><a href="#c-extensions">C extensions</a> - low-level memory operations with <code>@</code> and <code>^</code></li>
 </ul>
 <p>These features are considered advanced because they either:</p>
@@ -1819,7 +1821,8 @@ write(total)
 <p>Start with <a href="#templates">templates</a> if you want easier string building, or jump to <a href="#compiled-mode">compiled mode</a> if you need raw speed.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="compiled-mode"><a class="header" href="#compiled-mode">Compiled Mode</a></h1>
-<p>lil can compile scripts into standalone binaries. The resulting executable does not need lil to run. Think of it like Cython for Python: same source, faster execution, no interpreter required.</p>
+<p>lil can compile scripts into standalone binaries (use <code>-c</code>). The resulting executable does not need lil to run. Think of it like Cython for Python: same source, faster execution, no interpreter required.</p>
+<p><strong>Note:</strong> There is also a Java/Forge output mode (<code>-j</code>) for generating Minecraft mod source. See <a href="#minecraft-forge-mod-generator">Minecraft Forge Generator</a>.</p>
 <h2 id="how-it-works"><a class="header" href="#how-it-works">How it works</a></h2>
 <p>When you compile, lil:</p>
 <ol>
@@ -1897,6 +1900,245 @@ write("hello")             : this compiles and works fine
 <h2 id="modifiers-in-aot"><a class="header" href="#modifiers-in-aot">Modifiers in AOT</a></h2>
 <p><code>force</code> and <code>unforce</code> still parse and run in compiled mode, but the locking concept does not apply. Variables in the generated C are statically typed, so <code>force x = 42</code> simply becomes <code>double x = 42;</code> (or the inferred type) with no lock attached. A later <code>x = 30</code> in the same compiled script will not be rejected the way it would in the interpreter. <code>unforce x</code> compiles to a no-op.</p>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="minecraft-forge-mod-generator"><a class="header" href="#minecraft-forge-mod-generator">Minecraft Forge Mod Generator</a></h1>
+<p>lil can generate complete Minecraft Forge mods from a high-level DSL. Use <code>-j</code> to enable Java generation and <code>-o &lt;dir&gt;/</code> to write a full mod directory tree.</p>
+<h2 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h2>
+<pre><code class="language-lil">[MCMForge]
+include minecraft-forge
+
+modID@minecraft = "example_mod"
+modVersion@minecraft = "0.1.0"
+mcVersion@minecraft = "1.20.1"
+modName@minecraft = "Example Mod"
+modAuthors@minecraft = "you"
+</code></pre>
+<p>Compile: <code>lil -j mod.lil -o mod_out/</code></p>
+<h2 id="metadata"><a class="header" href="#metadata">Metadata</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Directive</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>modID@minecraft</code></td><td>Mod identifier (used in file paths, registry names)</td></tr>
+<tr><td><code>modVersion@minecraft</code></td><td>Mod version</td></tr>
+<tr><td><code>mcVersion@minecraft</code></td><td>Minecraft version target</td></tr>
+<tr><td><code>modName@minecraft</code></td><td>Human-readable mod name</td></tr>
+<tr><td><code>modAuthors@minecraft</code></td><td>Author string</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="items"><a class="header" href="#items">Items</a></h2>
+<h3 id="basic-items"><a class="header" href="#basic-items">Basic Items</a></h3>
+<pre><code class="language-lil">newItem@minecraft(ruby) {
+    propertiesItem@minecraft {
+        stacksTo = 64
+    }
+    itemNames@minecraft {
+        [1] = "Ruby"
+    }
+}
+</code></pre>
+<h3 id="tools-automatic-type-detection"><a class="header" href="#tools-automatic-type-detection">Tools (automatic type detection)</a></h3>
+<p>Names containing <code>_sword</code>, <code>_pickaxe</code>, <code>_axe</code>, <code>_shovel</code>, or <code>_hoe</code> are automatically typed:</p>
+<pre><code class="language-lil">newItem@minecraft(ruby_sword, ruby_pickaxe, ruby_axe) {
+    propertiesItem@minecraft {
+        tier = "ruby"
+        attackDamage = 3
+        attackSpeed = -2.4
+    }
+    itemNames@minecraft {
+        [1] = "Ruby Sword"
+        [2] = "Ruby Pickaxe"
+        [3] = "Ruby Axe"
+    }
+}
+</code></pre>
+<h3 id="armor"><a class="header" href="#armor">Armor</a></h3>
+<p>Armor names (<code>_helmet</code>, <code>_chestplate</code>, <code>_leggings</code>, <code>_boots</code>) are detected:</p>
+<pre><code class="language-lil">newItem@minecraft(ruby_helmet, ruby_boots) {
+    propertiesItem@minecraft {
+        tier = "ruby"
+        durability = 37
+        protection = 3, 6, 8, 3
+        toughness = 2.0
+    }
+    itemNames@minecraft {
+        [1] = "Ruby Helmet"
+        [2] = "Ruby Boots"
+    }
+}
+</code></pre>
+<h3 id="food"><a class="header" href="#food">Food</a></h3>
+<pre><code class="language-lil">newFood@minecraft(ruby_apple) {
+    propertiesItem@minecraft {
+        hunger = 6
+        saturation = 0.6
+        alwaysEdible = true
+    }
+    foodEffect@minecraft("NIGHT_VISION", 6000, 0, 1.0)
+    foodEffect@minecraft("REGENERATION", 100, 1, 1.0)
+}
+</code></pre>
+<h3 id="properties"><a class="header" href="#properties">Properties</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Applies To</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>tier</code></td><td>tools, armor</td><td>string</td><td>Tool tier (e.g. “ruby”, “diamond”)</td></tr>
+<tr><td><code>attackDamage</code></td><td>tools</td><td>number</td><td>Base attack damage</td></tr>
+<tr><td><code>attackSpeed</code></td><td>tools</td><td>number</td><td>Attack speed modifier</td></tr>
+<tr><td><code>durability</code></td><td>any</td><td>number</td><td>Item durability</td></tr>
+<tr><td><code>stacksTo</code></td><td>items</td><td>number</td><td>Max stack size</td></tr>
+<tr><td><code>isImmuneToLava</code></td><td>any</td><td>0/1</td><td>Fire resistance</td></tr>
+<tr><td><code>hunger</code></td><td>food</td><td>number</td><td>Hunger restored</td></tr>
+<tr><td><code>saturation</code></td><td>food</td><td>number</td><td>Saturation modifier</td></tr>
+<tr><td><code>alwaysEdible</code></td><td>food</td><td>0/1</td><td>Edible when full</td></tr>
+<tr><td><code>protection</code></td><td>armor</td><td>list</td><td>Per-slot protection values</td></tr>
+<tr><td><code>toughness</code></td><td>armor</td><td>number</td><td>Armor toughness</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="blocks"><a class="header" href="#blocks">Blocks</a></h2>
+<pre><code class="language-lil">newBlock@minecraft(ruby_block, ruby_ore) {
+    propertiesBlock@minecraft {
+        material = "metal"
+        hardness = 5.0
+        resistance = 6.0
+        tool = "pickaxe"
+        tier = "iron"
+        sound = "metal"
+    }
+    itemNames@minecraft {
+        [1] = "Ruby Block"
+        [2] = "Ruby Ore"
+    }
+}
+</code></pre>
+<h3 id="block-properties"><a class="header" href="#block-properties">Block Properties</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Property</th><th>Values</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>material</code></td><td><code>metal</code>, <code>wood</code>, <code>stone</code>, <code>glass</code>, <code>dirt</code>, <code>plant</code>, <code>snow</code></td><td>Base material</td></tr>
+<tr><td><code>hardness</code></td><td>number</td><td>Mining hardness</td></tr>
+<tr><td><code>resistance</code></td><td>number</td><td>Explosion resistance</td></tr>
+<tr><td><code>tool</code></td><td><code>pickaxe</code>, <code>axe</code>, <code>shovel</code>, <code>hoe</code></td><td>Required tool type</td></tr>
+<tr><td><code>tier</code></td><td><code>stone</code>, <code>iron</code>, <code>diamond</code></td><td>Required tool tier</td></tr>
+<tr><td><code>sound</code></td><td><code>metal</code>, <code>wood</code>, <code>stone</code>, <code>glass</code>, <code>deepslate</code>, <code>gravel</code>, <code>snow</code></td><td>Block sound type</td></tr>
+<tr><td><code>requiresTool</code></td><td>0/1</td><td>Tool required for drops</td></tr>
+<tr><td><code>light</code></td><td>number (0-15)</td><td>Light emission level</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="recipes"><a class="header" href="#recipes">Recipes</a></h2>
+<h3 id="shaped"><a class="header" href="#shaped">Shaped</a></h3>
+<pre><code class="language-lil">recipeShaped@minecraft(ruby_sword) {
+    pattern {
+        "R", "R",
+        "R", "S"
+    }
+    keys = "R": "ruby", "S": "stick"
+    result = "ruby_sword"
+}
+</code></pre>
+<h3 id="shapeless"><a class="header" href="#shapeless">Shapeless</a></h3>
+<pre><code class="language-lil">recipeShapeless@minecraft(ruby) {
+    ingredients = "ruby_block"
+    result = "ruby"
+    count = 9
+}
+</code></pre>
+<h3 id="smelting"><a class="header" href="#smelting">Smelting</a></h3>
+<pre><code class="language-lil">recipeSmelting@minecraft(ruby) {
+    ingredient = "raw_ruby"
+    result = "ruby"
+    experience = 1.0
+    cookTime = 200
+}
+</code></pre>
+<h2 id="creative-tabs"><a class="header" href="#creative-tabs">Creative Tabs</a></h2>
+<pre><code class="language-lil">newCreativeTab@minecraft(ruby_tab) {
+    icon = "ruby_sword"
+    items = "ruby", "ruby_sword", "ruby_block", "ruby_apple"
+}
+</code></pre>
+<p>Multiple tabs are supported:</p>
+<pre><code class="language-lil">newCreativeTab@minecraft(materials_tab) {
+    icon = "ruby"
+    items = "ruby", "ruby_block"
+}
+newCreativeTab@minecraft(combat_tab) {
+    icon = "ruby_sword"
+    items = "ruby_sword", "ruby_helmet"
+}
+</code></pre>
+<h2 id="procedure-events"><a class="header" href="#procedure-events">Procedure Events</a></h2>
+<p>Items and blocks can have custom behavior via procedure blocks:</p>
+<h3 id="item-events"><a class="header" href="#item-events">Item Events</a></h3>
+<pre><code class="language-lil">procedureItem@minecraft(HitEntity) {
+    write@std "hit something"
+}
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event Name</th><th>Override Method</th></tr>
+</thead>
+<tbody>
+<tr><td><code>RightClick</code></td><td><code>InteractionResultHolder&lt;ItemStack&gt; use(Level, Player, InteractionHand)</code></td></tr>
+<tr><td><code>HitEntity</code></td><td><code>boolean hurtEnemy(ItemStack, LivingEntity, LivingEntity)</code></td></tr>
+<tr><td><code>Crafted</code></td><td><code>void onCraftedBy(ItemStack, Level, Player)</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="block-events"><a class="header" href="#block-events">Block Events</a></h3>
+<pre><code class="language-lil">procedureBlock@minecraft(BlockPlaced) {
+    write@std "placed"
+}
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Event Name</th><th>Override Method</th></tr>
+</thead>
+<tbody>
+<tr><td><code>BlockPlaced</code></td><td><code>void onPlace(BlockState, Level, BlockPos, BlockState, boolean)</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="generated-files"><a class="header" href="#generated-files">Generated Files</a></h2>
+<p>When using <code>-o &lt;dir&gt;/</code>, lil produces:</p>
+<pre><code>&lt;dir&gt;/
+  build.gradle
+  gradle.properties
+  src/main/java/com/{modid}/
+    ModMain.java
+    ModItems.java
+    ModBlocks.java
+    ModCreativeTabs.java
+    ModArmorMaterials.java
+    ModToolTiers.java
+    {ClassName}.java           (one per item/block)
+  src/main/resources/
+    META-INF/mods.toml
+    pack.mcmeta
+    assets/{modid}/
+      lang/en_us.json
+      models/item/{name}.json
+      models/block/{name}.json
+      blockstates/{name}.json
+    data/{modid}/
+      recipes/{name}.json
+      loot_tables/blocks/{name}.json
+      tags/blocks/mineable/{tool}.json
+      tags/blocks/needs_{tier}_tool.json
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="c-extensions"><a class="header" href="#c-extensions">C Extensions</a></h1>
 <p>lil provides two operators that give you direct access to memory. These only work when compiling with <code>lil -c</code>. Running them with the interpreter produces an error.</p>
 <p>If you’ve used Python’s <code>ctypes</code> module to get the address of a C object or read memory at a raw pointer, the concept is the same: <code>@</code> is like <code>ctypes.addressof()</code> and <code>^</code> is like <code>ctypes.string_at()</code>.</p>
@@ -1964,7 +2206,7 @@ entry@gtk("input", "type here...")      : text entry with placeholder
 <pre><code class="language-lil">add@gtk("box", "btn", "lbl", "input")    : add multiple children at once
 show@gtk("box")                        : show the container and all children
 </code></pre>
-<h2 id="properties"><a class="header" href="#properties">Properties</a></h2>
+<h2 id="properties-1"><a class="header" href="#properties-1">Properties</a></h2>
 <p>Set and get widget properties at runtime:</p>
 <pre><code class="language-lil">set@gtk("lbl", "label", "new text")      : change button/label text
 set@gtk("input", "text", "hello")        : change entry text
@@ -2127,7 +2369,7 @@ write(last_error@sys)
 
         <script src="clipboard-1626706a.min.js"></script>
         <script src="highlight-abc7f01d.js"></script>
-        <script src="book-c22b7243.js"></script>
+        <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
 

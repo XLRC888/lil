@@ -15,8 +15,8 @@
         <link rel="icon" href="favicon-de23e50b.svg">
         <link rel="shortcut icon" href="favicon-8114d1fc.png">
         <link rel="stylesheet" href="css/variables-8adf115d.css">
-        <link rel="stylesheet" href="css/general-0392ca55.css">
-        <link rel="stylesheet" href="css/chrome-fc474251.css">
+        <link rel="stylesheet" href="css/general-e96d0476.css">
+        <link rel="stylesheet" href="css/chrome-d279d366.css">
         <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-0a90dac4.js";
+            window.path_to_searchindex_js = "searchindex-ae258ff4.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-a3b2d5b2.js"></script>
+        <script src="toc-05074f83.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -175,7 +175,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="advanced-features"><a class="header" href="#advanced-features">Advanced Features</a></h1>
-<p>This chapter covers the advanced features of lil: templates, the has operator, compiled mode, and C extensions. If you know Python, many of these concepts will feel familiar under a different syntax.</p>
+<p>This chapter covers the advanced features of lil: templates, the has operator, compiled mode, Minecraft Forge mod generation, and C extensions. If you know Python, many of these concepts will feel familiar under a different syntax.</p>
 <h2 id="what-youll-find-here"><a class="header" href="#what-youll-find-here">What You’ll Find Here</a></h2>
 <div class="table-wrapper">
 <table>
@@ -186,6 +186,7 @@
 <tr><td>Templates</td><td>f-strings like <code>f"hello {name}"</code></td><td>Inline variable substitution in strings</td></tr>
 <tr><td>Has operator</td><td><code>in</code> keyword like <code>"sub" in text</code></td><td>Check variable existence or substring match</td></tr>
 <tr><td>Compiled mode</td><td>Cython / Nuitka</td><td>Compile lil scripts to standalone C binaries</td></tr>
+<tr><td>Minecraft Forge</td><td>N/A</td><td>Generate complete Minecraft Forge mod Java source</td></tr>
 <tr><td>C extensions</td><td><code>ctypes</code> / <code>cffi</code></td><td>Direct memory access with address-of and dereference</td></tr>
 </tbody>
 </table>
@@ -195,6 +196,7 @@
 <li><a href="templates.html">Templates</a> - string interpolation with <code>{varname}</code></li>
 <li><a href="has.html">Has operator</a> - substring matching and variable existence checks</li>
 <li><a href="compiled.html">Compiled mode</a> - AOT compilation for 10x speedup</li>
+<li><a href="minecraft_forge.html">Minecraft Forge</a> - Java mod source generation</li>
 <li><a href="c_ext.html">C extensions</a> - low-level memory operations with <code>@</code> and <code>^</code></li>
 </ul>
 <p>These features are considered advanced because they either:</p>
@@ -253,7 +255,7 @@
 
         <script src="clipboard-1626706a.min.js"></script>
         <script src="highlight-abc7f01d.js"></script>
-        <script src="book-c22b7243.js"></script>
+        <script src="book-609e4cb8.js"></script>
 
         <!-- Custom JS scripts -->
 
