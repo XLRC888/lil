@@ -1299,7 +1299,7 @@ ASTNode *parse_postfix(void) {
 
 ASTNode *parse_mul(void) {
     ASTNode *l = parse_unary();
-    while (lex_cur.type == TOK_STAR || lex_cur.type == TOK_SLASH || lex_cur.type == TOK_MOD) {
+    while (lex_cur.type == TOK_STAR || lex_cur.type == TOK_SLASH || lex_cur.type == TOK_MOD || lex_cur.type == TOK_INT_DIV) {
         int op = lex_cur.type;
         lex_next();
         ASTNode *r = parse_unary();

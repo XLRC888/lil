@@ -10,6 +10,12 @@ d = 10 / 3
 e = 10 % 3
 ```
 
+Integer division:
+
+```lil
+x = 10 // 3    : 3
+```
+
 Modulo with negative numbers follows the sign of the dividend:
 
 ```lil
@@ -26,7 +32,7 @@ y = -(x + 3)
 
 ## Logical operators
 
-lil uses `and`, `or`, `not` like Python. `&&` is also supported as short-circuit and. `!` is an alias for `not`:
+lil uses `and`, `or`, `not` like Python, but also supports `&&`, `||`, `!` as aliases:
 
 ```lil
 if a > 0 and b > 0 {
@@ -82,7 +88,7 @@ From lowest to highest:
 4. `not`
 5. `==`, `!=`, `<`, `>`, `<=`, `>=`
 6. `+`, `-`
-7. `*`, `/`, `%`
+7. `*`, `/`, `%`, `//`
 8. unary `-`, unary `not`
 9. parentheses `()`
 

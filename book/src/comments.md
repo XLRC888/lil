@@ -27,4 +27,4 @@ comment
 
 `#` is for function definitions, not comments: `#add(a, b) { a + b }`.
 
-`//` is also a single-line comment (same as `:`): `x = 10 // this is a comment`.
+`//` is integer division, not a comment: `10 // 3 = 3`.

@@ -800,6 +800,13 @@ Value eval_expr(ASTNode *n) {
                 val_free(l); val_free(r);
                 return make_num(_r);
             }
+            if (op == TOK_INT_DIV) {
+                long rd = (long)val_tonum(r);
+                if (rd == 0) fatal("line %d: integer division by zero", n->line);
+                long _r = (long)val_tonum(l) / rd;
+                val_free(l); val_free(r);
+                return make_num(_r);
+            }
 
             int result = 0;
             if (op == TOK_EQ || op == TOK_NE || op == TOK_LT || op == TOK_GT || op == TOK_LE || op == TOK_GE) {
@@ -1426,7 +1433,7 @@ int exec_stmt(ASTNode *n) {
 enum {
     OP_NOP, OP_CONST, OP_VAR_GET, OP_VAR_SET,
     OP_VAR_GET_IDX, OP_VAR_SET_IDX, OP_INC_IDX, OP_DEC_IDX,
-    OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD, OP_NEG,
+    OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD, OP_INT_DIV, OP_NEG,
     OP_EQ, OP_NE, OP_LT, OP_GT, OP_LE, OP_GE,
     OP_AND, OP_OR, OP_NOT,
     OP_PRINT, OP_JMP, OP_JZ, OP_HALT, OP_EXIT, OP_FALLBACK, OP_POP
@@ -1564,6 +1571,7 @@ int ce_expr(ASTNode *n) {
                 case TOK_STAR: emit(OP_MUL, 0); break;
                 case TOK_SLASH: emit(OP_DIV, 0); break;
                 case TOK_MOD: emit(OP_MOD, 0); break;
+                case TOK_INT_DIV: emit(OP_INT_DIV, 0); break;
                 case TOK_EQ: emit(OP_EQ, 0); break;
                 case TOK_NE: emit(OP_NE, 0); break;
                 case TOK_LT: emit(OP_LT, 0); break;
@@ -1761,7 +1769,7 @@ void vm_run(void) {
     vm_exit = 0;
     void *dtab[] = { &&OP_NOP, &&OP_CONST, &&OP_VAR_GET, &&OP_VAR_SET,
         &&OP_VAR_GET_IDX, &&OP_VAR_SET_IDX, &&OP_INC_IDX, &&OP_DEC_IDX,
-        &&OP_ADD, &&OP_SUB, &&OP_MUL, &&OP_DIV, &&OP_MOD, &&OP_NEG,
+        &&OP_ADD, &&OP_SUB, &&OP_MUL, &&OP_DIV, &&OP_MOD, &&OP_INT_DIV, &&OP_NEG,
         &&OP_EQ, &&OP_NE, &&OP_LT, &&OP_GT, &&OP_LE, &&OP_GE,
         &&OP_AND, &&OP_OR, &&OP_NOT,
         &&OP_PRINT, &&OP_JMP, &&OP_JZ, &&OP_HALT, &&OP_EXIT, &&OP_FALLBACK, &&OP_POP };
@@ -1886,6 +1894,16 @@ OP_MOD: {
         int rd = (int)b.data.num;
         if (rd == 0) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }
         else { val_free(a); val_free(b); vm_stack[sp++] = make_num((double)((int)a.data.num % rd)); }
+    }
+    ip++; goto *dtab[code[ip].op];
+}
+OP_INT_DIV: {
+    Value b = vm_stack[--sp], a = vm_stack[--sp];
+    if (a.type == VAL_STR || b.type == VAL_STR) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }
+    else {
+        int rd = (int)b.data.num;
+        if (rd == 0) { val_free(a); val_free(b); vm_stack[sp++] = make_num(0); }
+        else { int r = (int)a.data.num / rd; val_free(a); val_free(b); vm_stack[sp++] = make_num((double)r); }
     }
     ip++; goto *dtab[code[ip].op];
 }

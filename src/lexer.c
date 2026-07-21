@@ -31,12 +31,6 @@ static Token lex_scan(void) {
             continue;
         }
 
-        if (c == '/' && lex_pos + 1 < lex_len && lex_src[lex_pos + 1] == '/') {
-            lex_pos += 2;
-            while (lex_pos < lex_len && lex_src[lex_pos] != '\n') lex_pos++;
-            continue;
-        }
-
         if (c == '"') {
             lex_pos++;
             int start = lex_pos;
@@ -147,6 +141,7 @@ static Token lex_scan(void) {
             case '-': t.type = TOK_MINUS; return t;
             case '*': t.type = TOK_STAR; return t;
             case '/':
+                if (lex_pos < lex_len && lex_src[lex_pos] == '/') { lex_pos++; t.type = TOK_INT_DIV; return t; }
                 t.type = TOK_SLASH; return t;
             case '%': t.type = TOK_MOD; return t;
             case '(': t.type = TOK_LPAREN; return t;

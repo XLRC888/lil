@@ -136,9 +136,9 @@ void typecheck_stmt(ASTNode *n) {
             VarType lt = infer_expr_type(n->data.binop.left);
             VarType rt = infer_expr_type(n->data.binop.right);
             int op = n->data.binop.op;
-            if ((op == TOK_SLASH || op == TOK_MOD) && lit_zero(n->data.binop.right))
+            if ((op == TOK_SLASH || op == TOK_MOD || op == TOK_INT_DIV) && lit_zero(n->data.binop.right))
                 fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: division by zero\n", n->line);
-            if (op != TOK_PLUS && op != TOK_MINUS && op != TOK_STAR && op != TOK_SLASH && op != TOK_MOD)
+            if (op != TOK_PLUS && op != TOK_MINUS && op != TOK_STAR && op != TOK_SLASH && op != TOK_MOD && op != TOK_INT_DIV)
                 { typecheck_stmt(n->data.binop.left); typecheck_stmt(n->data.binop.right); break; }
             if ((lt == TY_STR || rt == TY_STR) && op != TOK_PLUS)
                 fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: arithmetic on string\n", n->line);
@@ -475,7 +475,16 @@ void cg_expr(FILE *f, ASTNode *n, VarType want) {
                 break;
             }
             if (lt == TY_NUM && rt == TY_NUM) {
-                if (op == TOK_MOD) {
+                if (op == TOK_INT_DIV) {
+                    if (want == TY_NUM) fprintf(f, "(");
+                    else fprintf(f, "make_num(");
+                    fprintf(f, "(double)((int)");
+                    cg_expr(f, n->data.binop.left, TY_NUM);
+                    fprintf(f, "/(int)");
+                    cg_expr(f, n->data.binop.right, TY_NUM);
+                    fprintf(f, ")");
+                    fprintf(f, ")");
+                } else if (op == TOK_MOD) {
                     if (want == TY_NUM) fprintf(f, "(");
                     else fprintf(f, "make_num(");
                     fprintf(f, "(double)((int)");
@@ -505,6 +514,7 @@ void cg_expr(FILE *f, ASTNode *n, VarType want) {
                 else if (op == TOK_STAR) fprintf(f, ",3)");
                 else if (op == TOK_SLASH) fprintf(f, ",4)");
                 else if (op == TOK_MOD) fprintf(f, ",5)");
+                else if (op == TOK_INT_DIV) fprintf(f, ",6)");
                 else fprintf(f, ",1)");
             }
             break;
@@ -1084,6 +1094,7 @@ int generate_c(const char *path, const char *outpath) {
     fprintf(f, "    case 1: r=av+bv;break; case 2: r=av-bv;break;\n");
     fprintf(f, "    case 3: r=av*bv;break; case 4: r=bv==0?0:av/bv;break;\n");
     fprintf(f, "    case 5: r=bv==0?0:(double)((int)av%%(int)bv);break;\n");
+    fprintf(f, "    case 6: r=bv==0?0:(double)((int)av/(int)bv);break;\n");
     fprintf(f, "  }\n");
     fprintf(f, "  return make_num(r);\n");
     fprintf(f, "}\n");

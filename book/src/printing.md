@@ -60,3 +60,5 @@ write("hello")
 block comment ::
 write("world")
 ```
+
+`//` is integer division, not a comment: `10 // 3 = 3`.
