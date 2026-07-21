@@ -1,6 +1,6 @@
 # Minecraft Forge Mod Generator
 
-lil can generate complete Minecraft Forge mods from a high-level DSL. Use `-j` to enable Java generation and `-o <dir>/` to write a full mod directory tree.
+lil can generate complete Minecraft Forge mods from a high-level DSL. Use `-j` to enable Java generation and `-o <dir>/` to write a full mod directory tree. Use `-jc` for flat output (files go directly in the target dir without the `src/main/java/...` tree).
 
 ## Quick Start
 
@@ -17,6 +17,12 @@ modAuthors@minecraft = "you"
 
 Compile: `lil -j mod.lil -o mod_out/`
 
+For flat output (no `src/main/java/com/...` tree):
+
+```bash
+lil -jc mod.lil -o mod_out/
+```
+
 ## Metadata
 
 | Directive | Description |
@@ -24,8 +30,10 @@ Compile: `lil -j mod.lil -o mod_out/`
 | `modID@minecraft` | Mod identifier (used in file paths, registry names) |
 | `modVersion@minecraft` | Mod version |
 | `mcVersion@minecraft` | Minecraft version target |
+| `forgeVersion@minecraft` | Forge version (default: 47.3.0) |
 | `modName@minecraft` | Human-readable mod name |
 | `modAuthors@minecraft` | Author string |
+| `modLicense@minecraft` | Mod license (default: "All Rights Reserved") |
 
 ## Items
 
@@ -149,10 +157,29 @@ newBlock@minecraft(ruby_block, ruby_ore) {
 ```lil
 recipeShaped@minecraft(ruby_sword) {
     pattern {
-        "R", "R",
-        "R", "S"
+        "", "R", "",
+        "", "R", "",
+        "", "S", ""
     }
-    keys = "R": "ruby", "S": "stick"
+    keys = "R": "ruby", "S": "minecraft:stick"
+    result = "ruby_sword"
+}
+```
+
+Pattern cells auto-group: 9 cells = 3x3 grid, 4 cells = 2x2 grid, anything else = 1 row per cell (old format `" R "` also works). Empty string `""` = empty slot in the grid.
+
+Item references in keys (`"R": "ruby"`), results, and ingredients default to the current mod's namespace: `"ruby"` becomes `"lilmod:ruby"`. Prepend a modid with `:` to reference items from another mod or vanilla: `"minecraft:stick"`, `"othermod:ruby"`. This applies everywhere item IDs are used in recipes.
+
+For comparison, the old format also works (same result):
+
+```lil
+recipeShaped@minecraft(ruby_sword) {
+    pattern {
+        " R ",
+        " R ",
+        " S "
+    }
+    keys = "R": "ruby", "S": "minecraft:stick"
     result = "ruby_sword"
 }
 ```
@@ -182,23 +209,38 @@ recipeSmelting@minecraft(ruby) {
 
 ```lil
 newCreativeTab@minecraft(ruby_tab) {
-    icon = "ruby_sword"
-    items = "ruby", "ruby_sword", "ruby_block", "ruby_apple"
+    propertiesCreativeTab@minecraft {
+        icon = "ruby_sword"
+        items = "ruby", "ruby_sword", "ruby_block", "ruby_apple"
+    }
 }
 ```
 
-Multiple tabs are supported:
+### Properties
+
+| Property | Description |
+|----------|-------------|
+| `icon` | Item to use as tab icon |
+| `items` | Comma-separated list of items to display in the tab |
+
+### Display Names
+
+Use `creativeTabNames@minecraft` inside the tab block to set per-tab display names (indexed by parameter position):
 
 ```lil
-newCreativeTab@minecraft(materials_tab) {
-    icon = "ruby"
-    items = "ruby", "ruby_block"
-}
-newCreativeTab@minecraft(combat_tab) {
-    icon = "ruby_sword"
-    items = "ruby_sword", "ruby_helmet"
+newCreativeTab@minecraft(materials_tab, combat_tab) {
+    propertiesCreativeTab@minecraft {
+        icon = "ruby"
+        items = "ruby", "ruby_block", "ruby_sword", "ruby_helmet"
+    }
+    creativeTabNames@minecraft {
+        [1] = "Materials"
+        [2] = "Combat"
+    }
 }
 ```
+
+If no display name is set, the tab's internal name is used as-is in the lang file.
 
 ## Procedure Events
 
@@ -230,9 +272,55 @@ procedureBlock@minecraft(BlockPlaced) {
 |------------|----------------|
 | `BlockPlaced` | `void onPlace(BlockState, Level, BlockPos, BlockState, boolean)` |
 
+## Custom Models
+
+Override auto-generated item and block model JSONs with `modelsItem@minecraft` and `modelsBlock@minecraft`.
+
+### Item Models
+
+```lil
+modelsItem@minecraft {
+    [1] parent = "handheld"
+    [1] layer0 = "ruby_sword"
+}
+```
+
+Each `[N]` entry targets item index N (1-based, same order as in `newItem@minecraft`). `parent` sets the model parent; any other key becomes a texture variable in the generated JSON. Texture paths without a colon or slash get prefixed with `{modid}:item/`.
+
+In the JSON output, this produces a [custom model](https://minecraft.wiki/w/Model) instead of the generic `item/generated` or `item/handheld`:
+
+```json
+{
+  "parent": "item/handheld",
+  "textures": {
+    "layer0": "example_mod:item/ruby_sword"
+  }
+}
+```
+
+### Block Models
+
+```lil
+modelsBlock@minecraft {
+    [1] parent = "cube_column"
+    [1] end = "example_block_top"
+    [1] side = "example_block_side"
+}
+```
+
+Same format as item models. Texture paths without a colon or slash get prefixed with `{modid}:block/` instead of `item/`. Omitting both `modelsItem` and `modelsBlock` produces standard auto-generated models (`item/generated`, `block/cube_all`).
+
+### Auto-Generated Textures
+
+If you define a custom model referencing a texture file (e.g. `layer0 = "ruby_sword"`), and no `.png` file exists at the expected path, lil auto-generates a 16x16 placeholder PNG with a color derived from the texture name. This lets you test the mod in-game before creating real textures.
+
+The expected paths are:
+- Item textures: `src/main/resources/assets/{modid}/textures/item/{name}.png`
+- Block textures: `src/main/resources/assets/{modid}/textures/block/{name}.png`
+
 ## Generated Files
 
-When using `-o <dir>/`, lil produces:
+When using `-o <dir>/`, lil produces a full mod source tree:
 
 ```
 <dir>/
@@ -241,11 +329,24 @@ When using `-o <dir>/`, lil produces:
   src/main/java/com/{modid}/
     ModMain.java
     ModItems.java
-    ModBlocks.java
-    ModCreativeTabs.java
-    ModArmorMaterials.java
-    ModToolTiers.java
-    {ClassName}.java           (one per item/block)
+    ...
+  src/main/resources/
+    ...
+```
+
+With `-jc` (flat mode), Java files go directly in `<dir>/` without the `src/main/java/com/{modid}/` nesting. Resources and build config keep their same paths:
+
+```
+<dir>/
+  build.gradle
+  gradle.properties
+  ModMain.java
+  ModItems.java
+  ModBlocks.java
+  ModCreativeTabs.java
+  ModArmorMaterials.java
+  ModToolTiers.java
+  {ClassName}.java           (one per item/block)
   src/main/resources/
     META-INF/mods.toml
     pack.mcmeta

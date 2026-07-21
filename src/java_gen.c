@@ -83,6 +83,15 @@ typedef struct {
     char *repair_item;
 } McToolTier;
 
+#define MAX_MODEL_TEX 8
+
+typedef struct {
+    char parent[64];
+    char tex_keys[MAX_MODEL_TEX][32];
+    char tex_vals[MAX_MODEL_TEX][64];
+    int ntex;
+} McModel;
+
 static McProp mc_props[MAX_MC_PROPS];
 static int mc_prop_count;
 static McItem mc_items[MAX_ITEMS];
@@ -104,6 +113,9 @@ static int gradle_properties_mode;
 static int mc_name_seq_counter;
 static int mc_name_consumer;
 static char *mc_item_display_names[MAX_ITEMS];
+static char *mc_tab_display_names[MAX_TABS];
+static McModel mc_item_models[MAX_ITEMS];
+static McModel mc_block_models[MAX_BLOCKS];
 
 static void mc_add_prop(const char *name, const char *value) {
     if (mc_prop_count >= MAX_MC_PROPS) return;
@@ -306,6 +318,72 @@ static void scan_mc_all(const char *src) {
                         while (*p && *p != '\n' && *p != '\r' && *p != '}') { if (*p == '{') depth++; p++; }
                     }
                     if (*p == '}') p++;
+                } else if (name_len == 11 && strncmp(name_start, "modelsBlock", 11) == 0) {
+                    int depth = 1;
+                    while (*p && depth > 0) {
+                        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+                        if (*p == '}') { depth--; if (!depth) break; p++; continue; }
+                        if (*p == '[') {
+                            p++; int idx = 0;
+                            while (*p >= '0' && *p <= '9') idx = idx * 10 + (*p++ - '0');
+                            if (*p == ']') p++;
+                            while (*p == ' ' || *p == '\t') p++;
+                            char key[32]; int ki = 0;
+                            while (*p && *p != ' ' && *p != '\t' && *p != '=' && ki < 30) key[ki++] = *p++;
+                            key[ki] = 0;
+                            while (*p == ' ' || *p == '\t' || *p == '=') p++;
+                            while (*p == ' ' || *p == '\t') p++;
+                            char val[64]; int vi = 0;
+                            if (*p == '"') { p++; while (*p && *p != '"' && vi < 60) val[vi++] = *p++; if (*p == '"') p++; }
+                            else { while (*p && *p != '\n' && *p != '\r' && *p != ' ' && vi < 60) val[vi++] = *p++; }
+                            val[vi] = 0;
+                            if (idx > 0 && idx <= MAX_BLOCKS) {
+                                int mi = idx - 1;
+                                if (!strcmp(key, "parent"))
+                                    snprintf(mc_block_models[mi].parent, sizeof(mc_block_models[mi].parent), "%s", val);
+                                else if (mc_block_models[mi].ntex < MAX_MODEL_TEX) {
+                                    int ti = mc_block_models[mi].ntex++;
+                                    snprintf(mc_block_models[mi].tex_keys[ti], sizeof(mc_block_models[mi].tex_keys[ti]), "%s", key);
+                                    snprintf(mc_block_models[mi].tex_vals[ti], sizeof(mc_block_models[mi].tex_vals[ti]), "%s", val);
+                                }
+                            }
+                        }
+                        while (*p && *p != '\n' && *p != '\r') p++;
+                    }
+                    if (*p == '}') p++;
+                } else if (name_len == 10 && strncmp(name_start, "modelsItem", 10) == 0) {
+                    int depth = 1;
+                    while (*p && depth > 0) {
+                        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+                        if (*p == '}') { depth--; if (!depth) break; p++; continue; }
+                        if (*p == '[') {
+                            p++; int idx = 0;
+                            while (*p >= '0' && *p <= '9') idx = idx * 10 + (*p++ - '0');
+                            if (*p == ']') p++;
+                            while (*p == ' ' || *p == '\t') p++;
+                            char key[32]; int ki = 0;
+                            while (*p && *p != ' ' && *p != '\t' && *p != '=' && ki < 30) key[ki++] = *p++;
+                            key[ki] = 0;
+                            while (*p == ' ' || *p == '\t' || *p == '=') p++;
+                            while (*p == ' ' || *p == '\t') p++;
+                            char val[64]; int vi = 0;
+                            if (*p == '"') { p++; while (*p && *p != '"' && vi < 60) val[vi++] = *p++; if (*p == '"') p++; }
+                            else { while (*p && *p != '\n' && *p != '\r' && *p != ' ' && vi < 60) val[vi++] = *p++; }
+                            val[vi] = 0;
+                            if (idx > 0 && idx <= MAX_ITEMS) {
+                                int mi = idx - 1;
+                                if (!strcmp(key, "parent"))
+                                    snprintf(mc_item_models[mi].parent, sizeof(mc_item_models[mi].parent), "%s", val);
+                                else if (mc_item_models[mi].ntex < MAX_MODEL_TEX) {
+                                    int ti = mc_item_models[mi].ntex++;
+                                    snprintf(mc_item_models[mi].tex_keys[ti], sizeof(mc_item_models[mi].tex_keys[ti]), "%s", key);
+                                    snprintf(mc_item_models[mi].tex_vals[ti], sizeof(mc_item_models[mi].tex_vals[ti]), "%s", val);
+                                }
+                            }
+                        }
+                        while (*p && *p != '\n' && *p != '\r') p++;
+                    }
+                    if (*p == '}') p++;
                 } else {
                     int depth = 1;
                     while (*p && depth > 0) {
@@ -349,24 +427,40 @@ static void scan_mc_all(const char *src) {
         } else if (p - start >= 7 && strncmp(p - 7, "pattern", 7) == 0
             && (p - start == 7 || *(p-8) == ' ' || *(p-8) == '\t' || *(p-8) == '\n')) {
             p++;
-            char rows[4][32]; int nrows = 0;
-            memset(rows, 0, sizeof(rows));
-            while (*p && nrows < 4) {
+            char cells[16][32]; int ncells = 0;
+            memset(cells, 0, sizeof(cells));
+            while (*p && ncells < 16) {
                 while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r' || *p == ',') p++;
                 if (*p == '}') break;
                 if (*p == '"') {
                     p++; int ri = 0;
-                    while (*p && *p != '"' && ri < 30) rows[nrows][ri++] = *p++;
+                    while (*p && *p != '"' && ri < 30) cells[ncells][ri++] = *p++;
                     if (*p == '"') p++;
-                    rows[nrows][ri] = 0; nrows++;
+                    cells[ncells][ri] = 0; ncells++;
                 } else {
                     while (*p && *p != '}' && *p != '\n') p++;
                 }
             }
-            if (nrows > 0) {
-                const char *rrows[4];
-                for (int i = 0; i < nrows; i++) rrows[i] = rows[i];
-                mc_add_recipe_shaped("_pattern", NULL, 0, rrows, nrows, NULL, NULL, 0, NULL);
+            if (ncells > 0) {
+                char rows[4][32]; int nrows = 0;
+                int per = (ncells == 9) ? 3 : (ncells == 4) ? 2 : 1;
+                for (int r = 0; r < (per > 1 ? ncells / per : ncells) && r < 4; r++) {
+                    int pos = 0;
+                    if (per > 1) {
+                        for (int c = 0; c < per; c++) {
+                            int idx = r * per + c;
+                            rows[r][pos++] = cells[idx][0] ? cells[idx][0] : ' ';
+                        }
+                    } else {
+                        int si = 0; while (cells[r][si] && pos < 31) rows[r][pos++] = cells[r][si++];
+                    }
+                    rows[r][pos] = 0; nrows++;
+                }
+                if (nrows > 0) {
+                    const char *rrows[4];
+                    for (int i = 0; i < nrows; i++) rrows[i] = rows[i];
+                    mc_add_recipe_shaped("_pattern", NULL, 0, rrows, nrows, NULL, NULL, 0, NULL);
+                }
             }
             if (*p == '}') p++;
         }
@@ -408,17 +502,33 @@ static void scan_mc_all(const char *src) {
                         p += 7;
                         while (*p != '{' && *p != '\n' && *p != '}') p++;
                         if (*p == '{') {
-                            p++; nrows = 0;
-                            memset(pattern_rows, 0, sizeof(pattern_rows));
-                            while (*p && nrows < 4) {
+                            p++;
+                            char rcells[16][32]; int rnc = 0;
+                            memset(rcells, 0, sizeof(rcells));
+                            while (*p && rnc < 16) {
                                 while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r' || *p == ',') p++;
                                 if (*p == '}') break;
                                 if (*p == '"') {
                                     p++; int ri = 0;
-                                    while (*p && *p != '"' && ri < 30) pattern_rows[nrows][ri++] = *p++;
+                                    while (*p && *p != '"' && ri < 30) rcells[rnc][ri++] = *p++;
                                     if (*p == '"') p++;
-                                    pattern_rows[nrows][ri] = 0; nrows++;
+                                    rcells[rnc][ri] = 0; rnc++;
                                 }
+                            }
+                            nrows = 0;
+                            memset(pattern_rows, 0, sizeof(pattern_rows));
+                            int per = (rnc == 9) ? 3 : (rnc == 4) ? 2 : 1;
+                            for (int r = 0; r < (per > 1 ? rnc / per : rnc) && r < 4; r++) {
+                                int pos = 0;
+                                if (per > 1) {
+                                    for (int c = 0; c < per; c++) {
+                                        int idx = r * per + c;
+                                        pattern_rows[nrows][pos++] = rcells[idx][0] ? rcells[idx][0] : ' ';
+                                    }
+                                } else {
+                                    int si = 0; while (rcells[r][si] && pos < 31) pattern_rows[nrows][pos++] = rcells[r][si++];
+                                }
+                                pattern_rows[nrows][pos] = 0; nrows++;
                             }
                             while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
                             if (*p == '}') p++;
@@ -506,19 +616,14 @@ static void scan_mc_all(const char *src) {
                 }
 
                 if (is_smelting) {
-                    fprintf(stderr, "DEBUG smelting: rname=%s ingredient=%s result=%s exp=%f cook=%d\n", rname, ingredient, result, exp, cook);
                     mc_add_recipe_smelting(rname, ingredient, result, exp, cook, group[0] ? group : NULL);
                 } else if (is_shapeless) {
                     const char *ing[16];
-                    fprintf(stderr, "DEBUG shapeless: rname=%s result=%s ning=%d count=%d\n", rname, result, ning, count);
-                    for (int i = 0; i < ning; i++) fprintf(stderr, "DEBUG ingredient[%d]=%s\n", i, ingredients[i]);
                     for (int i = 0; i < ning; i++) ing[i] = ingredients[i];
                     mc_add_recipe_shapeless(rname, result, count, ing, ning, group[0] ? group : NULL);
                 } else {
                     const char *r_rows[4] = {NULL};
                     for (int i = 0; i < nrows && i < 4; i++) r_rows[i] = pattern_rows[i];
-                    fprintf(stderr, "DEBUG shaped: rname=%s result=%s nrows=%d nk=%d\n", rname, result, nrows, nk);
-                    for (int i = 0; i < nk; i++) fprintf(stderr, "DEBUG key[%d]=%c val=%s\n", i, keys_chars[i], key_vals[i] ? key_vals[i] : "NULL");
                     mc_add_recipe_shaped(rname, result, count, r_rows, nrows,
                         keys_chars, (const char**)key_vals, nk, group[0] ? group : NULL);
                 }
@@ -530,50 +635,114 @@ static void scan_mc_all(const char *src) {
         scan_tab_block:
         {
             while (*p == ' ' || *p == '\t') p++;
-            char tname[64]; int tni = 0;
-            if (*p == '(') { p++; while (*p && *p != ')' && tni < 60) tname[tni++] = *p++; if (*p == ')') p++; }
-            tname[tni] = 0;
+            char tnames[MAX_TABS][64];
+            int ntabs = 0;
+            memset(tnames, 0, sizeof(tnames));
+            if (*p == '(') {
+                p++;
+                while (*p && *p != ')' && ntabs < MAX_TABS) {
+                    while (*p == ' ' || *p == '\t' || *p == ',') p++;
+                    if (*p == ')' || !*p) break;
+                    int j = 0;
+                    while (*p && *p != ')' && *p != ',' && *p != ' ' && *p != '\t' && j < 60)
+                        tnames[ntabs][j++] = *p++;
+                    if (j > 0) ntabs++;
+                }
+                if (*p == ')') p++;
+            }
             while (*p == ' ' || *p == '\t') p++;
             if (*p == '{') {
                 int depth = 1; p++;
-                char icon[64] = "";
-                McCreativeTab tab;
-                memset(&tab, 0, sizeof(tab));
-                tab.name = sdup(tname);
+                char icon[64] = ""; int icon_set = 0;
+                char items_list[64][64]; int nitems = 0;
+                char tab_dnames[MAX_TABS][128];
+                memset(tab_dnames, 0, sizeof(tab_dnames));
+                memset(items_list, 0, sizeof(items_list));
                 while (*p && depth > 0) {
                     while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
                     if (*p == '}') { depth--; if (!depth) break; continue; }
-                    if (strncmp(p, "icon", 4) == 0 && (p[4] == ' ' || p[4] == '=')) {
-                        p += 4; while (*p == ' ' || *p == '\t' || *p == '=') p++;
-                        int ii = 0;
-                        if (*p == '"') { p++; while (*p && *p != '"' && ii < 60) icon[ii++] = *p++; if (*p == '"') p++; }
-                        else { while (*p && *p != '\n' && *p != '\r' && *p != ' ' && ii < 60) icon[ii++] = *p++; }
-                        icon[ii] = 0;
-                        tab.icon = sdup(icon);
+
+                    if (strncmp(p, "creativeTabNames@minecraft", 26) == 0) {
+                        p += 26;
+                        while (*p == ' ' || *p == '\t') p++;
+                        if (*p == '{') { p++;
+                            int sd = 1;
+                            while (*p && sd > 0) {
+                                while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+                                if (*p == '}') { sd--; if (!sd) break; p++; continue; }
+                                if (*p == '[') {
+                                    p++; int idx = 0;
+                                    while (*p >= '0' && *p <= '9') idx = idx * 10 + (*p++ - '0');
+                                    if (*p == ']') p++;
+                                    while (*p == ' ' || *p == '\t') p++;
+                                    if (*p == '=') p++;
+                                    while (*p == ' ' || *p == '\t') p++;
+                                    char val[256]; int vi = 0;
+                                    if (*p == '"') { p++; while (*p && *p != '"' && vi < 250) val[vi++] = *p++; if (*p == '"') p++; }
+                                    else { while (*p && *p != '\n' && *p != '\r' && vi < 250) val[vi++] = *p++; }
+                                    val[vi] = 0;
+                                    if (idx > 0 && idx <= MAX_TABS)
+                                        snprintf(tab_dnames[idx-1], sizeof(tab_dnames[idx-1]), "%s", val);
+                                }
+                                while (*p && *p != '\n' && *p != '\r' && *p != '}') { if (*p == '{') sd++; p++; }
+                            }
+                            if (*p == '}') p++;
+                        }
                         continue;
                     }
-                    if (strncmp(p, "items", 5) == 0 && (p[5] == ' ' || p[5] == '=')) {
-                        p += 5; while (*p == ' ' || *p == '\t' || *p == '=') p++;
-                        while (*p && *p != '\n' && *p != '\r' && tab.nitems < 64) {
-                            while (*p == ' ' || *p == '\t' || *p == ',') p++;
-                            if (*p == '\n' || *p == '\r') break;
-                            if (*p == '"') {
-                                p++; int ii = 0; char it[64];
-                                while (*p && *p != '"' && ii < 60) it[ii++] = *p++;
-                                if (*p == '"') p++;
-                                it[ii] = 0; tab.items[tab.nitems++] = sdup(it);
-                            } else {
-                                int ii = 0; char it[64];
-                                while (*p && *p != ',' && *p != '\n' && *p != '\r' && *p != ' ' && *p != '\t' && ii < 60)
-                                    it[ii++] = *p++;
-                                it[ii] = 0; tab.items[tab.nitems++] = sdup(it);
+
+                    if (strncmp(p, "propertiesCreativeTab@minecraft", 31) == 0) {
+                        p += 31;
+                        while (*p == ' ' || *p == '\t') p++;
+                        if (*p == '{') { p++;
+                            int sd = 1;
+                            while (*p && sd > 0) {
+                                while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+                                if (*p == '}') { sd--; if (!sd) break; continue; }
+                                if (strncmp(p, "icon", 4) == 0 && (p[4] == ' ' || p[4] == '=')) {
+                                    p += 4; while (*p == ' ' || *p == '\t' || *p == '=') p++;
+                                    int ii = 0;
+                                    if (*p == '"') { p++; while (*p && *p != '"' && ii < 60) icon[ii++] = *p++; if (*p == '"') p++; }
+                                    else { while (*p && *p != '\n' && *p != '\r' && *p != ' ' && ii < 60) icon[ii++] = *p++; }
+                                    icon[ii] = 0; icon_set = 1; continue;
+                                }
+                                if (strncmp(p, "items", 5) == 0 && (p[5] == ' ' || p[5] == '=')) {
+                                    p += 5; while (*p == ' ' || *p == '\t' || *p == '=') p++;
+                                    while (*p && *p != '\n' && *p != '\r' && nitems < 64) {
+                                        while (*p == ' ' || *p == '\t' || *p == ',') p++;
+                                        if (*p == '\n' || *p == '\r') break;
+                                        if (*p == '"') { p++; int ii = 0;
+                                            while (*p && *p != '"' && ii < 60) items_list[nitems][ii++] = *p++;
+                                            if (*p == '"') p++; items_list[nitems][ii] = 0; nitems++;
+                                        } else { int ii = 0;
+                                            while (*p && *p != ',' && *p != '\n' && *p != '\r' && *p != ' ' && *p != '\t' && ii < 60)
+                                                items_list[nitems][ii++] = *p++;
+                                            items_list[nitems][ii] = 0; nitems++;
+                                        }
+                                    }
+                                    continue;
+                                }
+                                while (*p && *p != '\n' && *p != '\r') p++;
                             }
+                            if (*p == '}') p++;
                         }
                         continue;
                     }
                     while (*p && *p != '\n' && *p != '\r') p++;
                 }
-                mc_add_tab(&tab);
+                for (int i = 0; i < ntabs; i++) {
+                    McCreativeTab tab;
+                    memset(&tab, 0, sizeof(tab));
+                    tab.name = sdup(tnames[i]);
+                    if (icon_set) tab.icon = sdup(icon);
+                    for (int j = 0; j < nitems; j++)
+                        tab.items[tab.nitems++] = sdup(items_list[j]);
+                    mc_add_tab(&tab);
+                    if (tab_dnames[i][0] && mc_tab_count > 0) {
+                        if (mc_tab_display_names[mc_tab_count - 1]) free(mc_tab_display_names[mc_tab_count - 1]);
+                        mc_tab_display_names[mc_tab_count - 1] = sdup(tab_dnames[i]);
+                    }
+                }
                 if (*p == '}') p++;
             }
         }
@@ -1012,6 +1181,16 @@ static void cg_java_stmt(FILE *f, ASTNode *n, int indent) {
     }
 }
 
+static int is_vanilla_tier(const char *name) {
+    const char *vanilla[] = {"WOOD", "STONE", "IRON", "GOLD", "DIAMOND", "NETHERITE"};
+    char *upper = mc_name_to_java(name);
+    if (!upper) return 0;
+    int r = 0;
+    for (int i = 0; i < 6; i++) if (!strcmp(upper, vanilla[i])) { r = 1; break; }
+    free(upper);
+    return r;
+}
+
 static void cg_to_java_item_class(FILE *f, McItem *item) {
     char *jname = item->filename;
     fprintf(f, "package com.%s.%s;\n\n", mc_mod_id, mc_mod_id);
@@ -1028,10 +1207,12 @@ static void cg_to_java_item_class(FILE *f, McItem *item) {
     fprintf(f, "import net.minecraftforge.registries.DeferredRegister;\n");
     fprintf(f, "import net.minecraftforge.registries.ForgeRegistries;\n");
     fprintf(f, "import net.minecraftforge.registries.RegistryObject;\n");
-    fprintf(f, "import com.%s.%s.ModItems;\n\n", mc_mod_id, mc_mod_id);
-
-    char *tier = "WOOD";
-    int attack_dmg = 3, attack_speed = -2, immune_fire = 0;
+    fprintf(f, "import com.%s.%s.ModItems;\n", mc_mod_id, mc_mod_id);
+    int has_custom_tier = 0;
+    char *tier = "WOOD", *upper_tier = sdup("WOOD"), *tier_prefix = "Tiers.";
+    int attack_dmg = 3;
+    float attack_speed = -2.0f;
+    int immune_fire = 0;
     int durability = 0, stacks_to = 64, hunger = 0, always_edible = 0;
     float saturation = 0;
     if (item->prop_block && item->prop_block->type == NODE_BLOCK) {
@@ -1044,7 +1225,7 @@ static void cg_to_java_item_class(FILE *f, McItem *item) {
                 else if (!strcmp(pn, "attackDamage") && s->data.assign.value->type == NODE_NUM)
                     attack_dmg = (int)s->data.assign.value->data.num;
                 else if (!strcmp(pn, "attackSpeed") && s->data.assign.value->type == NODE_NUM)
-                    attack_speed = (int)s->data.assign.value->data.num;
+                    attack_speed = (float)s->data.assign.value->data.num;
                 else if (!strcmp(pn, "isImmuneToLava") && s->data.assign.value->type == NODE_NUM)
                     immune_fire = (int)s->data.assign.value->data.num;
                 else if (!strcmp(pn, "durability") && s->data.assign.value->type == NODE_NUM)
@@ -1061,37 +1242,43 @@ static void cg_to_java_item_class(FILE *f, McItem *item) {
         }
     }
 
+    if (strcmp(tier, "WOOD")) {
+        char *tmp = mc_name_to_java(tier);
+        free(upper_tier);
+        upper_tier = tmp;
+        tier_prefix = is_vanilla_tier(tier) ? "Tiers." : "ModToolTiers.";
+    }
     int is_armor = !strcmp(item->type, "helmet") || !strcmp(item->type, "chestplate")
         || !strcmp(item->type, "leggings") || !strcmp(item->type, "boots");
 
     if (!strcmp(item->type, "sword")) {
         fprintf(f, "public class %s extends SwordItem {\n", jname);
         fprintf(f, "    public %s() {\n", jname);
-        fprintf(f, "        super(Tiers.%s, %d, %d, new Item.Properties()", tier, attack_dmg, attack_speed);
+        fprintf(f, "        super(%s%s, %d, %ff, new Item.Properties()", tier_prefix, upper_tier, attack_dmg, (double)attack_speed);
         if (immune_fire) fprintf(f, ".fireResistant()");
         fprintf(f, ");\n    }\n");
     } else if (!strcmp(item->type, "pickaxe")) {
         fprintf(f, "public class %s extends PickaxeItem {\n", jname);
         fprintf(f, "    public %s() {\n", jname);
-        fprintf(f, "        super(Tiers.%s, %d, %f, new Item.Properties()", tier, attack_dmg, (float)attack_speed);
+        fprintf(f, "        super(%s%s, %d, %ff, new Item.Properties()", tier_prefix, upper_tier, attack_dmg, (double)attack_speed);
         if (immune_fire) fprintf(f, ".fireResistant()");
         fprintf(f, ");\n    }\n");
     } else if (!strcmp(item->type, "axe")) {
         fprintf(f, "public class %s extends AxeItem {\n", jname);
         fprintf(f, "    public %s() {\n", jname);
-        fprintf(f, "        super(Tiers.%s, %d, %f, new Item.Properties()", tier, attack_dmg, (float)attack_speed);
+        fprintf(f, "        super(%s%s, %ff, %ff, new Item.Properties()", tier_prefix, upper_tier, (double)attack_dmg, (double)attack_speed);
         if (immune_fire) fprintf(f, ".fireResistant()");
         fprintf(f, ");\n    }\n");
     } else if (!strcmp(item->type, "shovel")) {
         fprintf(f, "public class %s extends ShovelItem {\n", jname);
         fprintf(f, "    public %s() {\n", jname);
-        fprintf(f, "        super(Tiers.%s, %f, %f, new Item.Properties()", tier, (float)attack_dmg, (float)attack_speed);
+        fprintf(f, "        super(%s%s, %ff, %ff, new Item.Properties()", tier_prefix, upper_tier, (double)attack_dmg, (double)attack_speed);
         if (immune_fire) fprintf(f, ".fireResistant()");
         fprintf(f, ");\n    }\n");
     } else if (!strcmp(item->type, "hoe")) {
         fprintf(f, "public class %s extends HoeItem {\n", jname);
         fprintf(f, "    public %s() {\n", jname);
-        fprintf(f, "        super(Tiers.%s, %d, %f, new Item.Properties()", tier, attack_dmg, (float)attack_speed);
+        fprintf(f, "        super(%s%s, %d, %ff, new Item.Properties()", tier_prefix, upper_tier, attack_dmg, (double)attack_speed);
         if (immune_fire) fprintf(f, ".fireResistant()");
         fprintf(f, ");\n    }\n");
     } else if (is_armor) {
@@ -1151,7 +1338,7 @@ static void cg_to_java_item_class(FILE *f, McItem *item) {
 
 static void cg_to_java_block_class(FILE *f, McBlock *bl) {
     char *jname = bl->filename;
-    char *mat = "Material.STONE";
+    char *matcol = "MapColor.STONE";
     float hardness = 3.0f, resistance = 3.0f;
     int requires_tool = 0, light = 0;
     char *sound = "SoundType.STONE";
@@ -1162,13 +1349,13 @@ static void cg_to_java_block_class(FILE *f, McBlock *bl) {
             if (s->type == NODE_ASSIGN) {
                 char *pn = s->data.assign.name;
                 if (!strcmp(pn, "material") && s->data.assign.value->type == NODE_STR) {
-                    if (!strcmp(s->data.assign.value->data.str, "metal")) mat = "Material.METAL";
-                    else if (!strcmp(s->data.assign.value->data.str, "wood")) mat = "Material.WOOD";
-                    else if (!strcmp(s->data.assign.value->data.str, "glass")) { mat = "Material.GLASS"; sound = "SoundType.GLASS"; }
-                    else if (!strcmp(s->data.assign.value->data.str, "stone")) mat = "Material.STONE";
-                    else if (!strcmp(s->data.assign.value->data.str, "dirt")) mat = "Material.DIRT";
-                    else if (!strcmp(s->data.assign.value->data.str, "plant")) mat = "Material.PLANT";
-                    else if (!strcmp(s->data.assign.value->data.str, "snow")) mat = "Material.SNOW";
+                    if (!strcmp(s->data.assign.value->data.str, "metal")) matcol = "MapColor.METAL";
+                    else if (!strcmp(s->data.assign.value->data.str, "wood")) matcol = "MapColor.WOOD";
+                    else if (!strcmp(s->data.assign.value->data.str, "glass")) { matcol = "MapColor.NONE"; sound = "SoundType.GLASS"; }
+                    else if (!strcmp(s->data.assign.value->data.str, "stone")) matcol = "MapColor.STONE";
+                    else if (!strcmp(s->data.assign.value->data.str, "dirt")) matcol = "MapColor.DIRT";
+                    else if (!strcmp(s->data.assign.value->data.str, "plant")) matcol = "MapColor.PLANT";
+                    else if (!strcmp(s->data.assign.value->data.str, "snow")) matcol = "MapColor.SNOW";
                 } else if (!strcmp(pn, "hardness") && s->data.assign.value->type == NODE_NUM)
                     hardness = (float)s->data.assign.value->data.num;
                 else if (!strcmp(pn, "resistance") && s->data.assign.value->type == NODE_NUM)
@@ -1196,11 +1383,11 @@ static void cg_to_java_block_class(FILE *f, McBlock *bl) {
     fprintf(f, "import net.minecraft.world.level.block.Block;\n");
     fprintf(f, "import net.minecraft.world.level.block.state.BlockBehaviour;\n");
     fprintf(f, "import net.minecraft.world.level.block.state.BlockState;\n");
-    fprintf(f, "import net.minecraft.world.level.material.Material;\n");
+    fprintf(f, "import net.minecraft.world.level.material.MapColor;\n");
     fprintf(f, "import net.minecraft.world.level.block.SoundType;\n\n");
     fprintf(f, "public class %s extends Block {\n", jname);
     fprintf(f, "    public %s() {\n", jname);
-    fprintf(f, "        super(BlockBehaviour.Properties.of(%s)\n", mat);
+    fprintf(f, "        super(BlockBehaviour.Properties.of().mapColor(%s)\n", matcol);
     fprintf(f, "            .strength(%ff, %ff)\n", hardness, resistance);
     if (requires_tool) fprintf(f, "            .requiresCorrectToolForDrops()\n");
     if (light > 0) fprintf(f, "            .lightLevel(s -> %d)\n", light);
@@ -1276,12 +1463,12 @@ static void cg_to_java_block_registry(FILE *f) {
     fprintf(f, "package %s;\n\n", pkg);
     fprintf(f, "import net.minecraft.world.level.block.*;\n");
     fprintf(f, "import net.minecraft.world.level.block.state.BlockBehaviour;\n");
-    fprintf(f, "import net.minecraft.world.level.material.Material;\n");
-    fprintf(f, "import net.minecraft.world.level.material.MaterialColor;\n");
+    fprintf(f, "import net.minecraft.world.level.material.MapColor;\n");
     fprintf(f, "import net.minecraft.world.level.block.SoundType;\n");
     fprintf(f, "import net.minecraftforge.registries.DeferredRegister;\n");
     fprintf(f, "import net.minecraftforge.registries.ForgeRegistries;\n");
-    fprintf(f, "import net.minecraftforge.registries.RegistryObject;\n\n");
+    fprintf(f, "import net.minecraftforge.registries.RegistryObject;\n");
+    fprintf(f, "import net.minecraftforge.eventbus.api.IEventBus;\n\n");
 
     fprintf(f, "public class ModBlocks {\n");
     fprintf(f, "    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, \"%s\");\n\n", mc_mod_id);
@@ -1289,7 +1476,7 @@ static void cg_to_java_block_registry(FILE *f) {
     for (int i = 0; i < mc_block_count; i++) {
         McBlock *bl = &mc_blocks[i];
         char *upper = mc_name_to_java(bl->name);
-        char *mat = "Material.STONE";
+        char *matcol = "MapColor.STONE";
         float hardness = 3.0f, resistance = 3.0f;
         int requires_tool = 0, light = 0;
         char *sound = "SoundType.STONE";
@@ -1300,13 +1487,13 @@ static void cg_to_java_block_registry(FILE *f) {
                 if (s->type == NODE_ASSIGN) {
                     char *pn = s->data.assign.name;
                     if (!strcmp(pn, "material") && s->data.assign.value->type == NODE_STR) {
-                        if (!strcmp(s->data.assign.value->data.str, "metal")) mat = "Material.METAL";
-                        else if (!strcmp(s->data.assign.value->data.str, "wood")) mat = "Material.WOOD";
-                        else if (!strcmp(s->data.assign.value->data.str, "glass")) { mat = "Material.GLASS"; sound = "SoundType.GLASS"; }
-                        else if (!strcmp(s->data.assign.value->data.str, "stone")) mat = "Material.STONE";
-                        else if (!strcmp(s->data.assign.value->data.str, "dirt")) mat = "Material.DIRT";
-                        else if (!strcmp(s->data.assign.value->data.str, "plant")) mat = "Material.PLANT";
-                        else if (!strcmp(s->data.assign.value->data.str, "snow")) mat = "Material.SNOW";
+                        if (!strcmp(s->data.assign.value->data.str, "metal")) matcol = "MapColor.METAL";
+                        else if (!strcmp(s->data.assign.value->data.str, "wood")) matcol = "MapColor.WOOD";
+                        else if (!strcmp(s->data.assign.value->data.str, "glass")) { matcol = "MapColor.NONE"; sound = "SoundType.GLASS"; }
+                        else if (!strcmp(s->data.assign.value->data.str, "stone")) matcol = "MapColor.STONE";
+                        else if (!strcmp(s->data.assign.value->data.str, "dirt")) matcol = "MapColor.DIRT";
+                        else if (!strcmp(s->data.assign.value->data.str, "plant")) matcol = "MapColor.PLANT";
+                        else if (!strcmp(s->data.assign.value->data.str, "snow")) matcol = "MapColor.SNOW";
                     } else if (!strcmp(pn, "hardness") && s->data.assign.value->type == NODE_NUM)
                         hardness = (float)s->data.assign.value->data.num;
                     else if (!strcmp(pn, "resistance") && s->data.assign.value->type == NODE_NUM)
@@ -1331,7 +1518,7 @@ static void cg_to_java_block_registry(FILE *f) {
         if (bl->proc_block) {
             fprintf(f, "        %s::new);\n\n", bl->filename);
         } else {
-            fprintf(f, "        () -> new Block(BlockBehaviour.Properties.of(%s)\n", mat);
+            fprintf(f, "        () -> new Block(BlockBehaviour.Properties.of().mapColor(%s)\n", matcol);
             fprintf(f, "            .strength(%ff, %ff)\n", hardness, resistance);
             if (requires_tool) fprintf(f, "            .requiresCorrectToolForDrops()\n");
             if (light > 0) fprintf(f, "            .lightLevel(s -> %d)\n", light);
@@ -1346,6 +1533,13 @@ static void cg_to_java_block_registry(FILE *f) {
     fprintf(f, "}\n");
 }
 
+static const char *mc_strip_modid(const char *name) {
+    size_t mlen = strlen(mc_mod_id);
+    if (strncmp(name, mc_mod_id, mlen) == 0 && name[mlen] == ':')
+        return name + mlen + 1;
+    return name;
+}
+
 static void cg_to_java_creative_tabs(FILE *f) {
     if (!mc_tab_count) return;
     char pkg[256];
@@ -1356,7 +1550,8 @@ static void cg_to_java_creative_tabs(FILE *f) {
     fprintf(f, "import net.minecraft.world.item.CreativeModeTab;\n");
     fprintf(f, "import net.minecraft.world.item.ItemStack;\n");
     fprintf(f, "import net.minecraftforge.registries.DeferredRegister;\n");
-    fprintf(f, "import net.minecraftforge.registries.RegistryObject;\n\n");
+    fprintf(f, "import net.minecraftforge.registries.RegistryObject;\n");
+    fprintf(f, "import net.minecraftforge.eventbus.api.IEventBus;\n\n");
 
     fprintf(f, "public class ModCreativeTabs {\n");
     fprintf(f, "    public static final DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, \"%s\");\n\n", mc_mod_id);
@@ -1367,20 +1562,22 @@ static void cg_to_java_creative_tabs(FILE *f) {
         fprintf(f, "    public static final RegistryObject<CreativeModeTab> %s = TABS.register(\"%s\",\n", upper, t->name);
         fprintf(f, "        () -> CreativeModeTab.builder()\n");
         if (t->icon) {
-            char *icon_upper = mc_name_to_java(t->icon);
+            const char *icon_s = mc_strip_modid(t->icon);
+            char *icon_upper = mc_name_to_java(icon_s);
             int is_block = 0;
             for (int k = 0; k < mc_block_count; k++)
-                if (!strcmp(t->icon, mc_blocks[k].name)) { is_block = 1; break; }
+                if (!strcmp(icon_s, mc_blocks[k].name)) { is_block = 1; break; }
             fprintf(f, "            .icon(() -> new ItemStack(ModItems.%s%s.get()))\n", icon_upper, is_block ? "_ITEM" : "");
             free(icon_upper);
         }
         fprintf(f, "            .title(Component.translatable(\"creativetab.%s.%s\"))\n", mc_mod_id, t->name);
         fprintf(f, "            .displayItems((params, output) -> {\n");
         for (int j = 0; j < t->nitems; j++) {
-            char *iu = mc_name_to_java(t->items[j]);
+            const char *item_s = mc_strip_modid(t->items[j]);
+            char *iu = mc_name_to_java(item_s);
             int is_block = 0;
             for (int k = 0; k < mc_block_count; k++)
-                if (!strcmp(t->items[j], mc_blocks[k].name)) { is_block = 1; break; }
+                if (!strcmp(item_s, mc_blocks[k].name)) { is_block = 1; break; }
             fprintf(f, "                output.accept(ModItems.%s%s.get());\n", iu, is_block ? "_ITEM" : "");
             free(iu);
         }
@@ -1461,11 +1658,10 @@ static void cg_to_java_main(FILE *f) {
     fprintf(f, "import net.minecraftforge.fml.common.Mod;\n");
     fprintf(f, "import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;\n\n");
 
-    char *upper_mod = mc_upper_first(mc_mod_id);
     fprintf(f, "@Mod(\"%s\")\n", mc_mod_id);
-    fprintf(f, "public class %s {\n", upper_mod);
+    fprintf(f, "public class ModMain {\n");
     fprintf(f, "    public static final String MODID = \"%s\";\n\n", mc_mod_id);
-    fprintf(f, "    public %s() {\n", upper_mod);
+    fprintf(f, "    public ModMain() {\n");
     fprintf(f, "        IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();\n");
     if (mc_item_count || mc_block_count) fprintf(f, "        ModItems.ITEMS.register(bus);\n");
     if (mc_block_count) fprintf(f, "        ModBlocks.BLOCKS.register(bus);\n");
@@ -1473,7 +1669,6 @@ static void cg_to_java_main(FILE *f) {
     fprintf(f, "        MinecraftForge.EVENT_BUS.register(this);\n");
     fprintf(f, "    }\n");
     fprintf(f, "}\n");
-    free(upper_mod);
 }
 
 static void cg_to_gradle_properties(FILE *f) {
@@ -1526,27 +1721,59 @@ static void cg_to_registry_or_proc_file(ASTNode *prog) {
     }
 }
 
-static void cg_item_model_json(const char *name, const char *type) {
+static void cg_item_model_json(const char *name, const char *type, int idx) {
     char path[512];
     snprintf(path, sizeof(path), "%s/src/main/resources/assets/%s/models/item/%s.json",
         mc_mod_pkg, mc_mod_id, name);
     FILE *f = fopen(path, "w");
     if (!f) return;
-    int is_tool = !strcmp(type, "sword") || !strcmp(type, "pickaxe") || !strcmp(type, "axe")
-        || !strcmp(type, "shovel") || !strcmp(type, "hoe");
-    fprintf(f, "{\n  \"parent\": \"item/%s\",\n  \"textures\": {\n    \"layer0\": \"%s:item/%s\"\n  }\n}\n",
-        is_tool ? "handheld" : "generated", mc_mod_id, name);
+    McModel *m = (idx >= 0 && idx < MAX_ITEMS && mc_item_models[idx].parent[0])
+        ? &mc_item_models[idx] : NULL;
+    if (m) {
+        fprintf(f, "{\n  \"parent\": \"item/%s\",\n  \"textures\": {\n", m->parent);
+        for (int i = 0; i < m->ntex; i++) {
+            const char *tv = m->tex_vals[i];
+            int has_sep = strchr(tv, ':') || strchr(tv, '/');
+            char tbuf[128];
+            if (!has_sep) snprintf(tbuf, sizeof(tbuf), "%s:item/%s", mc_mod_id, tv);
+            else snprintf(tbuf, sizeof(tbuf), "%s", tv);
+            fprintf(f, "    \"%s\": \"%s\"%s\n", m->tex_keys[i], tbuf,
+                i < m->ntex - 1 ? "," : "");
+        }
+        fprintf(f, "  }\n}\n");
+    } else {
+        int is_tool = !strcmp(type, "sword") || !strcmp(type, "pickaxe") || !strcmp(type, "axe")
+            || !strcmp(type, "shovel") || !strcmp(type, "hoe");
+        fprintf(f, "{\n  \"parent\": \"item/%s\",\n  \"textures\": {\n    \"layer0\": \"%s:item/%s\"\n  }\n}\n",
+            is_tool ? "handheld" : "generated", mc_mod_id, name);
+    }
     fclose(f);
 }
 
-static void cg_block_model_json(const char *name) {
+static void cg_block_model_json(const char *name, int idx) {
     char path[512];
     snprintf(path, sizeof(path), "%s/src/main/resources/assets/%s/models/block/%s.json",
         mc_mod_pkg, mc_mod_id, name);
     FILE *f = fopen(path, "w");
     if (!f) return;
-    fprintf(f, "{\n  \"parent\": \"block/cube_all\",\n  \"textures\": {\n    \"all\": \"%s:block/%s\"\n  }\n}\n",
-        mc_mod_id, name);
+    McModel *m = (idx >= 0 && idx < MAX_BLOCKS && mc_block_models[idx].parent[0])
+        ? &mc_block_models[idx] : NULL;
+    if (m) {
+        fprintf(f, "{\n  \"parent\": \"block/%s\",\n  \"textures\": {\n", m->parent);
+        for (int i = 0; i < m->ntex; i++) {
+            const char *tv = m->tex_vals[i];
+            int has_sep = strchr(tv, ':') || strchr(tv, '/');
+            char tbuf[128];
+            if (!has_sep) snprintf(tbuf, sizeof(tbuf), "%s:block/%s", mc_mod_id, tv);
+            else snprintf(tbuf, sizeof(tbuf), "%s", tv);
+            fprintf(f, "    \"%s\": \"%s\"%s\n", m->tex_keys[i], tbuf,
+                i < m->ntex - 1 ? "," : "");
+        }
+        fprintf(f, "  }\n}\n");
+    } else {
+        fprintf(f, "{\n  \"parent\": \"block/cube_all\",\n  \"textures\": {\n    \"all\": \"%s:block/%s\"\n  }\n}\n",
+            mc_mod_id, name);
+    }
     fclose(f);
 }
 
@@ -1605,7 +1832,8 @@ static void cg_lang_json(void) {
     }
     for (int i = 0; i < mc_tab_count; i++) {
         if (!first) fprintf(f, ",\n");
-        fprintf(f, "  \"creativetab.%s.%s\": \"%s\"", mc_mod_id, mc_tabs[i].name, mc_tabs[i].name);
+        char *dn = mc_tab_display_names[i] ? mc_tab_display_names[i] : mc_tabs[i].name;
+        fprintf(f, "  \"creativetab.%s.%s\": \"%s\"", mc_mod_id, mc_tabs[i].name, dn);
         first = 0;
     }
     fprintf(f, "\n}\n");
@@ -1632,6 +1860,13 @@ static void cg_block_loot_json(const char *name, const char *drop) {
     fclose(f);
 }
 
+static const char *mc_item_id(const char *val) {
+    static char buf[128];
+    if (strchr(val, ':')) return val;
+    snprintf(buf, sizeof(buf), "%s:%s", mc_mod_id, val);
+    return buf;
+}
+
 static void cg_recipe_json(McRecipe *r) {
     char path[512];
     snprintf(path, sizeof(path), "%s/src/main/resources/data/%s/recipes/%s.json",
@@ -1645,24 +1880,24 @@ static void cg_recipe_json(McRecipe *r) {
         }
         fprintf(f, "  ],\n  \"key\": {\n");
         for (int i = 0; i < r->nkeys; i++) {
-            fprintf(f, "    \"%c\": {\"item\": \"%s:%s\"}%s\n", r->keys[i], mc_mod_id, r->key_values[i],
+            fprintf(f, "    \"%c\": {\"item\": \"%s\"}%s\n", r->keys[i], mc_item_id(r->key_values[i]),
                 i < r->nkeys - 1 ? "," : "");
         }
-        fprintf(f, "  },\n  \"result\": {\"item\": \"%s:%s\", \"count\": %d}\n}\n",
-            mc_mod_id, r->result, r->count);
+        fprintf(f, "  },\n  \"result\": {\"item\": \"%s\", \"count\": %d}\n}\n",
+            mc_item_id(r->result), r->count);
     } else if (r->type == 1) {
         fprintf(f, "{\n  \"type\": \"minecraft:crafting_shapeless\",\n  \"ingredients\": [\n");
         for (int i = 0; i < r->ningredients; i++) {
-            fprintf(f, "    {\"item\": \"%s:%s\"}%s\n", mc_mod_id, r->ingredients[i],
+            fprintf(f, "    {\"item\": \"%s\"}%s\n", mc_item_id(r->ingredients[i]),
                 i < r->ningredients - 1 ? "," : "");
         }
-        fprintf(f, "  ],\n  \"result\": {\"item\": \"%s:%s\", \"count\": %d}\n}\n",
-            mc_mod_id, r->result, r->count);
+        fprintf(f, "  ],\n  \"result\": {\"item\": \"%s\", \"count\": %d}\n}\n",
+            mc_item_id(r->result), r->count);
     } else if (r->type == 2) {
         fprintf(f, "{\n  \"type\": \"minecraft:smelting\",\n  \"cookingtime\": %d,\n", r->cook_time);
-        fprintf(f, "  \"experience\": %ff,\n  \"ingredient\": {\"item\": \"%s:%s\"},\n",
-            r->experience, mc_mod_id, r->ingredient);
-        fprintf(f, "  \"result\": \"%s:%s\"\n}\n", mc_mod_id, r->result);
+        fprintf(f, "  \"experience\": %ff,\n  \"ingredient\": {\"item\": \"%s\"},\n",
+            r->experience, mc_item_id(r->ingredient));
+        fprintf(f, "  \"result\": \"%s\"\n}\n", mc_item_id(r->result));
     }
     fclose(f);
 }
@@ -1739,6 +1974,7 @@ static void cg_mods_toml(void) {
         mc_prop_val("modName") ? mc_prop_val("modName") : mc_mod_id);
     if (mc_prop_val("modAuthors"))
         fprintf(f, "authors=\"%s\"\n", mc_prop_val("modAuthors"));
+    fprintf(f, "license=\"%s\"\n", mc_prop_val("modLicense") ? mc_prop_val("modLicense") : "All Rights Reserved");
     fprintf(f, "[[dependencies.%s]]\n    modId=\"forge\"\n    mandatory=true\n    versionRange=\"[47,)\"\n    ordering=\"NONE\"\n    side=\"BOTH\"\n", mc_mod_id);
     fprintf(f, "[[dependencies.%s]]\n    modId=\"minecraft\"\n    mandatory=true\n    versionRange=\"[1.20.1,1.21)\"\n    ordering=\"NONE\"\n    side=\"BOTH\"\n", mc_mod_id);
     fclose(f);
@@ -1751,6 +1987,156 @@ static void cg_pack_mcmeta(void) {
     if (!f) return;
     fprintf(f, "{\n  \"pack\": {\n    \"description\": \"%s resources\",\n    \"pack_format\": 15\n  }\n}\n", mc_mod_id);
     fclose(f);
+}
+
+static unsigned int crc32_tab[256];
+static int crc32_ready;
+
+static void crc32_make_tab(void) {
+    for (unsigned int i = 0; i < 256; i++) {
+        unsigned int crc = i;
+        for (int j = 0; j < 8; j++)
+            crc = (crc >> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
+        crc32_tab[i] = crc;
+    }
+    crc32_ready = 1;
+}
+
+static unsigned int crc32_buf(const unsigned char *buf, int len) {
+    if (!crc32_ready) crc32_make_tab();
+    unsigned int crc = 0xFFFFFFFF;
+    for (int i = 0; i < len; i++)
+        crc = crc32_tab[(crc ^ buf[i]) & 0xFF] ^ (crc >> 8);
+    return crc ^ 0xFFFFFFFF;
+}
+
+static unsigned int adler32_buf(const unsigned char *buf, int len) {
+    unsigned int a = 1, b = 0;
+    for (int i = 0; i < len; i++) {
+        a = (a + buf[i]) % 65521;
+        b = (b + a) % 65521;
+    }
+    return (b << 16) | a;
+}
+
+static void png_chunk(FILE *f, const char *type, const unsigned char *data, int len) {
+    unsigned int l = len;
+    unsigned char hdr[4];
+    hdr[0] = (l >> 24) & 0xFF; hdr[1] = (l >> 16) & 0xFF;
+    hdr[2] = (l >> 8) & 0xFF; hdr[3] = l & 0xFF;
+    fwrite(hdr, 1, 4, f);
+    fwrite(type, 1, 4, f);
+    unsigned char *tmp = malloc(len + 4);
+    memcpy(tmp, type, 4);
+    if (len > 0) memcpy(tmp + 4, data, len);
+    unsigned int crc = crc32_buf(tmp, len + 4);
+    free(tmp);
+    fwrite(data, 1, len, f);
+    hdr[0] = (crc >> 24) & 0xFF; hdr[1] = (crc >> 16) & 0xFF;
+    hdr[2] = (crc >> 8) & 0xFF; hdr[3] = crc & 0xFF;
+    fwrite(hdr, 1, 4, f);
+}
+
+static unsigned int tex_name_hash(const char *name) {
+    unsigned int h = 0;
+    for (const char *p = name; *p; p++)
+        h = h * 31 + (unsigned char)*p;
+    return h;
+}
+
+static void cg_texture_png(const char *tex_path, const char *name) {
+    FILE *f = fopen(tex_path, "wb");
+    if (!f) return;
+    unsigned char sig[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+    fwrite(sig, 1, 8, f);
+    unsigned char ihdr[13] = {0,0,0,16,0,0,0,16,8,6,0,0,0};
+    png_chunk(f, "IHDR", ihdr, 13);
+    unsigned int h = tex_name_hash(name);
+    int r = (int)(((h & 0xFF) * 0.5) + 60);
+    int g = (int)((((h >> 8) & 0xFF) * 0.5) + 60);
+    int b = (int)((((h >> 16) & 0xFF) * 0.5) + 60);
+    if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
+    unsigned char raw[1040];
+    for (int row = 0; row < 16; row++) {
+        raw[row * 65] = 0;
+        for (int col = 0; col < 16; col++) {
+            int px = row * 65 + 1 + col * 4;
+            raw[px] = r; raw[px+1] = g; raw[px+2] = b; raw[px+3] = 255;
+        }
+    }
+    int rawlen = 1040;
+    unsigned char deflate_hdr[5];
+    deflate_hdr[0] = 0x01;
+    deflate_hdr[1] = rawlen & 0xFF;
+    deflate_hdr[2] = (rawlen >> 8) & 0xFF;
+    deflate_hdr[3] = (~rawlen) & 0xFF;
+    deflate_hdr[4] = (~(rawlen >> 8)) & 0xFF;
+    unsigned char zlib_hdr[2];
+    zlib_hdr[0] = 0x78; zlib_hdr[1] = 0x01;
+    unsigned int adler = adler32_buf(raw, rawlen);
+    unsigned char adler_buf[4];
+    adler_buf[0] = (adler >> 24) & 0xFF; adler_buf[1] = (adler >> 16) & 0xFF;
+    adler_buf[2] = (adler >> 8) & 0xFF; adler_buf[3] = adler & 0xFF;
+    unsigned char *idat = malloc(2 + 5 + rawlen + 4);
+    int pos = 0;
+    memcpy(idat + pos, zlib_hdr, 2); pos += 2;
+    memcpy(idat + pos, deflate_hdr, 5); pos += 5;
+    memcpy(idat + pos, raw, rawlen); pos += rawlen;
+    memcpy(idat + pos, adler_buf, 4); pos += 4;
+    png_chunk(f, "IDAT", idat, pos);
+    free(idat);
+    png_chunk(f, "IEND", (unsigned char*)"", 0);
+    fclose(f);
+}
+
+static void mkdir_p(const char *path) {
+    char cmd[1024];
+    snprintf(cmd, sizeof(cmd), "mkdir -p \"%s\"", path);
+    system(cmd);
+}
+
+static void cg_textures_all(void) {
+    char dir[512];
+    snprintf(dir, sizeof(dir), "%ssrc/main/resources/assets/%s/textures/item", mc_mod_pkg, mc_mod_id);
+    mkdir_p(dir);
+    snprintf(dir, sizeof(dir), "%ssrc/main/resources/assets/%s/textures/block", mc_mod_pkg, mc_mod_id);
+    mkdir_p(dir);
+    for (int i = 0; i < mc_item_count; i++) {
+        McModel *m = (i < MAX_ITEMS && mc_item_models[i].parent[0]) ? &mc_item_models[i] : NULL;
+        if (m) {
+            for (int j = 0; j < m->ntex; j++) {
+                char tp[512];
+                snprintf(tp, sizeof(tp), "%ssrc/main/resources/assets/%s/textures/item/%s.png",
+                    mc_mod_pkg, mc_mod_id, m->tex_vals[j]);
+                if (access(tp, F_OK) != 0)
+                    cg_texture_png(tp, m->tex_vals[j]);
+            }
+        } else {
+            char tp[512];
+            snprintf(tp, sizeof(tp), "%ssrc/main/resources/assets/%s/textures/item/%s.png",
+                mc_mod_pkg, mc_mod_id, mc_items[i].name);
+            if (access(tp, F_OK) != 0)
+                cg_texture_png(tp, mc_items[i].name);
+        }
+    }
+    for (int i = 0; i < mc_block_count; i++) {
+        McModel *m = (i < MAX_BLOCKS && mc_block_models[i].parent[0]) ? &mc_block_models[i] : NULL;
+        if (m) {
+            for (int j = 0; j < m->ntex; j++) {
+                char tp[512];
+                snprintf(tp, sizeof(tp), "%ssrc/main/resources/assets/%s/textures/block/%s.png",
+                    mc_mod_pkg, mc_mod_id, m->tex_vals[j]);
+                if (access(tp, F_OK) != 0)
+                    cg_texture_png(tp, m->tex_vals[j]);
+            }
+        } else {
+            char tp[512];
+            snprintf(tp, sizeof(tp), "%ssrc/main/resources/assets/%s/textures/block/%s.png",
+                mc_mod_pkg, mc_mod_id, mc_blocks[i].name);
+            if (access(tp, F_OK) != 0)
+                cg_texture_png(tp, mc_blocks[i].name);
+        }
+    }
 }
 
 static void cg_to_java_build_gradle(FILE *f) {
@@ -1767,15 +2153,9 @@ static void cg_to_java_build_gradle(FILE *f) {
     fprintf(f, "        data {\n            workingDirectory file('run/data')\n");
     fprintf(f, "            args '--mod', '%s', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')\n", mc_mod_id);
     fprintf(f, "        }\n    }\n}\n\n");
-    fprintf(f, "dependencies {\n    minecraft 'net.minecraftforge:forge:%s-47.3.0'\n", mc_prop_val("mcVersion") ? mc_prop_val("mcVersion") : "1.20.1");
+    fprintf(f, "dependencies {\n    minecraft 'net.minecraftforge:forge:%s-%s'\n", mc_prop_val("mcVersion") ? mc_prop_val("mcVersion") : "1.20.1", mc_prop_val("forgeVersion") ? mc_prop_val("forgeVersion") : "47.3.0");
     fprintf(f, "}\n\n");
     fprintf(f, "jar {\n    from(\"LICENSE\") { rename { \"${it}_${base.archivesName.get()}\" } }\n}\n");
-}
-
-static void mkdir_p(const char *path) {
-    char cmd[1024];
-    snprintf(cmd, sizeof(cmd), "mkdir -p \"%s\"", path);
-    system(cmd);
 }
 
 int generate_java(const char *path, const char *outpath) {
@@ -1819,6 +2199,11 @@ int generate_java(const char *path, const char *outpath) {
     mc_recipe_count = 0;
     mc_tab_count = 0;
     mc_name_seq_counter = 0;
+    memset(mc_item_models, 0, sizeof(mc_item_models));
+    memset(mc_block_models, 0, sizeof(mc_block_models));
+    for (int i = 0; i < MAX_TABS; i++) {
+        if (mc_tab_display_names[i]) { free(mc_tab_display_names[i]); mc_tab_display_names[i] = NULL; }
+    }
     scan_mc_all(src);
 
     mc_name_consumer = 0;
@@ -1836,12 +2221,29 @@ int generate_java(const char *path, const char *outpath) {
     size_t olen = strlen(outpath);
     int dir_mode = (olen > 0 && outpath[olen - 1] == '/');
 
+    if (access(outpath, F_OK) == 0) {
+        if (dir_mode) {
+            fprintf(stderr, "WARNING: target directory '%s' already has files. overwrite? [y/N]: ", outpath);
+        } else {
+            fprintf(stderr, "WARNING: '%s' already exists. overwrite? [y/N]: ", outpath);
+        }
+        char ans[16];
+        if (!fgets(ans, sizeof(ans), stdin)) { free(src); return 1; }
+        if (ans[0] != 'y' && ans[0] != 'Y') { free(src); return 0; }
+    }
+
     if (dir_mode) {
         snprintf(mc_mod_pkg, sizeof(mc_mod_pkg), "%s", outpath);
 
         char d[1024];
-        snprintf(d, sizeof(d), "%ssrc/main/java/com/%s/%s", outpath, mc_mod_id, mc_mod_id);
-        mkdir_p(d);
+        char java_src_dir[1024];
+
+        if (mcm_flat_mode) {
+            snprintf(java_src_dir, sizeof(java_src_dir), "%s", outpath);
+        } else {
+            snprintf(java_src_dir, sizeof(java_src_dir), "%ssrc/main/java/com/%s/%s/", outpath, mc_mod_id, mc_mod_id);
+            mkdir_p(java_src_dir);
+        }
         snprintf(d, sizeof(d), "%ssrc/main/resources/META-INF", outpath);
         mkdir_p(d);
         snprintf(d, sizeof(d), "%ssrc/main/resources/assets/%s/models/item", outpath, mc_mod_id);
@@ -1869,58 +2271,58 @@ int generate_java(const char *path, const char *outpath) {
         f = fopen(d, "w");
         if (f) { cg_to_java_build_gradle(f); fclose(f); fprintf(stdout, "generated: %s\n", d); }
 
-        snprintf(d, sizeof(d), "%ssrc/main/java/com/%s/%s/ModMain.java", outpath, mc_mod_id, mc_mod_id);
+        snprintf(d, sizeof(d), "%sModMain.java", java_src_dir);
         f = fopen(d, "w");
         if (f) { cg_to_java_main(f); fclose(f); fprintf(stdout, "generated: %s\n", d); }
 
         if (mc_item_count || mc_block_count) {
-            snprintf(d, sizeof(d), "%ssrc/main/java/com/%s/%s/ModItems.java", outpath, mc_mod_id, mc_mod_id);
+            snprintf(d, sizeof(d), "%sModItems.java", java_src_dir);
             f = fopen(d, "w");
             if (f) { cg_to_java_item_registry(f); fclose(f); fprintf(stdout, "generated: %s\n", d); }
         }
 
         if (mc_block_count) {
-            snprintf(d, sizeof(d), "%ssrc/main/java/com/%s/%s/ModBlocks.java", outpath, mc_mod_id, mc_mod_id);
+            snprintf(d, sizeof(d), "%sModBlocks.java", java_src_dir);
             f = fopen(d, "w");
             if (f) { cg_to_java_block_registry(f); fclose(f); fprintf(stdout, "generated: %s\n", d); }
         }
 
         if (mc_tab_count) {
-            snprintf(d, sizeof(d), "%ssrc/main/java/com/%s/%s/ModCreativeTabs.java", outpath, mc_mod_id, mc_mod_id);
+            snprintf(d, sizeof(d), "%sModCreativeTabs.java", java_src_dir);
             f = fopen(d, "w");
             if (f) { cg_to_java_creative_tabs(f); fclose(f); fprintf(stdout, "generated: %s\n", d); }
         }
 
         if (mc_armor_material_count) {
-            snprintf(d, sizeof(d), "%ssrc/main/java/com/%s/%s/ModArmorMaterials.java", outpath, mc_mod_id, mc_mod_id);
+            snprintf(d, sizeof(d), "%sModArmorMaterials.java", java_src_dir);
             f = fopen(d, "w");
             if (f) { cg_to_java_armor_materials(f); fclose(f); fprintf(stdout, "generated: %s\n", d); }
         }
 
         if (mc_tool_tier_count) {
-            snprintf(d, sizeof(d), "%ssrc/main/java/com/%s/%s/ModToolTiers.java", outpath, mc_mod_id, mc_mod_id);
+            snprintf(d, sizeof(d), "%sModToolTiers.java", java_src_dir);
             f = fopen(d, "w");
             if (f) { cg_to_java_tool_tiers(f); fclose(f); fprintf(stdout, "generated: %s\n", d); }
         }
 
         for (int i = 0; i < mc_item_count; i++) {
-            snprintf(d, sizeof(d), "%ssrc/main/java/com/%s/%s/%s.java", outpath, mc_mod_id, mc_mod_id, mc_items[i].filename);
+            snprintf(d, sizeof(d), "%s%s.java", java_src_dir, mc_items[i].filename);
             f = fopen(d, "w");
             if (f) { cg_to_java_item_class(f, &mc_items[i]); fclose(f); fprintf(stdout, "generated: %s\n", d); }
         }
 
         for (int i = 0; i < mc_block_count; i++) {
             if (mc_blocks[i].proc_block) {
-                snprintf(d, sizeof(d), "%ssrc/main/java/com/%s/%s/%s.java", outpath, mc_mod_id, mc_mod_id, mc_blocks[i].filename);
+                snprintf(d, sizeof(d), "%s%s.java", java_src_dir, mc_blocks[i].filename);
                 f = fopen(d, "w");
                 if (f) { cg_to_java_block_class(f, &mc_blocks[i]); fclose(f); fprintf(stdout, "generated: %s\n", d); }
             }
         }
 
         for (int i = 0; i < mc_item_count; i++)
-            cg_item_model_json(mc_items[i].name, mc_items[i].type);
+            cg_item_model_json(mc_items[i].name, mc_items[i].type, i);
         for (int i = 0; i < mc_block_count; i++) {
-            cg_block_model_json(mc_blocks[i].name);
+            cg_block_model_json(mc_blocks[i].name, i);
             cg_blockstate_json(mc_blocks[i].name);
             cg_block_loot_json(mc_blocks[i].name, mc_blocks[i].name);
         }
@@ -1930,6 +2332,7 @@ int generate_java(const char *path, const char *outpath) {
         cg_block_tags();
         cg_mods_toml();
         cg_pack_mcmeta();
+        cg_textures_all();
 
         free(src);
         return 0;

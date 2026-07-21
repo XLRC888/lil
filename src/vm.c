@@ -5,6 +5,7 @@ Value undef_val = {VAL_NUM, {.num=0}};
 int compile_mode;
 int compiled_header;
 int mcm_forge_mode;
+int mcm_flat_mode;
 char *java_output_filename;
 Var vars[MAX_VARS];
 int var_count;

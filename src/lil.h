@@ -178,6 +178,7 @@ extern int assign_var_idx[MAX_ASSIGN_HISTORY];
 extern int compile_mode;
 extern int compiled_header;
 extern int mcm_forge_mode;
+extern int mcm_flat_mode;
 extern char *java_output_filename;
 extern Token lex_cur;
 extern int scope_depth;

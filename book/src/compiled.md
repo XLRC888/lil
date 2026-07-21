@@ -2,7 +2,7 @@
 
 lil can compile scripts into standalone binaries (use `-c`). The resulting executable does not need lil to run. Think of it like Cython for Python: same source, faster execution, no interpreter required.
 
-**Note:** There is also a Java/Forge output mode (`-j`) for generating Minecraft mod source. See [Minecraft Forge Generator](minecraft_forge.md).
+**Note:** There is also a Java/Forge output mode (`-j` for full tree, `-jc` for flat) for generating Minecraft mod source. See [Minecraft Forge Generator](minecraft_forge.md).
 
 ## How it works
 
