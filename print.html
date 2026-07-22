@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1d7d6b97.js";
+            window.path_to_searchindex_js = "searchindex-7f8989fc.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-05074f83.js"></script>
@@ -567,8 +567,7 @@ if len &gt; 2 and len &lt; 10 {
 b = 1 or 0     : 1 (true)
 c = not 1      : 0 (false)
 </code></pre>
-<p><code>and</code> and <code>or</code> short-circuit. If the left operand determines the result, the right operand is never evaluated.</p>
-<p><code>&amp;&amp;</code> also short-circuits and returns the actual value, not 0/1:</p>
+<p><code>and</code> and <code>or</code> evaluate both operands unconditionally. <code>&amp;&amp;</code> short-circuits (right side is only evaluated if the left side is truthy) and returns the actual value, not 0/1:</p>
 <pre><code class="language-lil">x = 0
 result = x &amp;&amp; 5    : returns 0 (x is falsy)
 y = "hello"
