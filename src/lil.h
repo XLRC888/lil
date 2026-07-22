@@ -39,13 +39,12 @@
 #define FORCE_INPUT_INT 3
 #define FORCE_INPUT_STR 4
 
-typedef enum { VAL_NUM, VAL_STR, VAL_LIST, VAL_DICT, VAL_CHAN } ValType;
+typedef enum { VAL_NUM, VAL_STR, VAL_LIST, VAL_DICT } ValType;
 
 typedef struct Value {
     ValType type;
     union { double num; char *str; struct { struct Value *items; int count; int cap; } list;
-        struct { char **keys; struct Value *values; int count; int cap; } dict;
-        void *chan; } data;
+        struct { char **keys; struct Value *values; int count; int cap; } dict; } data;
 } Value;
 
 
@@ -61,8 +60,7 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_LBRACKET, TOK_RBRACKET,
     TOK_TEMPLATE, TOK_HASH, TOK_HASH_ID, TOK_AT, TOK_CARET,     TOK_AMPERSAND, TOK_PIPE, TOK_DOT,
     TOK_TRY, TOK_CATCH, TOK_FORCE, TOK_UNFORCE, TOK_QMARK, TOK_UNINCLUDE, TOK_COLON, TOK_STRUCT, TOK_LIVE,
-    TOK_AND_AND, TOK_WRITE, TOK_READ, TOK_ORIF, TOK_TYPED,
-    TOK_CHANNEL, TOK_SPAWN, TOK_SEND, TOK_RECV, TOK_WAIT } TokenType;
+    TOK_AND_AND, TOK_WRITE, TOK_READ, TOK_ORIF, TOK_TYPED } TokenType;
 
 typedef struct {
     TokenType type;
@@ -77,8 +75,7 @@ typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE,
     NODE_STRINGIFY, NODE_INTIFY, NODE_TOGGLE, NODE_TRY, NODE_FORCE, NODE_UNFORCE, NODE_SET_UNDEF,
     NODE_LIST, NODE_INDEX, NODE_INDEX_SET, NODE_DICT, NODE_STRUCT_DEF, NODE_LIVE, NODE_ANON_FUNC, NODE_DESTRUCT,
-    NODE_METHOD_CALL, NODE_SEMICOLON,
-    NODE_CHANNEL, NODE_SPAWN, NODE_SEND, NODE_RECV, NODE_WAIT } NodeType;
+    NODE_METHOD_CALL, NODE_SEMICOLON } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -115,10 +112,6 @@ typedef struct ASTNode {
         struct { struct ASTNode **stmts; int count, cap; } block;
         struct { struct ASTNode *receiver; char *method; struct ASTNode **args; int argc; char *lib; } method_call;
         struct { struct ASTNode *left; struct ASTNode *right; } semicolon;
-        struct { int capacity; } channel;
-        struct { struct ASTNode *body; } spawn;
-        struct { struct ASTNode *channel; struct ASTNode *value; } send;
-        struct { struct ASTNode *channel; } recv;
     } data;
 } ASTNode;
 

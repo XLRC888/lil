@@ -355,16 +355,6 @@ void cg_collect_vars(ASTNode *n) {
             cg_collect_vars(n->data.semicolon.left);
             cg_collect_vars(n->data.semicolon.right);
             break;
-        case NODE_SPAWN:
-            cg_collect_vars(n->data.spawn.body);
-            break;
-        case NODE_SEND:
-            cg_collect_vars(n->data.send.channel);
-            if (n->data.send.value) cg_collect_vars(n->data.send.value);
-            break;
-        case NODE_RECV:
-            cg_collect_vars(n->data.recv.channel);
-            break;
         default: break;
     }
 }
@@ -1000,21 +990,6 @@ case NODE_INDEX:
         case NODE_SEMICOLON:
             cg_stmt(f, n->data.semicolon.left, loop_ids, loop_depth);
             cg_stmt(f, n->data.semicolon.right, loop_ids, loop_depth);
-            break;
-        case NODE_CHANNEL:
-            fatal("line %d: channel not supported in AOT mode", n->line);
-            break;
-        case NODE_SPAWN:
-            fatal("line %d: spawn not supported in AOT mode", n->line);
-            break;
-        case NODE_SEND:
-            fatal("line %d: send not supported in AOT mode", n->line);
-            break;
-        case NODE_RECV:
-            fatal("line %d: recv not supported in AOT mode", n->line);
-            break;
-        case NODE_WAIT:
-            fatal("line %d: wait not supported in AOT mode", n->line);
             break;
     }
 }

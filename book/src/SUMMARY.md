@@ -29,7 +29,6 @@
   - [Undefined Default](undefined_default.md)
 - [Type Annotations](typed_annotations.md)
 - [Lists](lists.md)
-- [Channel Concurrency](channel_concurrency.md)
 - [Advanced Features](advanced.md)
   - [Compiled Mode](compiled.md)
   - [Minecraft Forge Generator](minecraft_forge.md)

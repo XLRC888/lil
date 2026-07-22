@@ -775,51 +775,6 @@ ASTNode *parse_stmt(void) {
         return n;
     }
 
-    if (lex_cur.type == TOK_CHANNEL) {
-        lex_next();
-        int capacity = 0;
-        if (lex_cur.type == TOK_NUM) {
-            capacity = (int)lex_cur.val.num;
-            lex_next();
-        }
-        ASTNode *n = ast_alloc(NODE_CHANNEL);
-        n->data.channel.capacity = capacity;
-        return n;
-    }
-    if (lex_cur.type == TOK_SPAWN) {
-        lex_next();
-        if (lex_cur.type == TOK_NEWLINE) lex_next();
-        if (lex_cur.type != TOK_LBRACE) fatal("line %d: expected '{' after spawn", lex_cur.line);
-        ASTNode *body = parse_block();
-        ASTNode *n = ast_alloc(NODE_SPAWN);
-        n->data.spawn.body = body;
-        return n;
-    }
-    if (lex_cur.type == TOK_SEND) {
-        lex_next();
-        ASTNode *ch = parse_expr();
-        ASTNode *val = NULL;
-        if (lex_cur.type != TOK_NEWLINE && lex_cur.type != TOK_EOF && lex_cur.type != TOK_RBRACE) {
-            val = parse_expr();
-        }
-        ASTNode *n = ast_alloc(NODE_SEND);
-        n->data.send.channel = ch;
-        n->data.send.value = val;
-        return n;
-    }
-    if (lex_cur.type == TOK_RECV) {
-        lex_next();
-        ASTNode *ch = parse_expr();
-        ASTNode *n = ast_alloc(NODE_RECV);
-        n->data.recv.channel = ch;
-        return n;
-    }
-    if (lex_cur.type == TOK_WAIT) {
-        lex_next();
-        ASTNode *n = ast_alloc(NODE_WAIT);
-        return n;
-    }
-
     if (lex_cur.type == TOK_TYPED) {
         lex_next();
         char *typename = NULL;
@@ -1339,24 +1294,6 @@ ASTNode *parse_primary(void) {
         if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
         lex_next();
         return e;
-    }
-    if (lex_cur.type == TOK_CHANNEL) {
-        lex_next();
-        int capacity = 0;
-        if (lex_cur.type == TOK_NUM) {
-            capacity = (int)lex_cur.val.num;
-            lex_next();
-        }
-        ASTNode *n = ast_alloc(NODE_CHANNEL);
-        n->data.channel.capacity = capacity;
-        return n;
-    }
-    if (lex_cur.type == TOK_RECV) {
-        lex_next();
-        ASTNode *ch = parse_expr();
-        ASTNode *n = ast_alloc(NODE_RECV);
-        n->data.recv.channel = ch;
-        return n;
     }
     if (lex_cur.type == TOK_MINUS) {
         lex_next();
