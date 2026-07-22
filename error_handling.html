@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7f8989fc.js";
+            window.path_to_searchindex_js = "searchindex-b3d4c72b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-05074f83.js"></script>
+        <script src="toc-7c449485.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -184,18 +184,47 @@
 }
 </code></pre>
 <p>If the code inside <code>try</code> triggers an error, execution jumps to <code>catch</code> immediately.</p>
+<h2 id="catch-variable"><a class="header" href="#catch-variable">Catch Variable</a></h2>
+<p>You can optionally name the error to get a stack trace:</p>
+<pre><code class="language-lil">try {
+  risky_stuff()
+} catch e {
+  write("error on line ", e.line)
+  write("message: ", e.msg)
+}
+</code></pre>
+<p>The error object has two fields:</p>
+<ul>
+<li><code>e.line</code> - the line number where the error occurred</li>
+<li><code>e.msg</code> - the error message string</li>
+</ul>
 <h2 id="practical-example"><a class="header" href="#practical-example">Practical Example</a></h2>
 <p>Reading a file that might not exist:</p>
 <pre><code class="language-lil">data = ""
 try {
   data = read@file("maybe.tmp")
-} catch {
-  write("could not read file")
+} catch e {
+  write("could not read file: ", e.msg)
 }
 write(data)
 </code></pre>
+<h2 id="division-by-zero"><a class="header" href="#division-by-zero">Division by Zero</a></h2>
+<pre><code class="language-lil">try {
+  x = 1 / 0
+} catch e {
+  write("math error: ", e.msg)
+}
+</code></pre>
+<h2 id="type-conversion-errors"><a class="header" href="#type-conversion-errors">Type Conversion Errors</a></h2>
+<pre><code class="language-lil">try {
+  x = "hello"
+  intify x
+} catch e {
+  write("conversion failed: ", e.msg)
+}
+</code></pre>
 <h2 id="what-gets-caught"><a class="header" href="#what-gets-caught">What gets caught</a></h2>
-<p>Runtime errors, type errors, out-of-bounds access, division by zero, and undefined function calls are all caught. Parse errors happen before the code runs and can’t be caught.</p>
+<p>Runtime errors, type errors, out-of-bounds access, division by zero, undefined variable access, and undefined function calls are all caught. Parse errors happen before the code runs and can’t be caught.</p>
 <p>The script continues after <code>catch</code> finishes.</p>
 
                     </main>

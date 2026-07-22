@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>C Extensions - lil Book</title>
+        <title>Channel Concurrency - lil Book</title>
 
 
         <!-- Custom HTML head -->
@@ -174,53 +174,79 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="c-extensions"><a class="header" href="#c-extensions">C Extensions</a></h1>
-<p>lil provides two operators that give you direct access to memory. These only work when compiling with <code>lil -c</code>. Running them with the interpreter produces an error.</p>
-<p>If you’ve used Python’s <code>ctypes</code> module to get the address of a C object or read memory at a raw pointer, the concept is the same: <code>@</code> is like <code>ctypes.addressof()</code> and <code>^</code> is like <code>ctypes.string_at()</code>.</p>
-<h2 id="address-of-"><a class="header" href="#address-of-">Address-of (@)</a></h2>
-<p>The <code>@</code> operator returns the memory address of a variable as a number:</p>
-<pre><code class="language-lil">x = 42
-addr = @x
-write(addr)
+                        <h1 id="channel-concurrency"><a class="header" href="#channel-concurrency">Channel Concurrency</a></h1>
+<p>lil supports Go-style channel concurrency with <code>channel</code>, <code>send</code>, <code>recv</code>, <code>spawn</code>, and <code>wait</code>.</p>
+<h2 id="creating-a-channel"><a class="header" href="#creating-a-channel">Creating a Channel</a></h2>
+<pre><code class="language-lil">ch = channel 3
 </code></pre>
-<p>The address will be different every time you run the program (ASLR). One run might print <code>140732789041152</code>, the next <code>140732789041184</code>.</p>
-<p>You can also get addresses of string variables:</p>
-<pre><code class="language-lil">msg = "hello"
-msg_addr = @msg
-write(msg_addr)
+<p>Creates a buffered channel with capacity 3. Unbuffered channels use <code>channel 0</code>.</p>
+<h2 id="sending-and-receiving"><a class="header" href="#sending-and-receiving">Sending and Receiving</a></h2>
+<pre><code class="language-lil">ch = channel 3
+send ch "hello"
+msg = recv ch
+write(msg)  : hello
 </code></pre>
-<h2 id="dereference-"><a class="header" href="#dereference-">Dereference (^)</a></h2>
-<p>The <code>^</code> operator reads a value from a memory address:</p>
-<pre><code class="language-lil">x = 42
-addr = @x
-value = ^addr
-write(value)    : prints 42
+<h2 id="spawning-threads"><a class="header" href="#spawning-threads">Spawning Threads</a></h2>
+<p>Use <code>spawn</code> to run code in a new thread:</p>
+<pre><code class="language-lil">ch = channel 1
+spawn {
+    send ch "from another thread"
+}
+msg = recv ch
+write(msg)  : from another thread
 </code></pre>
-<p>This round-trips through a pointer: write a value, take its address, then dereference it back.</p>
-<h2 id="practical-example"><a class="header" href="#practical-example">Practical Example</a></h2>
-<pre><code class="language-lil">x = 42
-x_addr = @x
-x_val = ^x_addr
-write("address: ", x_addr)
-write("value: ", x_val)
+<h2 id="waiting-for-completion"><a class="header" href="#waiting-for-completion">Waiting for Completion</a></h2>
+<p>Use <code>wait</code> to block until all spawned threads finish:</p>
+<pre><code class="language-lil">spawn {
+    write("working...")
+}
+wait
+write("done")
 </code></pre>
-<p>Each run will show a different address but always the same value.</p>
-<h2 id="safety-warning"><a class="header" href="#safety-warning">Safety Warning</a></h2>
-<p>Dereferencing an invalid address will crash your program with a segfault, just like Python’s <code>ctypes.string_at(bad_address)</code>:</p>
-<pre><code class="language-lil">value = ^9999999    : almost certainly a segfault
+<h2 id="producer-consumer-pattern"><a class="header" href="#producer-consumer-pattern">Producer-Consumer Pattern</a></h2>
+<pre><code class="language-lil">ch = channel 5
+spawn {
+    i = 0
+    while i &lt; 10 {
+        send ch i
+        i = i + 1
+    }
+}
+loop {
+    msg = recv ch
+    write("got: ", msg)
+    if msg == 9 { break }
+}
+wait
 </code></pre>
-<p>These operators are useful for low-level programming and interfacing with hardware at specific memory addresses (MMIO). Use them carefully.</p>
-<p>In the interpreter (<code>lil file.lil</code>), both operators produce an error.</p>
+<h2 id="channel-capacity"><a class="header" href="#channel-capacity">Channel Capacity</a></h2>
+<p>Buffered channels block when full. Unbuffered channels (<code>channel 0</code>) block until the receiver is ready:</p>
+<pre><code class="language-lil">ch = channel 1
+spawn {
+    send ch "a"  : succeeds immediately
+    send ch "b"  : blocks until received
+}
+write(recv ch)  : a
+write(recv ch)  : b
+wait
+</code></pre>
+<h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
+<ul>
+<li>Channels are heap-allocated and shared between threads</li>
+<li><code>recv</code> returns 0 if the channel is closed (no senders)</li>
+<li><code>wait</code> blocks until all spawned threads complete</li>
+<li>Channels work with all value types (numbers, strings, booleans, lists, dicts)</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="minecraft_forge.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="lists.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="gtk.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="advanced.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -230,11 +256,11 @@ write("value: ", x_val)
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="minecraft_forge.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="lists.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="gtk.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="advanced.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

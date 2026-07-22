@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7f8989fc.js";
+            window.path_to_searchindex_js = "searchindex-b3d4c72b.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-05074f83.js"></script>
+        <script src="toc-7c449485.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1645,18 +1645,47 @@ input "what is your name? " name
 }
 </code></pre>
 <p>If the code inside <code>try</code> triggers an error, execution jumps to <code>catch</code> immediately.</p>
+<h2 id="catch-variable"><a class="header" href="#catch-variable">Catch Variable</a></h2>
+<p>You can optionally name the error to get a stack trace:</p>
+<pre><code class="language-lil">try {
+  risky_stuff()
+} catch e {
+  write("error on line ", e.line)
+  write("message: ", e.msg)
+}
+</code></pre>
+<p>The error object has two fields:</p>
+<ul>
+<li><code>e.line</code> - the line number where the error occurred</li>
+<li><code>e.msg</code> - the error message string</li>
+</ul>
 <h2 id="practical-example-2"><a class="header" href="#practical-example-2">Practical Example</a></h2>
 <p>Reading a file that might not exist:</p>
 <pre><code class="language-lil">data = ""
 try {
   data = read@file("maybe.tmp")
-} catch {
-  write("could not read file")
+} catch e {
+  write("could not read file: ", e.msg)
 }
 write(data)
 </code></pre>
+<h2 id="division-by-zero"><a class="header" href="#division-by-zero">Division by Zero</a></h2>
+<pre><code class="language-lil">try {
+  x = 1 / 0
+} catch e {
+  write("math error: ", e.msg)
+}
+</code></pre>
+<h2 id="type-conversion-errors"><a class="header" href="#type-conversion-errors">Type Conversion Errors</a></h2>
+<pre><code class="language-lil">try {
+  x = "hello"
+  intify x
+} catch e {
+  write("conversion failed: ", e.msg)
+}
+</code></pre>
 <h2 id="what-gets-caught"><a class="header" href="#what-gets-caught">What gets caught</a></h2>
-<p>Runtime errors, type errors, out-of-bounds access, division by zero, and undefined function calls are all caught. Parse errors happen before the code runs and can’t be caught.</p>
+<p>Runtime errors, type errors, out-of-bounds access, division by zero, undefined variable access, and undefined function calls are all caught. Parse errors happen before the code runs and can’t be caught.</p>
 <p>The script continues after <code>catch</code> finishes.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="modifiers"><a class="header" href="#modifiers">Modifiers</a></h1>
@@ -1694,6 +1723,56 @@ write(x)       : prints "hello"
 write(y)       : prints 99
 </code></pre>
 <p>The name after <code>?</code> is descriptive only and is ignored by the runtime. Only one global default exists. Once set, every undefined variable will return that value until you change it again.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="type-annotations"><a class="header" href="#type-annotations">Type Annotations</a></h1>
+<p>lil supports gradual type annotations using the <code>typed</code> keyword. Variables can be annotated with a type, and the runtime will automatically coerce values or error on incompatible types.</p>
+<h2 id="variable-annotations"><a class="header" href="#variable-annotations">Variable Annotations</a></h2>
+<pre><code class="language-lil">typed int x = 42
+typed str name = "hello"
+typed float pi = 3.14
+typed bool flag = 1
+</code></pre>
+<h2 id="automatic-coercion"><a class="header" href="#automatic-coercion">Automatic Coercion</a></h2>
+<p>The runtime converts values when possible:</p>
+<pre><code class="language-lil">typed int x = "100"    : x is 100 (number)
+typed str y = 99       : y is "99" (string)
+typed float z = "3.14" : z is 3.14
+</code></pre>
+<h2 id="type-errors"><a class="header" href="#type-errors">Type Errors</a></h2>
+<p>Incompatible conversions fail at runtime:</p>
+<pre><code class="language-lil">try {
+    typed int x = "hello"
+} catch e {
+    write("error: ", e.msg)
+}
+</code></pre>
+<p>Output: <code>error: cannot convert 'hello' to number</code></p>
+<h2 id="function-annotations"><a class="header" href="#function-annotations">Function Annotations</a></h2>
+<p>Functions can annotate parameter types and return type:</p>
+<pre><code class="language-lil">#add(a typed int, b typed int) typed int {
+    a + b
+}
+</code></pre>
+<p>The runtime checks parameter types at call time and coerces the return value:</p>
+<pre><code class="language-lil">typed str s = "42"
+typed int n = add(s, 1)  : n is 43
+</code></pre>
+<h2 id="why-typed-instead-of-x-int"><a class="header" href="#why-typed-instead-of-x-int">Why <code>typed</code> instead of <code>x: int</code>?</a></h2>
+<p>lil uses <code>:</code> for single-line comments (<code>: this is a comment</code>). Using <code>x: int</code> syntax would conflict. The <code>typed</code> keyword follows the same pattern as <code>force</code>/<code>unforce</code>:</p>
+<ul>
+<li><code>force x</code> - mark variable as immutable</li>
+<li><code>typed int x</code> - mark variable as typed</li>
+</ul>
+<h2 id="standalone-conversion"><a class="header" href="#standalone-conversion">Standalone Conversion</a></h2>
+<p>The <code>intify</code>, <code>stringify</code>, and <code>toggle</code> forms still work for in-place conversion without annotations:</p>
+<pre><code class="language-lil">x = "hello"
+intify x
+: x is now 0 (conversion failed, defaults to 0)
+
+y = 99
+stringify y
+: y is now "99"
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="lists"><a class="header" href="#lists">Lists</a></h1>
 <p>Lists are ordered collections of values. They are created with square bracket syntax and support index access.</p>
@@ -1785,6 +1864,70 @@ write(filtered)
 total = reduce@list(nums, add, 0)
 write(total)
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="channel-concurrency"><a class="header" href="#channel-concurrency">Channel Concurrency</a></h1>
+<p>lil supports Go-style channel concurrency with <code>channel</code>, <code>send</code>, <code>recv</code>, <code>spawn</code>, and <code>wait</code>.</p>
+<h2 id="creating-a-channel"><a class="header" href="#creating-a-channel">Creating a Channel</a></h2>
+<pre><code class="language-lil">ch = channel 3
+</code></pre>
+<p>Creates a buffered channel with capacity 3. Unbuffered channels use <code>channel 0</code>.</p>
+<h2 id="sending-and-receiving"><a class="header" href="#sending-and-receiving">Sending and Receiving</a></h2>
+<pre><code class="language-lil">ch = channel 3
+send ch "hello"
+msg = recv ch
+write(msg)  : hello
+</code></pre>
+<h2 id="spawning-threads"><a class="header" href="#spawning-threads">Spawning Threads</a></h2>
+<p>Use <code>spawn</code> to run code in a new thread:</p>
+<pre><code class="language-lil">ch = channel 1
+spawn {
+    send ch "from another thread"
+}
+msg = recv ch
+write(msg)  : from another thread
+</code></pre>
+<h2 id="waiting-for-completion"><a class="header" href="#waiting-for-completion">Waiting for Completion</a></h2>
+<p>Use <code>wait</code> to block until all spawned threads finish:</p>
+<pre><code class="language-lil">spawn {
+    write("working...")
+}
+wait
+write("done")
+</code></pre>
+<h2 id="producer-consumer-pattern"><a class="header" href="#producer-consumer-pattern">Producer-Consumer Pattern</a></h2>
+<pre><code class="language-lil">ch = channel 5
+spawn {
+    i = 0
+    while i &lt; 10 {
+        send ch i
+        i = i + 1
+    }
+}
+loop {
+    msg = recv ch
+    write("got: ", msg)
+    if msg == 9 { break }
+}
+wait
+</code></pre>
+<h2 id="channel-capacity"><a class="header" href="#channel-capacity">Channel Capacity</a></h2>
+<p>Buffered channels block when full. Unbuffered channels (<code>channel 0</code>) block until the receiver is ready:</p>
+<pre><code class="language-lil">ch = channel 1
+spawn {
+    send ch "a"  : succeeds immediately
+    send ch "b"  : blocks until received
+}
+write(recv ch)  : a
+write(recv ch)  : b
+wait
+</code></pre>
+<h2 id="notes-1"><a class="header" href="#notes-1">Notes</a></h2>
+<ul>
+<li>Channels are heap-allocated and shared between threads</li>
+<li><code>recv</code> returns 0 if the channel is closed (no senders)</li>
+<li><code>wait</code> blocks until all spawned threads complete</li>
+<li>Channels work with all value types (numbers, strings, booleans, lists, dicts)</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="advanced-features"><a class="header" href="#advanced-features">Advanced Features</a></h1>
 <p>This chapter covers the advanced features of lil: templates, the has operator, compiled mode, Minecraft Forge mod generation, and C extensions. If you know Python, many of these concepts will feel familiar under a different syntax.</p>
