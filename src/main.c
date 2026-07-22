@@ -109,6 +109,7 @@ void run_file(const char *path) {
     anon_counter = 0;
 
     ASTNode *prog = parse_program();
+    program_root = prog;
 
     code_len = 0; const_len = 0; fb_len = 0;    fixup_len = 0; cur_loop = 0; for_counter = 0;
     compile_prog(prog->data.block.stmts, prog->data.block.count);

@@ -11,7 +11,7 @@ GTK_LIBS = $(shell pkg-config --libs gtk+-3.0 2>/dev/null)
 SRC = src/main.c src/lexer.c src/parser.c src/libs.c src/vm.c src/transpiler.c src/java_gen.c
 
 $(TARGET): $(SRC)
-	$(CC) $(CFLAGS) -Isrc -o $@ $^ -lm
+	$(CC) $(CFLAGS) -Isrc -o $@ $^ -lm -lpthread
 
 gtk: $(SRC) src/gtk.c
 	$(CC) $(CFLAGS) $(GTK_CFLAGS) -DHAVE_GTK -Isrc -o $(TARGET_GTK) $(SRC) src/gtk.c $(GTK_LIBS) -lm

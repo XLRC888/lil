@@ -50,6 +50,7 @@ ASTNode *ast_assign(const char *name, ASTNode *val) {
     ASTNode *n = ast_alloc(NODE_ASSIGN);
     n->data.assign.name = sdup(name);
     n->data.assign.value = val;
+    n->data.assign.typed = NULL;
     return n;
 }
 
@@ -134,6 +135,8 @@ ASTNode *ast_func_def(const char *name, ASTNode *body) {
     n->data.func_def.name = sdup(name);
     n->data.func_def.lib = NULL;
     n->data.func_def.body = body;
+    n->data.func_def.param_types = NULL;
+    n->data.func_def.return_type = NULL;
     return n;
 }
 
@@ -469,16 +472,30 @@ ASTNode *parse_stmt(void) {
         while (lex_cur.type == TOK_NEWLINE) lex_next();
         if (lex_cur.type != TOK_CATCH) fatal("line %d: expected catch after try", lex_cur.line);
         lex_next();
+        char *catch_var = NULL;
+        if (lex_cur.type == TOK_ID) {
+            catch_var = sdup(lex_cur.val.str);
+            lex_next();
+        }
         if (lex_cur.type == TOK_NEWLINE) lex_next();
         if (lex_cur.type != TOK_LBRACE) fatal("line %d: expected '{' after catch", lex_cur.line);
         ASTNode *catch_body = parse_block();
         ASTNode *n = ast_alloc(NODE_TRY);
         n->data.try_stmt.body = body;
         n->data.try_stmt.catch_body = catch_body;
+        n->data.try_stmt.catch_var = catch_var;
         return n;
     }
     if (lex_cur.type == TOK_INCLUDE) {
         lex_next();
+        if (lex_cur.type == TOK_STAR) {
+            lex_next();
+            ASTNode *n = ast_alloc(NODE_INCLUDE);
+            n->data.include.path = sdup("*");
+            n->data.include.funcs = NULL;
+            n->data.include.nfuncs = 0;
+            return n;
+        }
         if (lex_cur.type == TOK_ID && lib_idx(lex_cur.val.str) >= 0) {
             int li = lib_idx(lex_cur.val.str);
             lib_imported[li] = 1;
@@ -698,15 +715,25 @@ ASTNode *parse_stmt(void) {
         return n;
     }
     if (lex_cur.type == TOK_STRINGIFY) {
+        int sline = lex_cur.line;
         lex_next();
         if (lex_cur.type != TOK_ID) fatal("line %d: stringify expects a variable name", lex_cur.line);
         char *name = sdup(lex_cur.val.str);
         lex_next();
         ASTNode *n = ast_alloc(NODE_STRINGIFY);
         n->data.modify.name = name;
+        n->data.modify.fmt = NULL;
+        n->data.modify.value = NULL;
+        if (lex_cur.type == TOK_ASSIGN) {
+            static int stringify_warned;
+            if (!stringify_warned) { stringify_warned = 1; fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: 'stringify x = expr' is deprecated, use 'typed str x = expr' instead\n", sline); }
+            lex_next();
+            n->data.modify.value = parse_expr();
+        }
         return n;
     }
     if (lex_cur.type == TOK_INTIFY) {
+        int sline = lex_cur.line;
         lex_next();
         if (lex_cur.type != TOK_ID) fatal("line %d: intify expects a variable name", lex_cur.line);
         char *name = sdup(lex_cur.val.str);
@@ -719,16 +746,101 @@ ASTNode *parse_stmt(void) {
         ASTNode *n = ast_alloc(NODE_INTIFY);
         n->data.modify.name = name;
         n->data.modify.fmt = fmt;
+        n->data.modify.value = NULL;
+        if (lex_cur.type == TOK_ASSIGN) {
+            static int intify_warned;
+            if (!intify_warned) { intify_warned = 1; fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: 'intify x = expr' is deprecated, use 'typed int x = expr' instead\n", sline); }
+            lex_next();
+            n->data.modify.value = parse_expr();
+        }
         return n;
     }
 
     if (lex_cur.type == TOK_TOGGLE) {
+        int sline = lex_cur.line;
         lex_next();
         if (lex_cur.type != TOK_ID) fatal("line %d: toggle expects a variable name", lex_cur.line);
         char *name = sdup(lex_cur.val.str);
         lex_next();
         ASTNode *n = ast_alloc(NODE_TOGGLE);
         n->data.modify.name = name;
+        n->data.modify.fmt = NULL;
+        n->data.modify.value = NULL;
+        if (lex_cur.type == TOK_ASSIGN) {
+            static int toggle_warned;
+            if (!toggle_warned) { toggle_warned = 1; fprintf(stderr, "\033[1;33mwarning:\033[0m line %d: 'toggle x = expr' is deprecated, use 'typed str x = expr' or 'typed int x = expr' instead\n", sline); }
+            lex_next();
+            n->data.modify.value = parse_expr();
+        }
+        return n;
+    }
+
+    if (lex_cur.type == TOK_CHANNEL) {
+        lex_next();
+        int capacity = 0;
+        if (lex_cur.type == TOK_NUM) {
+            capacity = (int)lex_cur.val.num;
+            lex_next();
+        }
+        ASTNode *n = ast_alloc(NODE_CHANNEL);
+        n->data.channel.capacity = capacity;
+        return n;
+    }
+    if (lex_cur.type == TOK_SPAWN) {
+        lex_next();
+        if (lex_cur.type == TOK_NEWLINE) lex_next();
+        if (lex_cur.type != TOK_LBRACE) fatal("line %d: expected '{' after spawn", lex_cur.line);
+        ASTNode *body = parse_block();
+        ASTNode *n = ast_alloc(NODE_SPAWN);
+        n->data.spawn.body = body;
+        return n;
+    }
+    if (lex_cur.type == TOK_SEND) {
+        lex_next();
+        ASTNode *ch = parse_expr();
+        ASTNode *val = NULL;
+        if (lex_cur.type != TOK_NEWLINE && lex_cur.type != TOK_EOF && lex_cur.type != TOK_RBRACE) {
+            val = parse_expr();
+        }
+        ASTNode *n = ast_alloc(NODE_SEND);
+        n->data.send.channel = ch;
+        n->data.send.value = val;
+        return n;
+    }
+    if (lex_cur.type == TOK_RECV) {
+        lex_next();
+        ASTNode *ch = parse_expr();
+        ASTNode *n = ast_alloc(NODE_RECV);
+        n->data.recv.channel = ch;
+        return n;
+    }
+    if (lex_cur.type == TOK_WAIT) {
+        lex_next();
+        ASTNode *n = ast_alloc(NODE_WAIT);
+        return n;
+    }
+
+    if (lex_cur.type == TOK_TYPED) {
+        lex_next();
+        char *typename = NULL;
+        if (lex_cur.type == TOK_ID && (!strcmp(lex_cur.val.str, "int") || !strcmp(lex_cur.val.str, "str"))) {
+            typename = sdup(lex_cur.val.str);
+            lex_next();
+        } else if (lex_cur.type == TOK_ID) {
+            fatal("line %d: unsupported type '%s', use 'int' or 'str'", lex_cur.line, lex_cur.val.str);
+        }
+        if (lex_cur.type != TOK_ID) fatal("line %d: typed expects a variable name", lex_cur.line);
+        char *name = sdup(lex_cur.val.str);
+        lex_next();
+        ASTNode *val = NULL;
+        if (lex_cur.type == TOK_ASSIGN) {
+            lex_next();
+            val = parse_expr();
+        }
+        ASTNode *n = ast_alloc(NODE_ASSIGN);
+        n->data.assign.name = name;
+        n->data.assign.value = val ? val : ast_num(0);
+        n->data.assign.typed = typename;
         return n;
     }
 
@@ -840,6 +952,7 @@ ASTNode *parse_stmt(void) {
             }
             int np = e->data.func_call.nargs;
             char **params = malloc(np * sizeof(char*));
+            char **ptypes = e->data.func_call.param_types;
             for (int i = 0; i < np; i++) {
                 if (e->data.func_call.args[i]->type != NODE_ID)
                     fatal("line %d: parameter must be an identifier", e->data.func_call.args[i]->line);
@@ -854,6 +967,10 @@ ASTNode *parse_stmt(void) {
             n->data.func_def.body = body;
             n->data.func_def.lib = e->data.func_call.lib;
             e->data.func_call.lib = NULL;
+            n->data.func_def.param_types = ptypes;
+            e->data.func_call.param_types = NULL;
+            n->data.func_def.return_type = e->data.func_call.return_type;
+            e->data.func_call.return_type = NULL;
             return n;
         }
     }
@@ -1075,20 +1192,41 @@ ASTNode *parse_primary(void) {
         if (lex_cur.type != TOK_LPAREN) fatal("line %d: expected '(' after function name", lex_cur.line);
         lex_next();
         ASTNode **pargs = NULL;
+        char **ptypes = NULL;
         int npargs = 0, acap = 0;
         while (lex_cur.type != TOK_RPAREN && lex_cur.type != TOK_EOF) {
-            if (npargs >= acap) { acap = acap ? acap * 2 : 4; pargs = realloc(pargs, acap * sizeof(ASTNode*)); }
+            if (npargs >= acap) { acap = acap ? acap * 2 : 4; pargs = realloc(pargs, acap * sizeof(ASTNode*)); ptypes = realloc(ptypes, acap * sizeof(char*)); }
             if (lex_cur.type != TOK_ID) fatal("line %d: expected parameter name", lex_cur.line);
-            pargs[npargs++] = ast_id(lex_cur.val.str);
+            pargs[npargs] = ast_id(lex_cur.val.str);
+            ptypes[npargs] = NULL;
             lex_next();
+    if (lex_cur.type == TOK_TYPED) {
+                lex_next();
+                if (lex_cur.type == TOK_ID && (!strcmp(lex_cur.val.str, "int") || !strcmp(lex_cur.val.str, "str"))) {
+                    ptypes[npargs] = sdup(lex_cur.val.str);
+                    lex_next();
+                }
+            }
+            npargs++;
             if (lex_cur.type == TOK_COMMA) lex_next();
         }
         if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
         lex_next();
+        char *rtype = NULL;
+        if (lex_cur.type == TOK_TYPED) {
+            lex_next();
+            if (lex_cur.type == TOK_ID && (!strcmp(lex_cur.val.str, "int") || !strcmp(lex_cur.val.str, "str"))) {
+                rtype = sdup(lex_cur.val.str);
+                lex_next();
+            }
+        }
         ASTNode *n = ast_alloc(NODE_FUNC_CALL);
         n->data.func_call.name = fname;
         n->data.func_call.args = pargs;
         n->data.func_call.nargs = npargs;
+        n->data.func_call.lib = NULL;
+        n->data.func_call.param_types = ptypes;
+        n->data.func_call.return_type = rtype;
         return n;
     }
     if (lex_cur.type == TOK_ID) {
@@ -1180,17 +1318,14 @@ ASTNode *parse_primary(void) {
     if (lex_cur.type == TOK_WRITE || lex_cur.type == TOK_READ) {
         char *fname = lex_cur.type == TOK_WRITE ? sdup("write") : sdup("read");
         lex_next();
-        if (lex_cur.type != TOK_LPAREN) fatal("line %d: expected '(' after '%s'", lex_cur.line, fname);
-        lex_next();
         ASTNode **wargs = NULL;
         int wargs_n = 0, wargs_cap = 0;
-        while (lex_cur.type != TOK_RPAREN && lex_cur.type != TOK_EOF) {
+        while (lex_cur.type != TOK_NEWLINE && lex_cur.type != TOK_EOF && lex_cur.type != TOK_RBRACE) {
             if (wargs_n >= wargs_cap) { wargs_cap = wargs_cap ? wargs_cap * 2 : 4; wargs = realloc(wargs, wargs_cap * sizeof(ASTNode*)); if (!wargs) fatal("out of memory"); }
             wargs[wargs_n++] = parse_expr();
             if (lex_cur.type == TOK_COMMA) lex_next();
+            else break;
         }
-        if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
-        lex_next();
         ASTNode *n = ast_alloc(NODE_FUNC_CALL);
         n->data.func_call.name = fname;
         n->data.func_call.args = wargs;
@@ -1204,6 +1339,24 @@ ASTNode *parse_primary(void) {
         if (lex_cur.type != TOK_RPAREN) fatal("line %d: expected ')'", lex_cur.line);
         lex_next();
         return e;
+    }
+    if (lex_cur.type == TOK_CHANNEL) {
+        lex_next();
+        int capacity = 0;
+        if (lex_cur.type == TOK_NUM) {
+            capacity = (int)lex_cur.val.num;
+            lex_next();
+        }
+        ASTNode *n = ast_alloc(NODE_CHANNEL);
+        n->data.channel.capacity = capacity;
+        return n;
+    }
+    if (lex_cur.type == TOK_RECV) {
+        lex_next();
+        ASTNode *ch = parse_expr();
+        ASTNode *n = ast_alloc(NODE_RECV);
+        n->data.recv.channel = ch;
+        return n;
     }
     if (lex_cur.type == TOK_MINUS) {
         lex_next();

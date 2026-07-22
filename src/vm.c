@@ -22,6 +22,112 @@ char last_error[256];
 int in_try;
 int scope_depth;
 int anon_counter;
+ASTNode *program_root;
+int last_error_line;
+
+static void scan_libs_in_node(ASTNode *n) {
+    if (!n) return;
+    switch (n->type) {
+        case NODE_FUNCTION:
+            if (n->data.funcall.lib) {
+                int li = lib_idx(n->data.funcall.lib);
+                if (li >= 0) lib_imported[li] = 1;
+            }
+            break;
+        case NODE_FUNC_CALL:
+            if (n->data.func_call.lib) {
+                int li = lib_idx(n->data.func_call.lib);
+                if (li >= 0) lib_imported[li] = 1;
+            }
+            break;
+        case NODE_METHOD_CALL:
+            if (n->data.method_call.lib) {
+                int li = lib_idx(n->data.method_call.lib);
+                if (li >= 0) lib_imported[li] = 1;
+            }
+            break;
+        case NODE_FUNC_DEF:
+            if (n->data.func_def.lib) {
+                int li = lib_idx(n->data.func_def.lib);
+                if (li >= 0) lib_imported[li] = 1;
+            }
+            scan_libs_in_node(n->data.func_def.body);
+            break;
+        case NODE_BLOCK:
+            for (int i = 0; i < n->data.block.count; i++)
+                scan_libs_in_node(n->data.block.stmts[i]);
+            break;
+        case NODE_IF:
+            scan_libs_in_node(n->data.if_stmt.cond);
+            scan_libs_in_node(n->data.if_stmt.then);
+            scan_libs_in_node(n->data.if_stmt.els);
+            break;
+        case NODE_WHILE:
+            scan_libs_in_node(n->data.while_stmt.cond);
+            scan_libs_in_node(n->data.while_stmt.body);
+            break;
+        case NODE_FORTO:
+            scan_libs_in_node(n->data.forto.start);
+            scan_libs_in_node(n->data.forto.end);
+            scan_libs_in_node(n->data.forto.body);
+            break;
+        case NODE_LOOP:
+            scan_libs_in_node(n->data.loop.body);
+            break;
+        case NODE_TRY:
+            scan_libs_in_node(n->data.try_stmt.body);
+            scan_libs_in_node(n->data.try_stmt.catch_body);
+            break;
+        case NODE_BINOP:
+            scan_libs_in_node(n->data.binop.left);
+            scan_libs_in_node(n->data.binop.right);
+            break;
+        case NODE_UNARY:
+            scan_libs_in_node(n->data.unary.operand);
+            break;
+        case NODE_ASSIGN:
+            scan_libs_in_node(n->data.assign.value);
+            break;
+        case NODE_FORCE:
+        case NODE_UNFORCE:
+            scan_libs_in_node(n->data.force.value);
+            break;
+        case NODE_STRINGIFY:
+        case NODE_INTIFY:
+        case NODE_TOGGLE:
+            scan_libs_in_node(n->data.modify.value);
+            break;
+        case NODE_PRINT:
+            for (int i = 0; i < n->data.print.count; i++)
+                scan_libs_in_node(n->data.print.exprs[i]);
+            break;
+        case NODE_LIST:
+            for (int i = 0; i < n->data.list.count; i++)
+                scan_libs_in_node(n->data.list.elements[i]);
+            break;
+        case NODE_DICT:
+            for (int i = 0; i < n->data.dict.count; i++) {
+                scan_libs_in_node(n->data.dict.keys[i]);
+                scan_libs_in_node(n->data.dict.values[i]);
+            }
+            break;
+        case NODE_SEMICOLON:
+            scan_libs_in_node(n->data.semicolon.left);
+            scan_libs_in_node(n->data.semicolon.right);
+            break;
+        case NODE_SPAWN:
+            scan_libs_in_node(n->data.spawn.body);
+            break;
+        case NODE_SEND:
+            scan_libs_in_node(n->data.send.channel);
+            if (n->data.send.value) scan_libs_in_node(n->data.send.value);
+            break;
+        case NODE_RECV:
+            scan_libs_in_node(n->data.recv.channel);
+            break;
+        default: break;
+    }
+}
 
 void fatal(const char *fmt, ...) {
     error_occurred = 1;
@@ -29,6 +135,12 @@ void fatal(const char *fmt, ...) {
     va_start(ap, fmt);
     vsnprintf(last_error, sizeof(last_error), fmt, ap);
     va_end(ap);
+    if (strncmp(last_error, "line ", 5) == 0) {
+        int line = 0;
+        for (int i = 5; last_error[i] >= '0' && last_error[i] <= '9'; i++)
+            line = line * 10 + (last_error[i] - '0');
+        if (line > 0) last_error_line = line;
+    }
     if (!in_try)
         fprintf(stderr, "\033[1;31merror:\033[0m %s\n", last_error);
     fflush(stderr);
@@ -51,6 +163,7 @@ Value var_get(const char *name) {
     }
     if (vars[i].val.type == VAL_STR) return make_str(vars[i].val.data.str);
     if (vars[i].val.type == VAL_LIST || vars[i].val.type == VAL_DICT) return copy_val(vars[i].val);
+    if (vars[i].val.type == VAL_CHAN) return vars[i].val;
     return make_num(vars[i].val.data.num);
 }
 
@@ -359,6 +472,84 @@ void dict_clear(Value *v) {
     v->data.dict.cap = 0;
 }
 
+#include <pthread.h>
+
+typedef struct {
+    Value *items;
+    int count;
+    int cap;
+    int head;
+    int tail;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond_send;
+    pthread_cond_t cond_recv;
+} Chan;
+
+typedef struct {
+    pthread_t thread;
+    ASTNode *body;
+    int done;
+    Value result;
+} SpawnedThread;
+
+#define MAX_THREADS 64
+static SpawnedThread spawned_threads[MAX_THREADS];
+static int spawn_count;
+
+Value make_chan(int capacity) {
+    Chan *ch = malloc(sizeof(Chan));
+    if (!ch) fatal("out of memory");
+    if (capacity < 1) capacity = 1;
+    ch->items = malloc(sizeof(Value) * capacity);
+    if (!ch->items) fatal("out of memory");
+    ch->cap = capacity;
+    ch->count = 0;
+    ch->head = 0;
+    ch->tail = 0;
+    pthread_mutex_init(&ch->mutex, NULL);
+    pthread_cond_init(&ch->cond_send, NULL);
+    pthread_cond_init(&ch->cond_recv, NULL);
+    Value v;
+    v.type = VAL_CHAN;
+    v.data.chan = ch;
+    return v;
+}
+
+static void chan_send(Value *ch, Value item) {
+    Chan *c = (Chan*)ch->data.chan;
+    pthread_mutex_lock(&c->mutex);
+    while (c->count >= c->cap)
+        pthread_cond_wait(&c->cond_send, &c->mutex);
+    c->items[c->tail] = copy_val(item);
+    c->tail = (c->tail + 1) % c->cap;
+    c->count++;
+    pthread_cond_signal(&c->cond_recv);
+    pthread_mutex_unlock(&c->mutex);
+}
+
+static Value chan_recv(Value *ch) {
+    Chan *c = (Chan*)ch->data.chan;
+    pthread_mutex_lock(&c->mutex);
+    while (c->count <= 0)
+        pthread_cond_wait(&c->cond_recv, &c->mutex);
+    Value item = c->items[c->head];
+    c->items[c->head] = make_num(0);
+    c->head = (c->head + 1) % c->cap;
+    c->count--;
+    pthread_cond_signal(&c->cond_send);
+    pthread_mutex_unlock(&c->mutex);
+    return item;
+}
+
+static void *spawn_thread_func(void *arg) {
+    SpawnedThread *st = (SpawnedThread*)arg;
+    push_scope();
+    exec_stmt(st->body);
+    pop_scope();
+    st->done = 1;
+    return NULL;
+}
+
 char *val_tostr(Value v) {
     if (v.type == VAL_STR) return sdup(v.data.str);
     if (v.type == VAL_LIST) {
@@ -406,6 +597,11 @@ char *val_tostr(Value v) {
         buf[pos++] = '}'; buf[pos] = 0;
         return buf;
     }
+    if (v.type == VAL_CHAN) {
+        char buf[64];
+        snprintf(buf, sizeof(buf), "<channel %p>", v.data.chan);
+        return sdup(buf);
+    }
     double d = v.data.num;
     char buf[128];
     if (d == (long)d) snprintf(buf, sizeof(buf), "%ld", (long)d);
@@ -417,6 +613,7 @@ double val_tonum(Value v) {
     if (v.type == VAL_NUM) return v.data.num;
     if (v.type == VAL_LIST) return v.data.list.count;
     if (v.type == VAL_DICT) return v.data.dict.count;
+    if (v.type == VAL_CHAN) return ((Chan*)v.data.chan)->count;
     char *end;
     double d = strtod(v.data.str, &end);
     if (*end) fatal("cannot convert '%s' to number", v.data.str);
@@ -436,10 +633,22 @@ void val_free(Value v) {
         }
         free(v.data.dict.keys);
         free(v.data.dict.values);
+    } else if (v.type == VAL_CHAN) {
+        Chan *c = (Chan*)v.data.chan;
+        if (c) {
+            for (int i = 0; i < c->count; i++)
+                val_free(c->items[(c->head + i) % c->cap]);
+            free(c->items);
+            pthread_mutex_destroy(&c->mutex);
+            pthread_cond_destroy(&c->cond_send);
+            pthread_cond_destroy(&c->cond_recv);
+            free(c);
+        }
     }
 }
 
 Value copy_val(Value v) {
+    if (v.type == VAL_CHAN) return v;
     if (v.type == VAL_STR) v.data.str = sdup(v.data.str);
     else if (v.type == VAL_LIST) {
         Value *items = malloc(sizeof(Value) * (v.data.list.cap > 0 ? v.data.list.cap : 4));
@@ -466,6 +675,7 @@ int truthy(Value v) {
     if (v.type == VAL_STR) return strlen(v.data.str) != 0;
     if (v.type == VAL_LIST) return v.data.list.count != 0;
     if (v.type == VAL_DICT) return v.data.dict.count != 0;
+    if (v.type == VAL_CHAN) return ((Chan*)v.data.chan)->count != 0;
     return v.data.num != 0;
 }
 
@@ -657,6 +867,22 @@ Value eval_expr(ASTNode *n) {
                             arg_vals[j] = eval_expr(n->data.func_call.args[j]);
                         else
                             arg_vals[j] = make_num(0);
+                        if (funcs[i].param_types && funcs[i].param_types[j]) {
+                            if (!strcmp(funcs[i].param_types[j], "int") && arg_vals[j].type == VAL_STR) {
+                                char *end;
+                                double d = strtod(arg_vals[j].data.str, &end);
+                                if (*end != '\0' && arg_vals[j].data.str[0] != '\0') {
+                                    fatal("line %d: parameter '%s' expects int, got string '%s'", n->line, funcs[i].params[j], arg_vals[j].data.str);
+                                }
+                                val_free(arg_vals[j]);
+                                arg_vals[j] = make_num(d);
+                            } else if (!strcmp(funcs[i].param_types[j], "str") && arg_vals[j].type == VAL_NUM) {
+                                char *s = val_tostr(arg_vals[j]);
+                                val_free(arg_vals[j]);
+                                arg_vals[j] = make_str(s);
+                                free(s);
+                            }
+                        }
                     }
                     for (int j = 0; j < funcs[i].nparams; j++)
                         var_set_no_scope(funcs[i].params[j], arg_vals[j]);
@@ -687,6 +913,15 @@ Value eval_expr(ASTNode *n) {
             }
             fatal("line %d: function '%s' not defined", n->line, n->data.func_call.name);
             return make_num(0);
+        }
+        case NODE_RECV: {
+            Value ch = eval_expr(n->data.recv.channel);
+            if (ch.type != VAL_CHAN) fatal("line %d: recv requires a channel", n->line);
+            Value val = chan_recv(&ch);
+            return val;
+        }
+        case NODE_CHANNEL: {
+            return make_chan(n->data.channel.capacity);
         }
         case NODE_LIST: {
             Value list = make_list();
@@ -966,6 +1201,26 @@ int exec_stmt(ASTNode *n) {
     switch (n->type) {
         case NODE_ASSIGN: {
             Value v = eval_expr(n->data.assign.value);
+            if (n->data.assign.typed) {
+                if (!strcmp(n->data.assign.typed, "int")) {
+                    if (v.type == VAL_STR) {
+                        char *end;
+                        double d = strtod(v.data.str, &end);
+                        if (*end != '\0' && v.data.str[0] != '\0') {
+                            fatal("line %d: cannot convert '%s' to int", n->line, v.data.str);
+                        }
+                        val_free(v);
+                        v = make_num(d);
+                    }
+                } else if (!strcmp(n->data.assign.typed, "str")) {
+                    if (v.type == VAL_NUM) {
+                        char *s = val_tostr(v);
+                        val_free(v);
+                        v = make_str(s);
+                        free(s);
+                    }
+                }
+            }
             _last_expr_val = v;
             var_set(n->data.assign.name, v);
             return 0;
@@ -1028,6 +1283,17 @@ int exec_stmt(ASTNode *n) {
             return 0;
         }
         case NODE_STRINGIFY: {
+            if (n->data.modify.value) {
+                Value v = eval_expr(n->data.modify.value);
+                int idx = var_find(n->data.modify.name);
+                if (idx < 0) { var_set(n->data.modify.name, make_str("")); idx = var_count - 1; }
+                if (vars[idx].forced) fatal("line %d: cannot stringify a forced variable", n->line);
+                char *s = val_tostr(v);
+                var_set(n->data.modify.name, make_str(s));
+                free(s);
+                val_free(v);
+                return 0;
+            }
             int idx = var_find(n->data.modify.name);
             if (idx < 0) { var_set(n->data.modify.name, make_str("")); idx = var_count - 1; }
             if (vars[idx].forced) fatal("line %d: cannot stringify a forced variable", n->line);
@@ -1037,6 +1303,16 @@ int exec_stmt(ASTNode *n) {
             return 0;
         }
         case NODE_INTIFY: {
+            if (n->data.modify.value) {
+                Value v = eval_expr(n->data.modify.value);
+                int idx = var_find(n->data.modify.name);
+                if (idx >= 0 && vars[idx].forced) fatal("line %d: cannot intify a forced variable", n->line);
+                last_error_line = n->line;
+                double d = val_tonum(v);
+                var_set(n->data.modify.name, make_num(d));
+                val_free(v);
+                return 0;
+            }
             int _fidx = var_find(n->data.modify.name);
             if (_fidx >= 0 && vars[_fidx].forced) fatal("line %d: cannot intify a forced variable", n->line);
             if (n->data.modify.fmt) {
@@ -1064,12 +1340,29 @@ int exec_stmt(ASTNode *n) {
                 free(out);
             } else {
                 Value v = var_get(n->data.modify.name);
+                last_error_line = n->line;
                 double d = val_tonum(v);
                 var_set(n->data.modify.name, make_num(d));
             }
             return 0;
         }
         case NODE_TOGGLE: {
+            if (n->data.modify.value) {
+                Value v = eval_expr(n->data.modify.value);
+                int idx = var_find(n->data.modify.name);
+                if (idx < 0) { var_set(n->data.modify.name, make_str("")); idx = var_count - 1; }
+                if (vars[idx].forced) fatal("line %d: cannot toggle a forced variable", n->line);
+                if (v.type == VAL_STR) {
+                    double d = val_tonum(v);
+                    var_set(n->data.modify.name, make_num(d));
+                } else {
+                    char *s = val_tostr(v);
+                    var_set(n->data.modify.name, make_str(s));
+                    free(s);
+                }
+                val_free(v);
+                return 0;
+            }
             int idx = var_find(n->data.modify.name);
             if (idx < 0) { var_set(n->data.modify.name, make_str("")); idx = var_count - 1; }
             if (vars[idx].forced) fatal("line %d: cannot toggle a forced variable", n->line);
@@ -1086,6 +1379,7 @@ int exec_stmt(ASTNode *n) {
         case NODE_TRY: {
             jmp_buf old;
             memcpy(old, error_jmp, sizeof(jmp_buf));
+            int saved_line = last_error_line;
             in_try = 1;
             if (setjmp(error_jmp) == 0) {
                 exec_stmt(n->data.try_stmt.body);
@@ -1095,6 +1389,13 @@ int exec_stmt(ASTNode *n) {
                 error_occurred = 0;
                 memcpy(error_jmp, old, sizeof(jmp_buf));
                 in_try = 0;
+                if (n->data.try_stmt.catch_var) {
+                    Value err = make_dict();
+                    dict_set(&err, "line", make_num(last_error_line));
+                    dict_set(&err, "msg", make_str(last_error));
+                    var_set(n->data.try_stmt.catch_var, err);
+                }
+                last_error_line = saved_line;
                 exec_stmt(n->data.try_stmt.catch_body);
             }
             return 0;
@@ -1220,6 +1521,10 @@ int exec_stmt(ASTNode *n) {
             return 0;
         }
         case NODE_INCLUDE: {
+            if (!strcmp(n->data.include.path, "*")) {
+                scan_libs_in_node(program_root);
+                return 0;
+            }
             if (n->data.include.funcs && n->data.include.nfuncs > 0) {
                 LilState saved;
                 state_save(&saved);
@@ -1265,6 +1570,17 @@ int exec_stmt(ASTNode *n) {
                 assign_hist_count = saved.assign_hist_count;
                 memcpy(lib_imported, saved.lib_imported, sizeof(lib_imported));
                 scope_depth = saved.scope_depth;
+            } else {
+                int outer_fc = func_count;
+                run_file_interpreted(n->data.include.path);
+                if (error_occurred) return 0;
+                int nfc = func_count;
+                int wi = outer_fc;
+                for (int i = outer_fc; i < nfc; i++) {
+                    if (wi != i) funcs[wi] = funcs[i];
+                    wi++;
+                }
+                func_count = wi;
             }
             return 0;
         }
@@ -1309,6 +1625,8 @@ int exec_stmt(ASTNode *n) {
             funcs[func_count].params = n->data.func_def.params;
             funcs[func_count].nparams = n->data.func_def.nparams;
             funcs[func_count].body = n->data.func_def.body;
+            funcs[func_count].param_types = n->data.func_def.param_types;
+            funcs[func_count].return_type = n->data.func_def.return_type;
             func_count++;
             return 0;
         }
@@ -1423,6 +1741,40 @@ int exec_stmt(ASTNode *n) {
             int r = exec_stmt(n->data.semicolon.left);
             if (r) return r;
             return exec_stmt(n->data.semicolon.right);
+        }
+        case NODE_SPAWN: {
+            for (int i = 0; i < spawn_count; i++)
+                if (!spawned_threads[i].done) fatal("line %d: cannot spawn while threads are running (call wait first)", n->line);
+            if (spawn_count >= MAX_THREADS) fatal("line %d: too many spawned threads", n->line);
+            spawned_threads[spawn_count].body = n->data.spawn.body;
+            spawned_threads[spawn_count].done = 0;
+            spawned_threads[spawn_count].result = make_num(0);
+            pthread_create(&spawned_threads[spawn_count].thread, NULL, spawn_thread_func, &spawned_threads[spawn_count]);
+            spawn_count++;
+            return 0;
+        }
+        case NODE_SEND: {
+            Value ch = eval_expr(n->data.send.channel);
+            if (ch.type != VAL_CHAN) fatal("line %d: send requires a channel", n->line);
+            Value val = n->data.send.value ? eval_expr(n->data.send.value) : make_num(0);
+            chan_send(&ch, val);
+            val_free(val);
+            return 0;
+        }
+        case NODE_RECV: {
+            Value ch = eval_expr(n->data.recv.channel);
+            if (ch.type != VAL_CHAN) fatal("line %d: recv requires a channel", n->line);
+            Value val = chan_recv(&ch);
+            _last_expr_val = val;
+            return 0;
+        }
+        case NODE_WAIT: {
+            for (int i = 0; i < spawn_count; i++) {
+                if (!spawned_threads[i].done)
+                    pthread_join(spawned_threads[i].thread, NULL);
+            }
+            spawn_count = 0;
+            return 0;
         }
         default:
             _last_expr_val = eval_expr(n);
@@ -1970,7 +2322,7 @@ OP_PRINT: {
         if (i > 0) printf(" ");
         if (vals[i].type == VAL_STR) { printf("%s", vals[i].data.str); free(vals[i].data.str); }
         else if (vals[i].type == VAL_LIST || vals[i].type == VAL_DICT) { char *s = val_tostr(vals[i]); printf("%s", s); free(s); val_free(vals[i]); }
-        else { char *s = val_tostr(vals[i]); printf("%s", s); free(s); }
+        else { char *s = val_tostr(vals[i]); printf("%s", s); free(s); val_free(vals[i]); }
     }
     free(vals); printf("\n"); fflush(stdout);
     ip++; goto *dtab[code[ip].op];

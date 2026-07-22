@@ -355,6 +355,16 @@ void cg_collect_vars(ASTNode *n) {
             cg_collect_vars(n->data.semicolon.left);
             cg_collect_vars(n->data.semicolon.right);
             break;
+        case NODE_SPAWN:
+            cg_collect_vars(n->data.spawn.body);
+            break;
+        case NODE_SEND:
+            cg_collect_vars(n->data.send.channel);
+            if (n->data.send.value) cg_collect_vars(n->data.send.value);
+            break;
+        case NODE_RECV:
+            cg_collect_vars(n->data.recv.channel);
+            break;
         default: break;
     }
 }
@@ -828,11 +838,26 @@ void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
             break;
         }
         case NODE_STRINGIFY: {
+            if (n->data.modify.value) {
+                fprintf(f, "{\n  Value _sv = ");
+                cg_expr(f, n->data.modify.value, TY_DYN);
+                fprintf(f, ";\n  char *_ss = val_tostr(_sv);\n");
+                fprintf(f, "  val_free(%s); %s = make_str(_ss); free(_ss);\n", n->data.modify.name, n->data.modify.name);
+                fprintf(f, "  val_free(_sv); }\n");
+                break;
+            }
             fprintf(f, "{\n  char _b[128];\n  snprintf(_b,sizeof(_b),\"%%g\",%s.data.num);\n", n->data.modify.name);
             fprintf(f, "  val_free(%s); %s = make_str(_b);\n}\n", n->data.modify.name, n->data.modify.name);
             break;
         }
         case NODE_INTIFY: {
+            if (n->data.modify.value) {
+                fprintf(f, "{\n  Value _iv = ");
+                cg_expr(f, n->data.modify.value, TY_DYN);
+                fprintf(f, ";\n  val_free(%s); %s = make_num(val_tonum(_iv));\n", n->data.modify.name, n->data.modify.name);
+                fprintf(f, "  val_free(_iv); }\n");
+                break;
+            }
             if (n->data.modify.fmt) {
                 char *fmt = n->data.modify.fmt;
                 fprintf(f, "{\n  char *_s = val_tostr(%s);\n", n->data.modify.name);
@@ -857,6 +882,17 @@ void cg_stmt(FILE *f, ASTNode *n, int *loop_ids, int loop_depth) {
             break;
         }
         case NODE_TOGGLE: {
+            if (n->data.modify.value) {
+                fprintf(f, "{\n  Value _tv = ");
+                cg_expr(f, n->data.modify.value, TY_DYN);
+                fprintf(f, ";\n  if (_tv.type == VAL_STR) {\n");
+                fprintf(f, "    val_free(%s); %s = make_num(val_tonum(_tv));\n", n->data.modify.name, n->data.modify.name);
+                fprintf(f, "  } else {\n");
+                fprintf(f, "    char _tb[128]; snprintf(_tb,sizeof(_tb),\"%%g\",_tv.data.num);\n");
+                fprintf(f, "    val_free(%s); %s = make_str(_tb);\n", n->data.modify.name, n->data.modify.name);
+                fprintf(f, "  }\n  val_free(_tv); }\n");
+                break;
+            }
             fprintf(f, "{\n  if (%s.type == VAL_STR) {\n", n->data.modify.name);
             fprintf(f, "    { char *_e = %s.data.str; char *_end; double _d = strtod(_e,&_end); if (*_end) { fprintf(stderr,\"convert error\\n\"); longjmp(_try_jmp,1); } val_free(%s); %s = make_num(_d); }\n", n->data.modify.name, n->data.modify.name, n->data.modify.name);
             fprintf(f, "  } else {\n");
@@ -964,6 +1000,21 @@ case NODE_INDEX:
         case NODE_SEMICOLON:
             cg_stmt(f, n->data.semicolon.left, loop_ids, loop_depth);
             cg_stmt(f, n->data.semicolon.right, loop_ids, loop_depth);
+            break;
+        case NODE_CHANNEL:
+            fatal("line %d: channel not supported in AOT mode", n->line);
+            break;
+        case NODE_SPAWN:
+            fatal("line %d: spawn not supported in AOT mode", n->line);
+            break;
+        case NODE_SEND:
+            fatal("line %d: send not supported in AOT mode", n->line);
+            break;
+        case NODE_RECV:
+            fatal("line %d: recv not supported in AOT mode", n->line);
+            break;
+        case NODE_WAIT:
+            fatal("line %d: wait not supported in AOT mode", n->line);
             break;
     }
 }

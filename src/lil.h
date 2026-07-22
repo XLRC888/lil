@@ -39,12 +39,13 @@
 #define FORCE_INPUT_INT 3
 #define FORCE_INPUT_STR 4
 
-typedef enum { VAL_NUM, VAL_STR, VAL_LIST, VAL_DICT } ValType;
+typedef enum { VAL_NUM, VAL_STR, VAL_LIST, VAL_DICT, VAL_CHAN } ValType;
 
 typedef struct Value {
     ValType type;
     union { double num; char *str; struct { struct Value *items; int count; int cap; } list;
-        struct { char **keys; struct Value *values; int count; int cap; } dict; } data;
+        struct { char **keys; struct Value *values; int count; int cap; } dict;
+        void *chan; } data;
 } Value;
 
 
@@ -60,7 +61,8 @@ typedef enum { TOK_NUM, TOK_STR, TOK_ID, TOK_PRINT, TOK_INPUT, TOK_IF, TOK_ELSE,
     TOK_LBRACKET, TOK_RBRACKET,
     TOK_TEMPLATE, TOK_HASH, TOK_HASH_ID, TOK_AT, TOK_CARET,     TOK_AMPERSAND, TOK_PIPE, TOK_DOT,
     TOK_TRY, TOK_CATCH, TOK_FORCE, TOK_UNFORCE, TOK_QMARK, TOK_UNINCLUDE, TOK_COLON, TOK_STRUCT, TOK_LIVE,
-    TOK_AND_AND, TOK_WRITE, TOK_READ, TOK_ORIF } TokenType;
+    TOK_AND_AND, TOK_WRITE, TOK_READ, TOK_ORIF, TOK_TYPED,
+    TOK_CHANNEL, TOK_SPAWN, TOK_SEND, TOK_RECV, TOK_WAIT } TokenType;
 
 typedef struct {
     TokenType type;
@@ -75,7 +77,8 @@ typedef enum { NODE_NUM, NODE_STR, NODE_ID, NODE_BINOP, NODE_UNARY,
     NODE_TEMPLATE, NODE_FUNC_DEF, NODE_FUNC_CALL, NODE_BREAK, NODE_CONTINUE,
     NODE_STRINGIFY, NODE_INTIFY, NODE_TOGGLE, NODE_TRY, NODE_FORCE, NODE_UNFORCE, NODE_SET_UNDEF,
     NODE_LIST, NODE_INDEX, NODE_INDEX_SET, NODE_DICT, NODE_STRUCT_DEF, NODE_LIVE, NODE_ANON_FUNC, NODE_DESTRUCT,
-    NODE_METHOD_CALL, NODE_SEMICOLON } NodeType;
+    NODE_METHOD_CALL, NODE_SEMICOLON,
+    NODE_CHANNEL, NODE_SPAWN, NODE_SEND, NODE_RECV, NODE_WAIT } NodeType;
 
 typedef struct ASTNode {
     NodeType type;
@@ -87,7 +90,7 @@ typedef struct ASTNode {
         struct { int op; struct ASTNode *left, *right; } binop;
         struct { int op; struct ASTNode *operand; } unary;
         struct { char *name; struct ASTNode *value; int force_type; } force;
-        struct { char *name; struct ASTNode *value; } assign;
+        struct { char *name; struct ASTNode *value; char *typed; } assign;
         struct { struct ASTNode **exprs; int count; int cap; } print;
         struct { char *name; char *prompt; int force_type; } input;
         struct { struct ASTNode *cond, *then, *els; int flags; int has_mode;
@@ -95,14 +98,14 @@ typedef struct ASTNode {
         struct { struct ASTNode *cond, *body; } while_stmt;
         struct { char *var; struct ASTNode *start, *end, *body; } forto;
         struct { struct ASTNode *body; } loop;
-        struct { char *name; char **params; int nparams; struct ASTNode *body; char *lib; } func_def;
-        struct { char *name; struct ASTNode **args; int nargs; char *lib; } func_call;
+        struct { char *name; char **params; int nparams; struct ASTNode *body; char *lib; char **param_types; char *return_type; } func_def;
+        struct { char *name; struct ASTNode **args; int nargs; char *lib; char **param_types; char *return_type; } func_call;
         struct { char *path; char **funcs; int nfuncs; } include;
         struct { char **varnames; char **newnames; int nvars; char *path; int *indices; } get_stmt;
         struct { char *lib; char **args; int argc; } funcall;
         struct { char *raw; } templ;
-        struct { struct ASTNode *body, *catch_body; } try_stmt;
-        struct { char *name; char *fmt; } modify;
+        struct { struct ASTNode *body, *catch_body; char *catch_var; } try_stmt;
+        struct { char *name; char *fmt; struct ASTNode *value; } modify;
         struct { struct ASTNode **elements; int count; } list;
         struct { struct ASTNode **keys; struct ASTNode **values; int count; } dict;
         struct { char *name; char **fields; int nfields; } struct_def;
@@ -112,6 +115,10 @@ typedef struct ASTNode {
         struct { struct ASTNode **stmts; int count, cap; } block;
         struct { struct ASTNode *receiver; char *method; struct ASTNode **args; int argc; char *lib; } method_call;
         struct { struct ASTNode *left; struct ASTNode *right; } semicolon;
+        struct { int capacity; } channel;
+        struct { struct ASTNode *body; } spawn;
+        struct { struct ASTNode *channel; struct ASTNode *value; } send;
+        struct { struct ASTNode *channel; } recv;
     } data;
 } ASTNode;
 
@@ -120,6 +127,8 @@ typedef struct {
     char **params;
     int nparams;
     struct ASTNode *body;
+    char **param_types;
+    char *return_type;
 } FuncDef;
 
 typedef struct {
@@ -182,6 +191,7 @@ extern int mcm_flat_mode;
 extern char *java_output_filename;
 extern Token lex_cur;
 extern int scope_depth;
+extern ASTNode *program_root;
 
 void fatal(const char *fmt, ...);
 char *sdup(const char *s);

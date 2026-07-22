@@ -129,6 +129,12 @@ static Token lex_scan(void) {
             if (!strcmp(word, "write"))   { free(word); t.type = TOK_WRITE; return t; }
             if (!strcmp(word, "read"))    { free(word); t.type = TOK_READ; return t; }
             if (!strcmp(word, "orif"))    { free(word); t.type = TOK_ORIF; return t; }
+            if (!strcmp(word, "typed"))   { free(word); t.type = TOK_TYPED; return t; }
+            if (!strcmp(word, "channel")) { free(word); t.type = TOK_CHANNEL; return t; }
+            if (!strcmp(word, "spawn"))   { free(word); t.type = TOK_SPAWN; return t; }
+            if (!strcmp(word, "send"))    { free(word); t.type = TOK_SEND; return t; }
+            if (!strcmp(word, "recv"))    { free(word); t.type = TOK_RECV; return t; }
+            if (!strcmp(word, "wait"))    { free(word); t.type = TOK_WAIT; return t; }
 
             t.type = TOK_ID;
             t.val.str = word;
