@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-b3d4c72b.js";
+            window.path_to_searchindex_js = "searchindex-800b8901.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-7c449485.js"></script>
+        <script src="toc-28fa2653.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1864,70 +1864,6 @@ write(filtered)
 total = reduce@list(nums, add, 0)
 write(total)
 </code></pre>
-<div style="break-before: page; page-break-before: always;"></div>
-<h1 id="channel-concurrency"><a class="header" href="#channel-concurrency">Channel Concurrency</a></h1>
-<p>lil supports Go-style channel concurrency with <code>channel</code>, <code>send</code>, <code>recv</code>, <code>spawn</code>, and <code>wait</code>.</p>
-<h2 id="creating-a-channel"><a class="header" href="#creating-a-channel">Creating a Channel</a></h2>
-<pre><code class="language-lil">ch = channel 3
-</code></pre>
-<p>Creates a buffered channel with capacity 3. Unbuffered channels use <code>channel 0</code>.</p>
-<h2 id="sending-and-receiving"><a class="header" href="#sending-and-receiving">Sending and Receiving</a></h2>
-<pre><code class="language-lil">ch = channel 3
-send ch "hello"
-msg = recv ch
-write(msg)  : hello
-</code></pre>
-<h2 id="spawning-threads"><a class="header" href="#spawning-threads">Spawning Threads</a></h2>
-<p>Use <code>spawn</code> to run code in a new thread:</p>
-<pre><code class="language-lil">ch = channel 1
-spawn {
-    send ch "from another thread"
-}
-msg = recv ch
-write(msg)  : from another thread
-</code></pre>
-<h2 id="waiting-for-completion"><a class="header" href="#waiting-for-completion">Waiting for Completion</a></h2>
-<p>Use <code>wait</code> to block until all spawned threads finish:</p>
-<pre><code class="language-lil">spawn {
-    write("working...")
-}
-wait
-write("done")
-</code></pre>
-<h2 id="producer-consumer-pattern"><a class="header" href="#producer-consumer-pattern">Producer-Consumer Pattern</a></h2>
-<pre><code class="language-lil">ch = channel 5
-spawn {
-    i = 0
-    while i &lt; 10 {
-        send ch i
-        i = i + 1
-    }
-}
-loop {
-    msg = recv ch
-    write("got: ", msg)
-    if msg == 9 { break }
-}
-wait
-</code></pre>
-<h2 id="channel-capacity"><a class="header" href="#channel-capacity">Channel Capacity</a></h2>
-<p>Buffered channels block when full. Unbuffered channels (<code>channel 0</code>) block until the receiver is ready:</p>
-<pre><code class="language-lil">ch = channel 1
-spawn {
-    send ch "a"  : succeeds immediately
-    send ch "b"  : blocks until received
-}
-write(recv ch)  : a
-write(recv ch)  : b
-wait
-</code></pre>
-<h2 id="notes-1"><a class="header" href="#notes-1">Notes</a></h2>
-<ul>
-<li>Channels are heap-allocated and shared between threads</li>
-<li><code>recv</code> returns 0 if the channel is closed (no senders)</li>
-<li><code>wait</code> blocks until all spawned threads complete</li>
-<li>Channels work with all value types (numbers, strings, booleans, lists, dicts)</li>
-</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="advanced-features"><a class="header" href="#advanced-features">Advanced Features</a></h1>
 <p>This chapter covers the advanced features of lil: templates, the has operator, compiled mode, Minecraft Forge mod generation, and C extensions. If you know Python, many of these concepts will feel familiar under a different syntax.</p>
